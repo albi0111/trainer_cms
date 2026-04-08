@@ -1,112 +1,136 @@
 import { create } from 'zustand';
-import { Client } from '../features/clients/types';
-import { clientService } from '../features/clients/services/clientService';
+import { ClientWithProfile, ClientMeasurement, ClientProfile } from '../features/clients/types';
+import { clientService, MeasurementInput } from '../features/clients/services/clientService';
 
 interface ClientState {
-  // Data
-  clients: Client[];
-  selectedClient: Client | null;
+  // ── Data ────────────────────────────────────────────────────────────────────
+  clients: ClientWithProfile[];
+  selectedClient: ClientWithProfile | null;
 
-  // Status
-  isLoading: boolean;  // true until the first snapshot arrives
+  // ── Status ──────────────────────────────────────────────────────────────────
+  isLoading: boolean;   // true until first snapshot fires
   error: string | null;
 
-  // Subscription lifecycle
+  // ── Subscription lifecycle ──────────────────────────────────────────────────
   _unsubscribe: (() => void) | null;
 
-  // Actions
+  // ── Actions ─────────────────────────────────────────────────────────────────
+
+  /** Start live Firestore subscription. Safe to call multiple times. */
   subscribeClients: () => void;
+
+  /** Tear down the listener. Call on screen unmount. */
   unsubscribeClients: () => void;
-  createClient: (data: Parameters<typeof clientService.createClient>[0]) => Promise<void>;
-  updateClient: (id: string, data: Parameters<typeof clientService.updateClient>[1], currentVersion: number) => Promise<void>;
+
+  /**
+   * Create a new client. Only name is required.
+   * Profile fields are optional — sanitized before write.
+   */
+  createClient: (name: string, profile?: Partial<ClientProfile>) => Promise<void>;
+
+  /**
+   * Partial profile update. Only non-empty fields are written.
+   * Existing Firestore values for omitted/empty keys are preserved.
+   */
+  updateProfile: (
+    id: string,
+    data: { name?: string } & Partial<ClientProfile>,
+    currentVersion: number
+  ) => Promise<void>;
+
+  /**
+   * Store the 'inactive' override flag.
+   * deriveClientStatus() will always respect this regardless of measurements.
+   */
+  setInactive: (id: string, currentVersion: number) => Promise<void>;
+
+  /**
+   * Append a measurement to a client's subcollection.
+   * Never updates existing measurement documents.
+   */
+  addMeasurement: (clientId: string, input: MeasurementInput) => Promise<void>;
+
+  /** Soft-delete — removes from list query immediately. */
   softDeleteClient: (id: string, currentVersion: number) => Promise<void>;
-  setSelectedClient: (client: Client | null) => void;
+
+  setSelectedClient: (client: ClientWithProfile | null) => void;
   clearError: () => void;
 }
 
 export const useClientStore = create<ClientState>((set, get) => ({
   clients: [],
   selectedClient: null,
-  isLoading: true,   // start true — remains until first onSnapshot fires
+  isLoading: true,
   error: null,
   _unsubscribe: null,
 
-  /**
-   * Starts the live Firestore subscription.
-   * Safe to call multiple times — ignored if already subscribed.
-   * The snapshot fires immediately from the local cache (offline-first),
-   * then again whenever Firestore syncs new data.
-   */
+  // ── Subscription ────────────────────────────────────────────────────────────
+
   subscribeClients: () => {
-    if (get()._unsubscribe) return; // already subscribed
+    if (get()._unsubscribe) return; // already subscribed — idempotent
 
     const unsubscribe = clientService.subscribeToClients(
-      (clients) => {
-        // onUpdate: replace the full list with the latest snapshot
-        set({ clients, isLoading: false, error: null });
-      },
-      (error) => {
-        // onError: surface the error but keep any previously loaded data
-        set({ error: error.message, isLoading: false });
-      }
+      (clients) => set({ clients, isLoading: false, error: null }),
+      (error)   => set({ error: error.message, isLoading: false })
     );
-
     set({ _unsubscribe: unsubscribe });
   },
 
-  /**
-   * Tears down the Firestore listener.
-   * Call this on screen unmount to prevent memory leaks.
-   */
   unsubscribeClients: () => {
     get()._unsubscribe?.();
     set({ _unsubscribe: null });
   },
 
-  /**
-   * Writes a new client. The subscription handles the UI update automatically —
-   * no manual refetch is needed or performed.
-   */
-  createClient: async (data) => {
+  // ── Write actions ────────────────────────────────────────────────────────────
+
+  createClient: async (name, profile) => {
     set({ error: null });
     try {
-      await clientService.createClient(data);
-      // onSnapshot will update `clients` automatically
+      await clientService.createClient(name, profile);
+      // onSnapshot updates `clients` automatically — no manual refetch
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      set({ error: msg });
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
       throw e;
     }
   },
 
-  /**
-   * Updates a client using last-write-wins conflict resolution.
-   * `currentVersion` is read from local state — no server round-trip.
-   */
-  updateClient: async (id, data, currentVersion) => {
+  updateProfile: async (id, data, currentVersion) => {
     set({ error: null });
     try {
-      await clientService.updateClient(id, data, currentVersion);
-      // onSnapshot will update `clients` automatically
+      await clientService.updateProfile(id, data, currentVersion);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      set({ error: msg });
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
       throw e;
     }
   },
 
-  /**
-   * Soft-deletes a client. `currentVersion` comes from local state.
-   * The subscription will remove the client from `clients` when Firestore confirms.
-   */
+  setInactive: async (id, currentVersion) => {
+    set({ error: null });
+    try {
+      await clientService.setInactive(id, currentVersion);
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      throw e;
+    }
+  },
+
+  addMeasurement: async (clientId, input) => {
+    set({ error: null });
+    try {
+      await clientService.addMeasurement(clientId, input);
+      // Measurements live in a subcollection — useClientDetail hook handles their subscription
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      throw e;
+    }
+  },
+
   softDeleteClient: async (id, currentVersion) => {
     set({ error: null });
     try {
       await clientService.softDeleteClient(id, currentVersion);
-      // onSnapshot will update `clients` automatically
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      set({ error: msg });
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
     }
   },
 

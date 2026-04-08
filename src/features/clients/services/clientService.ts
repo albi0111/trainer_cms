@@ -1,38 +1,61 @@
 import {
   collection,
   doc,
-  getDoc,
   addDoc,
+  setDoc,
   updateDoc,
   query,
   where,
   orderBy,
   onSnapshot,
   serverTimestamp,
+  Timestamp,
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../../../database/firebase';
 import { clientConverter } from '../../../database/converters/clientConverter';
-import { Client } from '../types';
+import { measurementConverter } from '../../../database/converters/measurementConverter';
+import { Client, ClientProfile, ClientMeasurement, ClientWithProfile } from '../types';
 import { getUpdatePayload, getCreatePayload } from '../../../shared/utils/syncUtils';
 import { generateSearchTokens } from '../../../shared/utils/searchUtils';
+import { sanitizeUpdate, lbsToKg, inchesToCm } from '../../../shared/utils/sanitizeUtils';
 
 const CLIENTS_COLLECTION = 'clients';
+const MEASUREMENTS_SUB = 'measurements';
+
+// ─── Input types ──────────────────────────────────────────────────────────────
+
+/**
+ * Raw measurement input from the UI/form layer.
+ * Values may be in imperial if unit_system === 'imperial'.
+ * The service converts all values to metric before writing.
+ */
+export interface MeasurementInput {
+  date: Date;
+  unit_system: 'metric' | 'imperial';
+  source?: 'manual' | 'device';
+  weight?: number;        // kg if metric, lbs if imperial
+  height?: number;        // cm if metric, inches if imperial
+  waist?: number;         // cm if metric, inches if imperial
+  hip?: number;           // cm if metric, inches if imperial
+  chest?: number;         // cm if metric, inches if imperial
+  body_fat_pct?: number;  // always %
+  notes?: string;
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
 
 export const clientService = {
+
+  // ── Client list subscription ───────────────────────────────────────────────
+
   /**
-   * Subscribes to the live client list via onSnapshot.
-   * The callback receives the full up-to-date array on every Firestore change
-   * (including offline cache hits, so this works offline-first).
-   *
-   * Returns an unsubscribe function — call it on component/store cleanup.
-   *
-   * NOTE: Search/filtering is intentionally done locally by the caller.
-   * If a remote search strategy is needed in the future, add a separate
-   * `subscribeToClientSearch(query, callback)` here without touching the screen.
+   * Live subscription to the active client list.
+   * Returns an unsubscribe function — call on screen/store cleanup.
+   * Local search/filter is intentional (done by caller); avoids Firestore index complexity.
    */
   subscribeToClients(
-    onUpdate: (clients: Client[]) => void,
+    onUpdate: (clients: ClientWithProfile[]) => void,
     onError: (error: Error) => void
   ): Unsubscribe {
     const q = query(
@@ -40,89 +63,172 @@ export const clientService = {
       where('deleted', '==', false),
       orderBy('name')
     );
-
     return onSnapshot(
       q,
-      (snapshot) => {
-        const clients = snapshot.docs.map((d) => d.data());
-        onUpdate(clients);
-      },
-      (error) => {
-        onError(error);
-      }
+      (snapshot) => onUpdate(snapshot.docs.map((d) => d.data())),
+      (error) => onError(error)
     );
   },
 
-  /**
-   * Fetches a single client by ID. Used for detail views — not the list path.
-   */
-  async getClientById(id: string): Promise<Client> {
-    const docRef = doc(db, CLIENTS_COLLECTION, id).withConverter(clientConverter);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) throw new Error('Client not found');
-    return snap.data();
-  },
+  // ── Create client ──────────────────────────────────────────────────────────
 
   /**
-   * Creates a new client. Write-only — the live subscription handles the UI update.
+   * Creates a new client with only name required.
+   * Profile fields are optional — passed through sanitizeUpdate() before write.
+   * Initial stored status is 'active' (derived status will be 'incomplete' until
+   * measurements are added).
+   *
+   * Returns the new document ID.
    */
-  async createClient(clientData: {
-    name: string;
-    email: string;
-    phone: string;
-    goal: string;
-  }): Promise<string> {
-    const search_tokens = generateSearchTokens(clientData.name);
+  async createClient(
+    name: string,
+    profile?: Partial<ClientProfile>
+  ): Promise<string> {
+    const safeProfile = profile ? sanitizeUpdate(profile) : {};
+    const search_tokens = generateSearchTokens(name);
+
     const payload = await getCreatePayload({
-      ...clientData,
-      status: 'active' as const,
-      last_session_at: null,
+      name,
+      status: 'active' as const,   // stored default; deriveClientStatus handles display
       search_tokens,
+      ...safeProfile,
     });
 
     const docRef = await addDoc(
       collection(db, CLIENTS_COLLECTION).withConverter(clientConverter),
-      payload as any
+      payload as unknown as ClientWithProfile
     );
     return docRef.id;
   },
 
+  // ── Update profile (merge — never overwrites existing) ────────────────────
+
   /**
-   * Updates a client. Write-only — no read-before-write.
+   * Partially updates a client's core name or profile fields.
+   * Uses setDoc with merge:true — ONLY provided fields are written.
+   * Empty strings, null, undefined are stripped by sanitizeUpdate() before write.
    *
-   * Conflict strategy: Last-Write-Wins (LWW).
-   * The caller provides the locally cached `currentVersion`. The version is
-   * incremented deterministically (+1) in getUpdatePayload. If two devices
-   * write concurrently, the last write to reach Firestore wins. This is
-   * intentional and safe for a trainer CMS where concurrent edits to the same
-   * client record are rare and non-critical.
+   * This means a form that clears a field will NOT blank it in Firestore —
+   * the trainer must explicitly want to remove a value (future feature).
    */
-  async updateClient(
+  async updateProfile(
     id: string,
-    data: Partial<Client>,
+    data: { name?: string } & Partial<ClientProfile>,
     currentVersion: number
   ): Promise<void> {
+    const safeData = sanitizeUpdate(data);
+    if (Object.keys(safeData).length === 0) return; // nothing to write
+
+    // Regenerate search tokens if name changed
+    const updateData: Record<string, unknown> = { ...safeData };
+    if (safeData.name) {
+      updateData.search_tokens = generateSearchTokens(safeData.name as string);
+    }
+
+    const payload = await getUpdatePayload(updateData, currentVersion);
     const docRef = doc(db, CLIENTS_COLLECTION, id).withConverter(clientConverter);
 
-    const search_tokens = data.name ? generateSearchTokens(data.name) : undefined;
-    const payload = await getUpdatePayload(
-      { ...data, ...(search_tokens ? { search_tokens } : {}) },
-      currentVersion // LWW: version incremented to currentVersion + 1
-    );
-
-    await updateDoc(docRef, payload as any);
+    // setDoc with merge:true — fields not in payload are untouched
+    await setDoc(docRef, payload as unknown as ClientWithProfile, { merge: true });
   },
 
+  // ── Mark client inactive ───────────────────────────────────────────────────
+
   /**
-   * Soft-deletes a client by setting deleted=true. Write-only.
-   * `currentVersion` must be passed from local state — no server read needed.
+   * Sets stored status to 'inactive' — the only status value that is explicitly stored.
+   * deriveClientStatus() will respect this override regardless of measurements.
+   */
+  async setInactive(id: string, currentVersion: number): Promise<void> {
+    const payload = await getUpdatePayload({ status: 'inactive' as const }, currentVersion);
+    const docRef = doc(db, CLIENTS_COLLECTION, id).withConverter(clientConverter);
+    await setDoc(docRef, payload as unknown as ClientWithProfile, { merge: true });
+  },
+
+  // ── Soft delete ───────────────────────────────────────────────────────────
+
+  /**
+   * Soft-deletes by setting deleted=true. Removed from the subscribeToClients query immediately.
    */
   async softDeleteClient(id: string, currentVersion: number): Promise<void> {
     const docRef = doc(db, CLIENTS_COLLECTION, id);
     const payload = await getUpdatePayload(
       { deleted: true, deleted_at: serverTimestamp() },
-      currentVersion // LWW: same deterministic version strategy
+      currentVersion
     );
     await updateDoc(docRef, payload);
+  },
+
+  // ── Measurements (subcollection) ───────────────────────────────────────────
+
+  /**
+   * Appends a new measurement to clients/{clientId}/measurements.
+   * APPEND-ONLY: addDoc is always used — updateDoc on a measurement is NEVER called.
+   *
+   * METRIC ENFORCEMENT:
+   *   If input.unit_system === 'imperial', converts weight (lbs→kg) and lengths (in→cm)
+   *   before writing. All stored values are metric.
+   *
+   * Returns the new measurement document ID.
+   */
+  async addMeasurement(
+    clientId: string,
+    input: MeasurementInput
+  ): Promise<string> {
+    const isImperial = input.unit_system === 'imperial';
+
+    // Convert to metric if needed — service layer is the single conversion point
+    const metric: Partial<Pick<ClientMeasurement,
+      'weight_kg' | 'height_cm' | 'waist_cm' | 'hip_cm' | 'chest_cm' | 'body_fat_pct'
+    >> = {};
+
+    if (input.weight   != null) metric.weight_kg    = isImperial ? lbsToKg(input.weight)   : input.weight;
+    if (input.height   != null) metric.height_cm    = isImperial ? inchesToCm(input.height) : input.height;
+    if (input.waist    != null) metric.waist_cm     = isImperial ? inchesToCm(input.waist)  : input.waist;
+    if (input.hip      != null) metric.hip_cm       = isImperial ? inchesToCm(input.hip)    : input.hip;
+    if (input.chest    != null) metric.chest_cm     = isImperial ? inchesToCm(input.chest)  : input.chest;
+    if (input.body_fat_pct != null) metric.body_fat_pct = input.body_fat_pct; // always %
+
+    const safeNotes = input.notes?.trim().slice(0, 300); // enforce 300-char cap
+
+    const payload = await getCreatePayload({
+      client_id:   clientId,
+      date:        Timestamp.fromDate(input.date),
+      unit_system: input.unit_system,
+      source:      input.source ?? 'manual',
+      ...metric,
+      ...(safeNotes ? { notes: safeNotes } : {}),
+    });
+
+    const colRef = collection(
+      db,
+      CLIENTS_COLLECTION,
+      clientId,
+      MEASUREMENTS_SUB
+    ).withConverter(measurementConverter);
+
+    const docRef = await addDoc(colRef, payload as unknown as ClientMeasurement);
+    return docRef.id;
+  },
+
+  /**
+   * Live subscription to a client's measurement subcollection.
+   * Results ordered newest-first (date DESC) for display.
+   * Returns an unsubscribe function — call on hook/screen cleanup.
+   */
+  subscribeMeasurements(
+    clientId: string,
+    onUpdate: (measurements: ClientMeasurement[]) => void,
+    onError: (error: Error) => void
+  ): Unsubscribe {
+    const q = query(
+      collection(db, CLIENTS_COLLECTION, clientId, MEASUREMENTS_SUB).withConverter(measurementConverter),
+      where('deleted', '==', false),
+      orderBy('date', 'desc')
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => onUpdate(snapshot.docs.map((d) => d.data())),
+      (error) => onError(error)
+    );
   },
 };
