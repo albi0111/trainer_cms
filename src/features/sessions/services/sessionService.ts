@@ -17,9 +17,7 @@ import { sessionConverter } from '../../../database/converters/sessionConverter'
 import { SessionLog, SessionLogInput, WorkoutData } from '../types';
 import { getCreatePayload } from '../../../shared/utils/syncUtils';
 import { lbsToKg } from '../../../shared/utils/sanitizeUtils';
-
-const CLIENTS_COLLECTION = 'clients';
-const SESSION_LOGS_SUB   = 'session_logs';
+import { CLIENTS_COLLECTION, SESSION_LOGS_SUB } from '../../../database/collections';
 
 const SESSIONS_PAGE_SIZE = 50;
 
@@ -135,8 +133,13 @@ export const sessionService = {
     if (input.workout_data) {
       input.workout_data.exercises.forEach(ex => {
         ex.sets.forEach(set => {
-          if (set.reps <= 0) throw new Error(`INVALID_REPS: Exercise "${ex.name}" has 0 or negative reps.`);
-          if (set.weight_kg < 0) throw new Error(`INVALID_WEIGHT: Exercise "${ex.name}" has negative weight.`);
+          // Hardened check: NaN and Infinity are NOT finite, so they will be caught here.
+          if (!Number.isFinite(set.reps) || set.reps <= 0) {
+            throw new Error(`INVALID_REPS: Exercise "${ex.name}" has invalid or 0 reps.`);
+          }
+          if (!Number.isFinite(set.weight_kg) || set.weight_kg < 0) {
+            throw new Error(`INVALID_WEIGHT: Exercise "${ex.name}" has invalid or negative weight.`);
+          }
         });
       });
     }

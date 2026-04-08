@@ -18,16 +18,13 @@ import { Client, ClientProfile, ClientMeasurement, ClientWithProfile } from '../
 import { getUpdatePayload, getCreatePayload } from '../../../shared/utils/syncUtils';
 import { generateSearchTokens } from '../../../shared/utils/searchUtils';
 import { sanitizeUpdate, lbsToKg, inchesToCm } from '../../../shared/utils/sanitizeUtils';
+import { CLIENTS_COLLECTION, MEASUREMENTS_SUB, CLIENT_ID_FK } from '../../../database/collections';
 
-const CLIENTS_COLLECTION = 'clients';
-const MEASUREMENTS_SUB   = 'measurements';
-
-// ─── FK Naming Convention ─────────────────────────────────────────────────────
 // client_id is the canonical FK field name used across ALL subcollections and
 // future feature collections (Session, SessionLog, Report, etc.).
 // Any new collection that references a client MUST use this field name.
-// This constant documents the convention — import it if you need the literal string.
-export const CLIENT_ID_FK = 'client_id' as const;
+// This constant documents the convention — use from database/collections.ts.
+export { CLIENT_ID_FK };
 
 // Maximum measurement entries returned per subscription by default.
 // Keeps Firestore reads bounded as histories grow.

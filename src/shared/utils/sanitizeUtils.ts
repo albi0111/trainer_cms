@@ -21,7 +21,13 @@
  */
 export function sanitizeUpdate<T extends object>(data: T): Partial<T> {
   return Object.fromEntries(
-    Object.entries(data).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+    Object.entries(data)
+      .map(([k, v]) => {
+        // Auto-trim strings before evaluating emptiness
+        const value = typeof v === 'string' ? v.trim() : v;
+        return [k, value];
+      })
+      .filter(([, v]) => v !== '' && v !== null && v !== undefined)
   ) as Partial<T>;
 }
 

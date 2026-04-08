@@ -88,6 +88,26 @@ describe('Session System Logic & Validation', () => {
       .rejects.toThrow('INVALID_REPS');
   });
 
+  // 4. Validation: Infinity/NaN
+  test('Validation: Infinity or NaN weight/reps should throw', async () => {
+    const invalidInput: SessionLogInput = {
+      date: new Date(),
+      type: 'workout',
+      status: 'completed',
+      unit_system: 'metric',
+      workout_data: {
+        exercises: [{
+          exercise_id: 'ex-1',
+          name: 'Deadlift',
+          sets: [{ reps: Infinity as any, weight_kg: 100 }]
+        }]
+      }
+    };
+
+    await expect(sessionService.addSessionLog('client-1', invalidInput))
+      .rejects.toThrow('INVALID_REPS');
+  });
+
   // 4. Metric Conversion
   test('Metric Integrity: Imperial workout logs are converted to kg', async () => {
     const imperialInput: SessionLogInput = {

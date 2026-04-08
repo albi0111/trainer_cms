@@ -117,21 +117,25 @@ export function useClientDetail(clientId: string): ClientDetailState {
     // Weight change: newest weight − oldest weight (both metric kg, guaranteed by service)
     let weightChange: number | null = null;
     if (withWeight.length >= 2) {
-      const newest = withWeight[0].weight_kg!;
-      const oldest = withWeight[withWeight.length - 1].weight_kg!;
-      weightChange = Math.round((newest - oldest) * 100) / 100;
+      const newest = withWeight[0].weight_kg;
+      const oldest = withWeight[withWeight.length - 1].weight_kg;
+      
+      if (typeof newest === 'number' && typeof oldest === 'number' && 
+          Number.isFinite(newest) && Number.isFinite(oldest)) {
+        weightChange = Math.round((newest - oldest) * 100) / 100;
+      }
     }
 
     // Trend — requires at least 2 weight readings; ±0.5 kg threshold for "stable"
     let measurementTrend: MeasurementTrend = 'insufficient';
-    if (weightChange !== null) {
+    if (weightChange !== null && Number.isFinite(weightChange)) {
       if (weightChange < -0.5)       measurementTrend = 'improving'; // weight loss
       else if (weightChange > 0.5)   measurementTrend = 'gaining';   // weight gain
       else                           measurementTrend = 'stable';
     }
 
     return {
-      latestWeight,
+      latestWeight: (latestWeight !== null && Number.isFinite(latestWeight)) ? latestWeight : null,
       weightChange,
       recentMeasurementCount,
       measurementTrend,

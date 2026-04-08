@@ -41,6 +41,18 @@ describe('dbService Hardening Validation', () => {
     expect(payload.occupation).toBeUndefined();
   });
 
+  test('safeUpdate: strips whitespace-only strings', async () => {
+    const mockRef = {} as any;
+    const dirtyData = {
+      name: '  ', // Whitespace only
+    };
+
+    await dbService.safeUpdate(mockRef, dirtyData);
+
+    // Should NOT call setDoc because '  ' becomes '' which is stripped
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
   test('safeUpdate: injects updated_at timestamp', async () => {
     const mockRef = {} as any;
     await dbService.safeUpdate(mockRef, { name: 'Alice' });
