@@ -170,14 +170,32 @@ describe('Trainer CMS Client System - Deep Test', () => {
 
   // 6. Status updates correctly
   test('Requirement 5: Check status updates correctly (derived logic)', () => {
-    // New client (stored active, but no measurements)
-    expect(deriveClientStatus({ storedStatus: 'active', hasMeasurements: false })).toBe('incomplete');
+    // New client (stored active, but no measurements/sessions)
+    expect(deriveClientStatus({ 
+      storedStatus: 'active', 
+      hasMeasurements: false,
+      hasSessions: false 
+    })).toBe('incomplete');
 
-    // Client with measurements
-    expect(deriveClientStatus({ storedStatus: 'active', hasMeasurements: true })).toBe('active');
+    // Client with measurements only
+    expect(deriveClientStatus({ 
+      storedStatus: 'active', 
+      hasMeasurements: true,
+      hasSessions: false 
+    })).toBe('active');
+
+    // Client with sessions only
+    expect(deriveClientStatus({ 
+      storedStatus: 'active', 
+      hasMeasurements: false,
+      hasSessions: true 
+    })).toBe('active');
 
     // Inactive override
-    expect(deriveClientStatus({ storedStatus: 'inactive', hasMeasurements: true })).toBe('inactive');
-    expect(deriveClientStatus({ storedStatus: 'inactive', hasMeasurements: false })).toBe('inactive');
+    expect(deriveClientStatus({ 
+      storedStatus: 'inactive', 
+      hasMeasurements: true,
+      hasSessions: true 
+    })).toBe('inactive');
   });
 });
