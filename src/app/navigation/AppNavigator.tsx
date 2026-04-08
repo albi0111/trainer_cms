@@ -11,9 +11,38 @@ import {
   SafeAreaView,
 } from 'react-native';
 
-import { ClientListScreen } from '../../features/clients/screens/ClientListScreen';
+import { ClientListScreen }   from '../../features/clients/screens/ClientListScreen';
+import { ClientDetailScreen } from '../../features/clients/screens/ClientDetailScreen';
 
-// Placeholder screens for future feature modules
+// ─── Param lists ──────────────────────────────────────────────────────────────
+
+/**
+ * Type-safe param list for the Client Stack.
+ * ClientDetail requires clientId — TypeScript enforces this at every navigate() call.
+ */
+export type ClientStackParamList = {
+  ClientList:   undefined;
+  ClientDetail: { clientId: string };
+};
+
+// ─── Client Stack ─────────────────────────────────────────────────────────────
+
+const ClientStack = createStackNavigator<ClientStackParamList>();
+
+/**
+ * Inner stack for the Clients tab.
+ * ClientListScreen → (item press) → ClientDetailScreen
+ * headerShown: false — each screen manages its own Appbar for full control.
+ */
+const ClientNavigator = () => (
+  <ClientStack.Navigator screenOptions={{ headerShown: false }}>
+    <ClientStack.Screen name="ClientList"   component={ClientListScreen} />
+    <ClientStack.Screen name="ClientDetail" component={ClientDetailScreen} />
+  </ClientStack.Navigator>
+);
+
+// ─── Placeholder screens ───────────────────────────────────────────────────────
+
 const PlaceholderScreen = ({ name }: { name: string }) => (
   <View style={styles.placeholder}>
     <Text style={styles.placeholderText}>{name} Screen</Text>
@@ -21,19 +50,19 @@ const PlaceholderScreen = ({ name }: { name: string }) => (
 );
 
 // ─── Screen definitions ───────────────────────────────────────────────────────
+
 type ScreenKey = 'Clients' | 'Sessions' | 'Physical';
 
 const SCREENS: Record<ScreenKey, { label: string; icon: string; component: React.ComponentType<any> }> = {
-  Clients:  { label: 'Clients',          icon: 'account-group',    component: ClientListScreen },
+  Clients:  { label: 'Clients',          icon: 'account-group',    component: ClientNavigator },
   Sessions: { label: 'Sessions',         icon: 'calendar-clock',   component: () => <PlaceholderScreen name="Sessions" /> },
   Physical: { label: 'Physical Metrics', icon: 'chart-bell-curve', component: () => <PlaceholderScreen name="Physical Metrics" /> },
 };
 
-// ─── Navigators ───────────────────────────────────────────────────────────────
-const Tab = createBottomTabNavigator();
-const RootStack = createStackNavigator();
+// ─── Mobile: Bottom Tab Layout ────────────────────────────────────────────────
 
-// ─── Mobile: Bottom Tab Layout ───────────────────────────────────────────────
+const Tab = createBottomTabNavigator();
+
 const MobileTabs = () => (
   <Tab.Navigator screenOptions={{ headerShown: false }}>
     {(Object.keys(SCREENS) as ScreenKey[]).map((key) => {
@@ -55,10 +84,11 @@ const MobileTabs = () => (
   </Tab.Navigator>
 );
 
-// ─── Tablet: Plain View Sidebar (no Reanimated, no Drawer) ───────────────────
-// Uses a pure React Native View-based layout. Zero native module dependencies.
-// Works identically in Expo Go, development builds, and production builds.
-// When graduating to EAS builds, this can be swapped for @react-navigation/drawer.
+// ─── Tablet: View-based Sidebar ───────────────────────────────────────────────
+// Pure React Native View layout — zero Reanimated/Drawer dependency.
+// ClientNavigator is rendered as the active content component,
+// preserving the full stack navigation (List → Detail) within the tablet layout.
+
 const TabletSidebar = () => {
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('Clients');
   const ActiveComponent = SCREENS[activeScreen].component;
@@ -92,7 +122,7 @@ const TabletSidebar = () => {
         })}
       </View>
 
-      {/* Main content */}
+      {/* Main content — renders full ClientNavigator (stack) for Clients tab */}
       <View style={styles.tabletContent}>
         <ActiveComponent />
       </View>
@@ -101,6 +131,9 @@ const TabletSidebar = () => {
 };
 
 // ─── Root Navigator ───────────────────────────────────────────────────────────
+
+const RootStack = createStackNavigator();
+
 export const AppNavigator = () => {
   const deviceType = useDeviceType();
 
@@ -116,23 +149,12 @@ export const AppNavigator = () => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 18,
-    color: '#555',
-  },
-  // Tablet layout
-  tabletRoot: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#f4f4f8',
-  },
-  sidebar: {
+  placeholder:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  placeholderText:    { fontSize: 18, color: '#555' },
+  tabletRoot:         { flex: 1, flexDirection: 'row', backgroundColor: '#f4f4f8' },
+  sidebar:            {
     width: 240,
     backgroundColor: '#ffffff',
     paddingTop: 24,
@@ -145,38 +167,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 4,
   },
-  sidebarTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a2e',
-    marginBottom: 24,
-    paddingLeft: 8,
-    letterSpacing: 0.5,
-  },
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    marginBottom: 4,
-  },
-  sidebarItemActive: {
-    backgroundColor: '#ede7f6',
-  },
-  sidebarIcon: {
-    marginRight: 12,
-  },
-  sidebarLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  sidebarLabelActive: {
-    color: '#6200ee',
-    fontWeight: '700',
-  },
-  tabletContent: {
-    flex: 1,
-  },
+  sidebarTitle:       { fontSize: 16, fontWeight: '700', color: '#1a1a2e', marginBottom: 24, paddingLeft: 8, letterSpacing: 0.5 },
+  sidebarItem:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 10, marginBottom: 4 },
+  sidebarItemActive:  { backgroundColor: '#ede7f6' },
+  sidebarIcon:        { marginRight: 12 },
+  sidebarLabel:       { fontSize: 14, color: '#555', fontWeight: '500' },
+  sidebarLabelActive: { color: '#6200ee', fontWeight: '700' },
+  tabletContent:      { flex: 1 },
 });
