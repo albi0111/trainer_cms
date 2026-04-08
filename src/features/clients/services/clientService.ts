@@ -1,19 +1,17 @@
 import {
   collection,
   doc,
-  addDoc,
-  setDoc,
-  updateDoc,
   query,
   where,
   orderBy,
   limit,
   onSnapshot,
-  serverTimestamp,
   Timestamp,
   Unsubscribe,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../../database/firebase';
+import { dbService } from '../../../database/dbService';
 import { clientConverter } from '../../../database/converters/clientConverter';
 import { measurementConverter } from '../../../database/converters/measurementConverter';
 import { Client, ClientProfile, ClientMeasurement, ClientWithProfile } from '../types';
@@ -97,21 +95,17 @@ export const clientService = {
     name: string,
     profile?: Partial<ClientProfile>
   ): Promise<string> {
-    const safeProfile = profile ? sanitizeUpdate(profile) : {};
     const search_tokens = generateSearchTokens(name);
 
     const payload = await getCreatePayload({
       name,
-      status: 'active' as const,   // stored default; deriveClientStatus handles display
+      status: 'active' as const,
       search_tokens,
-      ...safeProfile,
+      ...(profile || {}),
     });
 
-    const docRef = await addDoc(
-      collection(db, CLIENTS_COLLECTION).withConverter(clientConverter),
-      payload as unknown as ClientWithProfile
-    );
-    return docRef.id;
+    const colRef = collection(db, CLIENTS_COLLECTION).withConverter(clientConverter);
+    return dbService.appendOnly(colRef, payload);
   },
 
   // ── Update profile (merge — never overwrites existing) ────────────────────
@@ -141,8 +135,7 @@ export const clientService = {
     const payload = await getUpdatePayload(updateData, currentVersion);
     const docRef = doc(db, CLIENTS_COLLECTION, id).withConverter(clientConverter);
 
-    // setDoc with merge:true — fields not in payload are untouched
-    await setDoc(docRef, payload as unknown as ClientWithProfile, { merge: true });
+    await dbService.safeUpdate(docRef, payload);
   },
 
   // ── Mark client inactive ───────────────────────────────────────────────────
@@ -154,7 +147,7 @@ export const clientService = {
   async setInactive(id: string, currentVersion: number): Promise<void> {
     const payload = await getUpdatePayload({ status: 'inactive' as const }, currentVersion);
     const docRef = doc(db, CLIENTS_COLLECTION, id).withConverter(clientConverter);
-    await setDoc(docRef, payload as unknown as ClientWithProfile, { merge: true });
+    await dbService.safeUpdate(docRef, payload);
   },
 
   // ── Soft delete ───────────────────────────────────────────────────────────
@@ -168,7 +161,9 @@ export const clientService = {
       { deleted: true, deleted_at: serverTimestamp() },
       currentVersion
     );
-    await updateDoc(docRef, payload);
+    // Deleted flag is critical metadata, bypasses generic merge logic if needed
+    // though safeUpdate handles it fine.
+    await dbService.internal_unsafeWrite(docRef, payload);
   },
 
   // ── Measurements (subcollection) ───────────────────────────────────────────
@@ -219,8 +214,7 @@ export const clientService = {
       MEASUREMENTS_SUB
     ).withConverter(measurementConverter);
 
-    const docRef = await addDoc(colRef, payload as unknown as ClientMeasurement);
-    return docRef.id;
+    return dbService.appendOnly(colRef, payload as unknown as ClientMeasurement);
   },
 
   /**

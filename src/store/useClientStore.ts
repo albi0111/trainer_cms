@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { ClientWithProfile, ClientMeasurement, ClientProfile } from '../features/clients/types';
 import { clientService, MeasurementInput } from '../features/clients/services/clientService';
+import { sessionService } from '../features/sessions/services/sessionService';
+import { SessionLogInput } from '../features/sessions/types';
 
 interface ClientState {
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -52,6 +54,12 @@ interface ClientState {
 
   /** Soft-delete — removes from list query immediately. */
   softDeleteClient: (id: string, currentVersion: number) => Promise<void>;
+
+  /**
+   * Append a session log entry to a client's subcollection.
+   * Handles validation and metric conversion at the service layer.
+   */
+  addSessionLog: (clientId: string, input: SessionLogInput) => Promise<void>;
 
   setSelectedClient: (client: ClientWithProfile | null) => void;
   clearError: () => void;
@@ -131,6 +139,16 @@ export const useClientStore = create<ClientState>((set, get) => ({
       await clientService.softDeleteClient(id, currentVersion);
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : 'Unknown error' });
+    }
+  },
+
+  addSessionLog: async (clientId, input) => {
+    set({ error: null });
+    try {
+      await sessionService.addSessionLog(clientId, input);
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      throw e;
     }
   },
 

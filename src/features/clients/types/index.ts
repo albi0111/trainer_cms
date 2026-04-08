@@ -33,6 +33,7 @@ export interface ClientProfile {
   meal_timing?: string;
   medical_conditions?: string;
   notes?: string;
+  session_plan?: string;               // Flexible text field for assignment (e.g. "Mon/Wed/Fri Legs focus")
 }
 
 // ─── Combined shape ───────────────────────────────────────────────────────────
@@ -113,4 +114,10 @@ export interface ClientAnalytics {
 
   /** Date of the most recent measurement. Null if none. */
   lastMeasurementDate: Date | null;
+
+  /** Total number of session logs (any status) recorded. */
+  totalSessions: number;
+
+  /** Date of the most recent session log. Null if none. */
+  lastSessionDate: Date | null;
 }

@@ -29,9 +29,8 @@ export interface ClientStatusContext {
  * │  storedStatus      │  signals            │  result                │
  * ├────────────────────┼─────────────────────┼────────────────────────┤
  * │  'inactive'        │  any                │  'inactive' (override) │
- * │  'active'          │  no measurements    │  'incomplete'          │
- * │  'active'          │  measurements only  │  'active'              │
- * │  'active'          │  measurements+sess. │  'active'  (Phase 2)   │
+ * │  'active'          │  no data            │  'incomplete'          │
+ * │  'active'          │  meas. OR sessions  │  'active'              │
  * └────────────────────┴─────────────────────┴────────────────────────┘
  *
  * EXTENSION RULE (Phase 2):
@@ -45,10 +44,9 @@ export function deriveClientStatus(ctx: ClientStatusContext): ClientDisplayStatu
   // Trainer's explicit inactive override — respected regardless of any signal
   if (ctx.storedStatus === 'inactive') return 'inactive';
 
-  // 'incomplete': client exists but no data has been collected yet
-  if (!ctx.hasMeasurements) return 'incomplete';
+  // 'active': has measurements OR sessions
+  if (ctx.hasMeasurements || ctx.hasSessions) return 'active';
 
-  // 'active': has measurements (session signal will refine this in Phase 2)
-  // Phase 2: consider ctx.hasSessions for a richer "active vs. stale" distinction
-  return 'active';
+  // 'incomplete': default state for new clients with no logs
+  return 'incomplete';
 }

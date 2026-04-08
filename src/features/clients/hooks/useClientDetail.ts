@@ -4,11 +4,14 @@ import { db } from '../../../database/firebase';
 import { clientConverter }   from '../../../database/converters/clientConverter';
 import { ClientWithProfile, ClientMeasurement, ClientAnalytics, ClientDisplayStatus, MeasurementTrend } from '../types';
 import { clientService }     from '../services/clientService';
+import { sessionService }    from '../../sessions/services/sessionService';
+import { SessionLog }        from '../../sessions/types';
 import { deriveClientStatus } from '../utils/deriveClientStatus';
 
 interface ClientDetailState {
   client:        ClientWithProfile | null;
   measurements:  ClientMeasurement[];
+  sessions:      SessionLog[];
   displayStatus: ClientDisplayStatus;
   analytics:     ClientAnalytics;
   isLoading:     boolean;
@@ -36,6 +39,7 @@ interface ClientDetailState {
 export function useClientDetail(clientId: string): ClientDetailState {
   const [client,       setClient]       = useState<ClientWithProfile | null>(null);
   const [measurements, setMeasurements] = useState<ClientMeasurement[]>([]);
+  const [sessions,     setSessions]     = useState<SessionLog[]>([]);
   const [isLoading,    setIsLoading]    = useState(true);
   const [error,        setError]        = useState<string | null>(null);
 
@@ -70,6 +74,17 @@ export function useClientDetail(clientId: string): ClientDetailState {
     return () => unsub();
   }, [clientId]);
 
+  // ── Session subscription (latest 50, date DESC) ─────────────────────────────
+  useEffect(() => {
+    if (!clientId) return;
+    const unsub = sessionService.subscribeSessionLogs(
+      clientId,
+      (data) => setSessions(data),
+      (err)  => setError(err.message)
+    );
+    return () => unsub();
+  }, [clientId]);
+
   // ── Derived status ───────────────────────────────────────────────────────────
   // Uses ClientStatusContext — extensible when Phase 2 session signals are available.
   // Pass hasSessions: sessions.length > 0 here once the Session system is live.
@@ -77,7 +92,7 @@ export function useClientDetail(clientId: string): ClientDetailState {
     ? deriveClientStatus({
         storedStatus:    client.status,
         hasMeasurements: measurements.length > 0,
-        // hasSessions: undefined   ← Phase 2: pass from a session subscription
+        hasSessions:     sessions.length > 0,
       })
     : 'incomplete';
 
@@ -95,6 +110,9 @@ export function useClientDetail(clientId: string): ClientDetailState {
     const latestWeight:      number | null = withWeight[0]?.weight_kg ?? null;
     const lastMeasurementDate: Date | null = measurements[0]?.date    ?? null;
     const measurementCount:  number        = measurements.length;
+
+    const totalSessions:     number        = sessions.length;
+    const lastSessionDate:   Date | null   = sessions[0]?.date        ?? null;
 
     // Weight change: newest weight − oldest weight (both metric kg, guaranteed by service)
     let weightChange: number | null = null;
@@ -118,8 +136,10 @@ export function useClientDetail(clientId: string): ClientDetailState {
       measurementCount,
       measurementTrend,
       lastMeasurementDate,
+      totalSessions,
+      lastSessionDate,
     };
   })();
 
-  return { client, measurements, displayStatus, analytics, isLoading, error };
+  return { client, measurements, sessions, displayStatus, analytics, isLoading, error };
 }
