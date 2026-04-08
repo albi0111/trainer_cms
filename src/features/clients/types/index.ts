@@ -1,11 +1,90 @@
 import { BaseModel } from '../../../types/base';
 
+// ─── Core Client ──────────────────────────────────────────────────────────────
+// Minimal document stored in Firestore.
+// Contains only what is always present — name, status cache, search index.
+//
+// STATUS RULE:
+//   stored status is ONLY used as a trainer-controlled "inactive" override.
+//   'active' and 'incomplete' are NEVER stored — they are ALWAYS derived at runtime.
+//   Use deriveClientStatus() for all UI rendering. Never read .status directly.
+
 export interface Client extends BaseModel {
-  name: string;
-  email: string;
-  phone: string;
-  goal: string;
-  status: 'active' | 'inactive';
-  last_session_at: Date | null;
-  search_tokens: string[]; // Trigram/Prefix index for Firestore search
+  name: string;                         // required — the only mandatory field
+  status: 'active' | 'inactive';        // stored: only 'inactive' is a meaningful stored value
+  search_tokens: string[];              // prefix-token index for local search, bounded ≤20
+}
+
+// ─── Client Profile ───────────────────────────────────────────────────────────
+// Optional extended info — lives on the SAME Firestore document as Client.
+// All fields are optional. Field rules:
+//   - All string fields: max 500 chars
+//   - No arrays
+//   - No nested objects
+//   - safe to partially update with sanitizeUpdate()
+
+export interface ClientProfile {
+  email?: string;
+  phone?: string;
+  goal?: string;
+  occupation?: string;
+  activity_level?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  sleep_quality?: 'poor' | 'fair' | 'good';
+  meal_timing?: string;
+  medical_conditions?: string;
+  notes?: string;
+}
+
+// ─── Combined shape ───────────────────────────────────────────────────────────
+// Used in detail screen and useClientDetail hook.
+// List screen uses Client only (no profile fields needed for list rendering).
+
+export type ClientWithProfile = Client & ClientProfile;
+
+// ─── Derived Status ───────────────────────────────────────────────────────────
+// All possible UI states — includes 'incomplete' which is never stored.
+
+export type ClientDisplayStatus = 'incomplete' | 'active' | 'inactive';
+
+// ─── Measurements ─────────────────────────────────────────────────────────────
+// Stored as subcollection: clients/{clientId}/measurements
+//
+// METRIC RULE (MANDATORY):
+//   ALL numeric values are stored in metric units ALWAYS.
+//   weight → kg, height/circumferences → cm, body_fat → %
+//
+//   unit_system records what unit the TRAINER ENTERED in (for display context only).
+//   The service layer converts imperial → metric before writing.
+//   No imperial values ever reach Firestore.
+//
+// APPEND-ONLY RULE:
+//   Never update a past measurement document.
+//   Always addDoc() — never updateDoc() on an existing measurement.
+
+export interface ClientMeasurement extends BaseModel {
+  client_id: string;                              // FK → clients/{id}; consistent naming for Session FK
+  date: Date;                                     // date measurements were taken (trainer-provided)
+  unit_system: 'metric' | 'imperial';             // display context only — values are always metric
+  source: 'manual' | 'device';                    // how data was collected, defaults to 'manual'
+
+  // All stored in metric (kg / cm / %)
+  weight_kg?: number;
+  height_cm?: number;
+  waist_cm?: number;
+  hip_cm?: number;
+  chest_cm?: number;
+  body_fat_pct?: number;
+  notes?: string;                                 // ≤300 chars
+}
+
+// ─── Analytics (Derived — never stored) ──────────────────────────────────────
+// Computed by useClientDetail hook from the live measurements array.
+// Session-based fields (attendanceRate, totalSessions) return null until Phase 2.
+
+export interface ClientAnalytics {
+  weightChange: number | null;            // measurements[last].weight_kg - measurements[first].weight_kg
+  lastMeasurementDate: Date | null;       // most recent measurement date
+  totalMeasurements: number;
+  attendanceRate: number | null;          // Phase 2 — null until sessions are implemented
+  totalSessions: number | null;           // Phase 2 — null until sessions are implemented
 }
