@@ -25,34 +25,6 @@ export function sanitizeUpdate<T extends object>(data: T): Partial<T> {
   ) as Partial<T>;
 }
 
-/**
- * Like sanitizeUpdate(), but allows explicit null values through.
- *
- * Use ONLY when the trainer intentionally wants to clear a field
- * (e.g., removing a medical condition that no longer applies).
- * In Firestore, a null value sets the field to null — it does NOT delete the field.
- * To delete a field entirely, use Firestore's deleteField() sentinel instead.
- *
- * ┌────────────────┬────────────────────────────────────────────────────────────┐
- * │  Input value   │  Behaviour                                                 │
- * ├────────────────┼────────────────────────────────────────────────────────────┤
- * │  ''            │  STRIPPED — empty string is still never valid              │
- * │  undefined     │  STRIPPED — absent values are not written                  │
- * │  null          │  KEPT    — written as null (explicit intentional clear)    │
- * │  any other     │  KEPT    — written as-is                                   │
- * └────────────────┴────────────────────────────────────────────────────────────┘
- *
- * Usage (intentional field clear):
- *   const safe = sanitizeUpdateAllowNull({ medical_conditions: null });
- *   // → { medical_conditions: null }
- *   await setDoc(ref, safe, { merge: true });
- */
-export function sanitizeUpdateAllowNull<T extends object>(data: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(data).filter(([, v]) => v !== '' && v !== undefined)
-  ) as Partial<T>;
-}
-
 // ─── Unit Conversion ──────────────────────────────────────────────────────────
 // METRIC RULE: ALL values stored in Firestore are metric (kg, cm).
 // These are the ONLY conversion functions in the codebase.

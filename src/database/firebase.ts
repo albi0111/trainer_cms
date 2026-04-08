@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache } from 'firebase/firestore';
 
-// TODO: Replace with your actual Firebase config
+// Initialize Firebase with placeholders. 
+// Production config should be injected via environment variables in a real-world deployment.
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",

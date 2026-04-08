@@ -210,4 +210,22 @@ describe('Trainer CMS Client System - Deep Test', () => {
     expect(tokens).toContain('doe');
     expect(tokens).toContain('do');
   });
+
+  // 8. Soft-Delete Resilience (Bug Fix Verification)
+  test('Requirement 8: softDeleteClient correctly sets deleted: true', async () => {
+    const { setDoc } = require('firebase/firestore');
+    const clientId = 'client-123';
+    
+    await clientService.softDeleteClient(clientId, 1);
+    
+    // Check that deleted: true survived the getUpdatePayload call
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        deleted: true,
+        version: 2
+      }),
+      { merge: true }
+    );
+  });
 });

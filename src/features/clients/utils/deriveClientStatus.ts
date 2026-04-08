@@ -33,9 +33,8 @@ export interface ClientStatusContext {
  * │  'active'          │  meas. OR sessions  │  'active'              │
  * └────────────────────┴─────────────────────┴────────────────────────┘
  *
- * EXTENSION RULE (Phase 2):
- *   When the Session system lands, update this function — do NOT add
- *   a parallel status derivation elsewhere. This is the single source of truth.
+ * This is the SINGLE source of truth for client status derivation.
+ * New signals (e.g. food logs) should be integrated here.
  *
  * Usage: call this wherever the UI needs to show status.
  *        NEVER read client.status directly in UI components.

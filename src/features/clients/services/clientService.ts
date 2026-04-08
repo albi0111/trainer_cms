@@ -31,7 +31,7 @@ export const CLIENT_ID_FK = 'client_id' as const;
 
 // Maximum measurement entries returned per subscription by default.
 // Keeps Firestore reads bounded as histories grow.
-// Use a paginated query (Phase 2+) for historical data export / full history view.
+// Higher historical logs can be accessed via pagination (sessionService.loadMoreSessions).
 const MEASUREMENTS_PAGE_SIZE = 50;
 
 // ─── Input types ──────────────────────────────────────────────────────────────

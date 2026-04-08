@@ -14,22 +14,37 @@ export async function getDeviceId(): Promise<string> {
 }
 
 /**
+ * Internal helper to prepare common audit fields.
+ */
+async function _prepareBasePayload<T extends object>(data: T) {
+  const deviceId = await getDeviceId();
+  const safeData = sanitizeUpdate(data);
+
+  return {
+    deviceId,
+    safeData,
+    timestamp: serverTimestamp() as unknown as FieldValue,
+  };
+}
+
+/**
  * Prepares a payload for updating an existing document.
  * Enforces:
  * - Sanitization (no empty strings, nulls, or undefined)
  * - serverTimestamp() for updated_at
  * - Optimistic version increment
+ * - Respects existing 'deleted' flag if provided (crucial for soft-delete)
  */
 export async function getUpdatePayload<T extends object>(data: T, currentVersion: number) {
-  const deviceId = await getDeviceId();
-  const safeData = sanitizeUpdate(data);
+  const { deviceId, safeData, timestamp } = await _prepareBasePayload(data);
 
   return {
     ...safeData,
-    updated_at: serverTimestamp() as unknown as FieldValue,
+    updated_at: timestamp,
     updated_by: deviceId,
     version: currentVersion + 1,
-    deleted: false,
+    // Default to false only if not already specified in payload
+    deleted: (safeData as any).deleted ?? false,
   };
 }
 
@@ -41,13 +56,12 @@ export async function getUpdatePayload<T extends object>(data: T, currentVersion
  * - Version 1 initialization
  */
 export async function getCreatePayload<T extends object>(data: T) {
-  const deviceId = await getDeviceId();
-  const safeData = sanitizeUpdate(data);
+  const { deviceId, safeData, timestamp } = await _prepareBasePayload(data);
 
   return {
     ...safeData,
-    created_at: serverTimestamp() as unknown as FieldValue,
-    updated_at: serverTimestamp() as unknown as FieldValue,
+    created_at: timestamp,
+    updated_at: timestamp,
     updated_by: deviceId,
     version: 1,
     deleted: false,
