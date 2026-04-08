@@ -53,9 +53,9 @@ export const dbService = {
   /**
    * Direct Access (Internal only): For cases where built-in sanitization 
    * logic needs to be bypassed (e.g., admin soft-delete).
-   * Use with extreme caution.
+   * Uses setDoc with merge:true for maximum resilience.
    */
   async internal_unsafeWrite(ref: DocumentReference, data: any): Promise<void> {
-    await updateDoc(ref, data);
+    await setDoc(ref, data, { merge: true });
   }
 };

@@ -45,9 +45,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock the search token generator to keep tests simple
-jest.mock('../shared/utils/searchUtils', () => ({
-  generateSearchTokens: jest.fn((name) => [name.toLowerCase()]),
-}));
+// jest.mock('../shared/utils/searchUtils', () => ({
+//   generateSearchTokens: jest.fn((name) => [name.toLowerCase()]),
+// }));
 
 describe('Trainer CMS Client System - Deep Test', () => {
   const { addDoc, setDoc, updateDoc } = require('firebase/firestore');
@@ -197,5 +197,17 @@ describe('Trainer CMS Client System - Deep Test', () => {
       hasMeasurements: true,
       hasSessions: true 
     })).toBe('inactive');
+  });
+
+  // 7. Search Logic Improvement
+  test('Requirement 7: Search tokens support multi-word retrieval (last name)', () => {
+    const { generateSearchTokens } = require('../shared/utils/searchUtils');
+    const tokens = generateSearchTokens('John Doe');
+    
+    // Should contain full prefix
+    expect(tokens).toContain('john d');
+    // Should now also contain last name prefixes (The Fix)
+    expect(tokens).toContain('doe');
+    expect(tokens).toContain('do');
   });
 });

@@ -44,10 +44,10 @@ export const sessionService = {
     // 1. Deep Validation
     this._validateSessionLog(input);
 
-    // 2. Metric Conversion
+    // 2. Metric conversion & Data preparation
     let finalWorkoutData: WorkoutData | undefined = undefined;
     if (input.workout_data) {
-      finalWorkoutData = this._convertToMetric(input.workout_data, input.unit_system);
+      finalWorkoutData = this._prepareExerciseData(input.workout_data, input.unit_system);
     }
 
     // 3. Prepare Payload
@@ -144,8 +144,10 @@ export const sessionService = {
 
   /**
    * Deep-maps workout data to metric (kg) if input was imperial.
+   * NOTE: We keep the field name 'weight_kg' in the schema for consistency,
+   * but the service layer ensures the value is indeed in kg.
    */
-  _convertToMetric(data: WorkoutData, unitSystem: 'metric' | 'imperial'): WorkoutData {
+  _prepareExerciseData(data: WorkoutData, unitSystem: 'metric' | 'imperial'): WorkoutData {
     if (unitSystem === 'metric') return data;
 
     return {

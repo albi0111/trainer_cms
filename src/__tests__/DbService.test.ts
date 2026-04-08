@@ -72,9 +72,10 @@ describe('dbService Hardening Validation', () => {
 
     await dbService.internal_unsafeWrite(mockRef, dirtyData);
 
-    expect(updateDoc).toHaveBeenCalledWith(
+    expect(setDoc).toHaveBeenCalledWith(
       mockRef,
-      { email: '' } // Verified bypass
+      { email: '' },
+      { merge: true }
     );
   });
 });

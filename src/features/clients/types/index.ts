@@ -106,8 +106,8 @@ export interface ClientAnalytics {
    *  Null if fewer than 2 measurements have weight data. */
   weightChange: number | null;
 
-  /** Total number of measurement entries for this client. */
-  measurementCount: number;
+  /** Total number of measurement entries in the current recent window (50). */
+  recentMeasurementCount: number;
 
   /** Directional weight trend across all measurements. */
   measurementTrend: MeasurementTrend;
@@ -115,8 +115,8 @@ export interface ClientAnalytics {
   /** Date of the most recent measurement. Null if none. */
   lastMeasurementDate: Date | null;
 
-  /** Total number of session logs (any status) recorded. */
-  totalSessions: number;
+  /** Total number of session logs in the current recent window (50). */
+  recentSessionCount: number;
 
   /** Date of the most recent session log. Null if none. */
   lastSessionDate: Date | null;

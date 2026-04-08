@@ -109,10 +109,10 @@ export function useClientDetail(clientId: string): ClientDetailState {
 
     const latestWeight:      number | null = withWeight[0]?.weight_kg ?? null;
     const lastMeasurementDate: Date | null = measurements[0]?.date    ?? null;
-    const measurementCount:  number        = measurements.length;
+    const recentMeasurementCount:  number  = measurements.length;
 
-    const totalSessions:     number        = sessions.length;
-    const lastSessionDate:   Date | null   = sessions[0]?.date        ?? null;
+    const recentSessionCount:     number   = sessions.length;
+    const lastSessionDate:        Date | null = sessions[0]?.date     ?? null;
 
     // Weight change: newest weight − oldest weight (both metric kg, guaranteed by service)
     let weightChange: number | null = null;
@@ -133,10 +133,10 @@ export function useClientDetail(clientId: string): ClientDetailState {
     return {
       latestWeight,
       weightChange,
-      measurementCount,
+      recentMeasurementCount,
       measurementTrend,
       lastMeasurementDate,
-      totalSessions,
+      recentSessionCount,
       lastSessionDate,
     };
   })();
