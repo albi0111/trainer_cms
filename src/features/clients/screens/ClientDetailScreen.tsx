@@ -310,11 +310,17 @@ export const ClientDetailScreen = ({ route, navigation }: Props) => {
           <InfoRow label="Goal"   value={client.goal}  />
           <Divider style={styles.divider} />
           <Text variant="titleSmall" style={styles.sectionTitle}>Progress Summary</Text>
+          {analytics.latestWeight != null && (
+            <InfoRow label="Current weight" value={`${analytics.latestWeight} kg`} />
+          )}
           {analytics.weightChange != null && (
             <InfoRow
               label="Weight change"
               value={`${analytics.weightChange > 0 ? '+' : ''}${analytics.weightChange} kg`}
             />
+          )}
+          {analytics.measurementTrend !== 'insufficient' && (
+            <InfoRow label="Trend" value={analytics.measurementTrend} />
           )}
           {analytics.lastMeasurementDate && (
             <InfoRow
@@ -322,7 +328,7 @@ export const ClientDetailScreen = ({ route, navigation }: Props) => {
               value={analytics.lastMeasurementDate.toLocaleDateString()}
             />
           )}
-          <InfoRow label="Total measurements" value={String(analytics.totalMeasurements)} />
+          <InfoRow label="Measurements" value={String(analytics.measurementCount)} />
         </>
       )}
     </ScrollView>

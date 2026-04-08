@@ -7,7 +7,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useClientStore } from '../../../store/useClientStore';
 import { useDeviceType } from '../../../shared/hooks/useDeviceType';
 import { ClientWithProfile, ClientDisplayStatus } from '../types';
-import { deriveClientStatus } from '../utils/deriveClientStatus';
 import { ClientFormModal } from '../components/ClientFormModal';
 import { ClientStackParamList } from '../../../app/navigation/AppNavigator';
 

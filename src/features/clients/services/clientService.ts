@@ -7,6 +7,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   onSnapshot,
   serverTimestamp,
   Timestamp,
@@ -21,7 +22,19 @@ import { generateSearchTokens } from '../../../shared/utils/searchUtils';
 import { sanitizeUpdate, lbsToKg, inchesToCm } from '../../../shared/utils/sanitizeUtils';
 
 const CLIENTS_COLLECTION = 'clients';
-const MEASUREMENTS_SUB = 'measurements';
+const MEASUREMENTS_SUB   = 'measurements';
+
+// ─── FK Naming Convention ─────────────────────────────────────────────────────
+// client_id is the canonical FK field name used across ALL subcollections and
+// future feature collections (Session, SessionLog, Report, etc.).
+// Any new collection that references a client MUST use this field name.
+// This constant documents the convention — import it if you need the literal string.
+export const CLIENT_ID_FK = 'client_id' as const;
+
+// Maximum measurement entries returned per subscription by default.
+// Keeps Firestore reads bounded as histories grow.
+// Use a paginated query (Phase 2+) for historical data export / full history view.
+const MEASUREMENTS_PAGE_SIZE = 50;
 
 // ─── Input types ──────────────────────────────────────────────────────────────
 
@@ -212,7 +225,13 @@ export const clientService = {
 
   /**
    * Live subscription to a client's measurement subcollection.
-   * Results ordered newest-first (date DESC) for display.
+   * Returns at most MEASUREMENTS_PAGE_SIZE (50) entries, ordered newest-first.
+   *
+   * WHY BOUNDED: measurement histories grow unboundedly over time. Limiting
+   * to 50 keeps read costs and UI render cost flat regardless of history size.
+   * For analytics that need ALL history (reports, graphs), add a separate
+   * one-shot getAll() method — do not inflate this subscription.
+   *
    * Returns an unsubscribe function — call on hook/screen cleanup.
    */
   subscribeMeasurements(
@@ -223,12 +242,13 @@ export const clientService = {
     const q = query(
       collection(db, CLIENTS_COLLECTION, clientId, MEASUREMENTS_SUB).withConverter(measurementConverter),
       where('deleted', '==', false),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(MEASUREMENTS_PAGE_SIZE)  // bounded read — prevents unbounded growth cost
     );
     return onSnapshot(
       q,
       (snapshot) => onUpdate(snapshot.docs.map((d) => d.data())),
-      (error) => onError(error)
+      (error)    => onError(error)
     );
   },
 };

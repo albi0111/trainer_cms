@@ -79,12 +79,38 @@ export interface ClientMeasurement extends BaseModel {
 
 // ─── Analytics (Derived — never stored) ──────────────────────────────────────
 // Computed by useClientDetail hook from the live measurements array.
-// Session-based fields (attendanceRate, totalSessions) return null until Phase 2.
+// All fields are deterministic and reproducible — no side effects, no Firestore writes.
+//
+// CONTRACT:
+//   - latestWeight    → most recent weight_kg entry; null if no weight logged
+//   - weightChange    → newest.weight_kg − oldest.weight_kg; null if <2 weight entries
+//   - measurementCount→ total non-deleted measurement documents observed
+//   - measurementTrend→ directional summary based on weight readings:
+//       'improving'    → weight trending down (positive for fat-loss goals)
+//       'gaining'      → weight trending up   (positive for muscle-gain goals)
+//       'stable'       → last vs. first Δ within ±0.5 kg
+//       'insufficient' → fewer than 2 weight measurements to determine direction
+//
+// Phase 2 extension:
+//   Add session-based fields (attendanceRate, totalSessions) here when
+//   the Session system lands. They MUST remain derived — never store them.
+
+export type MeasurementTrend = 'improving' | 'gaining' | 'stable' | 'insufficient';
 
 export interface ClientAnalytics {
-  weightChange: number | null;            // measurements[last].weight_kg - measurements[first].weight_kg
-  lastMeasurementDate: Date | null;       // most recent measurement date
-  totalMeasurements: number;
-  attendanceRate: number | null;          // Phase 2 — null until sessions are implemented
-  totalSessions: number | null;           // Phase 2 — null until sessions are implemented
+  /** Most recent weight reading in kg. Null if no weight ever logged. */
+  latestWeight: number | null;
+
+  /** Net weight change (kg) across all measurements: newest − oldest.
+   *  Null if fewer than 2 measurements have weight data. */
+  weightChange: number | null;
+
+  /** Total number of measurement entries for this client. */
+  measurementCount: number;
+
+  /** Directional weight trend across all measurements. */
+  measurementTrend: MeasurementTrend;
+
+  /** Date of the most recent measurement. Null if none. */
+  lastMeasurementDate: Date | null;
 }

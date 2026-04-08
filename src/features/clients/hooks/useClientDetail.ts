@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../database/firebase';
 import { clientConverter }   from '../../../database/converters/clientConverter';
-import { ClientWithProfile, ClientMeasurement, ClientAnalytics, ClientDisplayStatus } from '../types';
-import { clientService }      from '../services/clientService';
+import { ClientWithProfile, ClientMeasurement, ClientAnalytics, ClientDisplayStatus, MeasurementTrend } from '../types';
+import { clientService }     from '../services/clientService';
 import { deriveClientStatus } from '../utils/deriveClientStatus';
 
 interface ClientDetailState {
@@ -20,17 +20,18 @@ interface ClientDetailState {
  *
  * Manages two concurrent Firestore subscriptions:
  *   1. Single client document (core + all profile fields)
- *   2. Measurements subcollection (ordered date DESC)
+ *   2. Measurements subcollection (latest 50, ordered date DESC)
  *
- * Both listeners clean up on unmount.
+ * Both listeners clean up on unmount — no memory leaks.
  *
  * STATUS:
- *   Calls deriveClientStatus() on every state update.
+ *   Calls deriveClientStatus() via ClientStatusContext on every state update.
  *   Returns `displayStatus` — the UI MUST use this, never client.status directly.
+ *   Phase 2: pass hasSessions to context once Session system is live.
  *
  * ANALYTICS:
  *   Derived in-memory from the measurement array — nothing stored in Firestore.
- *   Session-based fields (attendanceRate, totalSessions) are null until Phase 2.
+ *   Follows the strict ClientAnalytics contract defined in types/index.ts.
  */
 export function useClientDetail(clientId: string): ClientDetailState {
   const [client,       setClient]       = useState<ClientWithProfile | null>(null);
@@ -58,7 +59,7 @@ export function useClientDetail(clientId: string): ClientDetailState {
     return () => unsub();
   }, [clientId]);
 
-  // ── Measurements subcollection subscription ──────────────────────────────────
+  // ── Measurements subscription (latest 50, date DESC) ────────────────────────
   useEffect(() => {
     if (!clientId) return;
     const unsub = clientService.subscribeMeasurements(
@@ -70,39 +71,53 @@ export function useClientDetail(clientId: string): ClientDetailState {
   }, [clientId]);
 
   // ── Derived status ───────────────────────────────────────────────────────────
-  // Pure function — called every render with current data. No memoisation needed.
+  // Uses ClientStatusContext — extensible when Phase 2 session signals are available.
+  // Pass hasSessions: sessions.length > 0 here once the Session system is live.
   const displayStatus: ClientDisplayStatus = client
-    ? deriveClientStatus(client.status, measurements)
+    ? deriveClientStatus({
+        storedStatus:    client.status,
+        hasMeasurements: measurements.length > 0,
+        // hasSessions: undefined   ← Phase 2: pass from a session subscription
+      })
     : 'incomplete';
 
   // ── Derived analytics ────────────────────────────────────────────────────────
-  // measurements is sorted DESC (newest first) — service guarantees this ordering.
+  // Follows the strict ClientAnalytics contract. All values computed from the
+  // live measurement array — no Firestore reads, no storage, deterministic.
+  //
+  // measurements is ordered date DESC (service guarantees this).
+  //   measurements[0]                  = newest
+  //   measurements[measurements.length-1] = oldest
   const analytics: ClientAnalytics = (() => {
-    if (measurements.length === 0) {
-      return {
-        weightChange:        null,
-        lastMeasurementDate: null,
-        totalMeasurements:   0,
-        attendanceRate:      null,  // Phase 2
-        totalSessions:       null,  // Phase 2
-      };
+    // Extract only measurements that have a weight reading for weight-based calculations
+    const withWeight = measurements.filter((m) => m.weight_kg != null);
+
+    const latestWeight:      number | null = withWeight[0]?.weight_kg ?? null;
+    const lastMeasurementDate: Date | null = measurements[0]?.date    ?? null;
+    const measurementCount:  number        = measurements.length;
+
+    // Weight change: newest weight − oldest weight (both metric kg, guaranteed by service)
+    let weightChange: number | null = null;
+    if (withWeight.length >= 2) {
+      const newest = withWeight[0].weight_kg!;
+      const oldest = withWeight[withWeight.length - 1].weight_kg!;
+      weightChange = Math.round((newest - oldest) * 100) / 100;
     }
 
-    const newest = measurements[0];
-    const oldest = measurements[measurements.length - 1];
-
-    // Weight change: newest − oldest (both in kg — metric guaranteed by service)
-    const weightChange =
-      newest.weight_kg != null && oldest.weight_kg != null
-        ? Math.round((newest.weight_kg - oldest.weight_kg) * 100) / 100
-        : null;
+    // Trend — requires at least 2 weight readings; ±0.5 kg threshold for "stable"
+    let measurementTrend: MeasurementTrend = 'insufficient';
+    if (weightChange !== null) {
+      if (weightChange < -0.5)       measurementTrend = 'improving'; // weight loss
+      else if (weightChange > 0.5)   measurementTrend = 'gaining';   // weight gain
+      else                           measurementTrend = 'stable';
+    }
 
     return {
+      latestWeight,
       weightChange,
-      lastMeasurementDate: newest.date,
-      totalMeasurements:   measurements.length,
-      attendanceRate:      null,  // Phase 2
-      totalSessions:       null,  // Phase 2
+      measurementCount,
+      measurementTrend,
+      lastMeasurementDate,
     };
   })();
 
