@@ -32,6 +32,10 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+.env.development
+.env.production
+.env.test
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +43,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# AI Agents
+.agents/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
