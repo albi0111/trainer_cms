@@ -12,6 +12,11 @@ import { ClientWithProfile } from '../../features/clients/types';
  * toFirestore:
  *   - Spreads the object. FieldValues (serverTimestamp) pass through unmodified.
  */
+export interface ClientStatusContext {
+  /** Trainer-stored override. 'creating' is transient for optimistic UI. */
+  storedStatus: 'active' | 'inactive' | 'creating';
+}
+
 export const clientConverter: FirestoreDataConverter<ClientWithProfile> = {
   toFirestore(client: ClientWithProfile) {
     return { ...client };
@@ -34,22 +39,25 @@ export const clientConverter: FirestoreDataConverter<ClientWithProfile> = {
         : (data.deleted_at ?? null),
 
       // ── Client core ────────────────────────────────────────────────────────
+      client_uuid:   data.client_uuid ?? '',
       name:          data.name   ?? '',
-      // Stored status only holds 'active' | 'inactive'.
-      // UI must call deriveClientStatus() — never use this value directly.
       status:        data.status ?? 'active',
       search_tokens: data.search_tokens ?? [],
+      created_at_local: data.created_at_local instanceof Timestamp
+        ? data.created_at_local.toDate()
+        : (data.created_at_local ? new Date(data.created_at_local) : new Date()),
 
       // ── ClientProfile (all optional — undefined if not in Firestore) ───────
       email:              data.email              ?? undefined,
       phone:              data.phone              ?? undefined,
+      address:            data.address            ?? undefined,
       goal:               data.goal               ?? undefined,
       occupation:         data.occupation         ?? undefined,
+      lifestyle:          data.lifestyle          ?? undefined,
       activity_level:     data.activity_level     ?? undefined,
       sleep_quality:      data.sleep_quality      ?? undefined,
       meal_timing:        data.meal_timing        ?? undefined,
       medical_conditions: data.medical_conditions ?? undefined,
-      notes:              data.notes              ?? undefined,
     };
   },
 };

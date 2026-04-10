@@ -1,33 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
+  Modal,
+  SafeAreaView,
 } from 'react-native';
-import {
-  Appbar,
-  Text,
-  TextInput,
-  Button,
-  Chip,
-  Divider,
-  FAB,
-  Portal,
-  Dialog,
-  useTheme,
-  ActivityIndicator,
-  Banner,
-} from 'react-native-paper';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { StackScreenProps } from '@react-navigation/stack';
+
+import { useAppTheme, useAppStyle } from '../../../theme/ThemeContext';
+import { AppTheme } from '../../../theme';
+import { Stack } from '../../../shared/components/layout/Stack';
 import { ClientStackParamList } from '../../../app/navigation/AppNavigator';
 import { useClientDetail } from '../hooks/useClientDetail';
 import { useClientStore } from '../../../store/useClientStore';
-import { ClientProfile } from '../types';
-import { MeasurementInput } from '../services/clientService';
-import { sanitizeUpdate } from '../../../shared/utils/sanitizeUtils';
+import { useClientFormStore } from '../../../store/useClientFormStore';
+import { ThemeText } from '../../../shared/components/ThemeText';
+import { Button } from '../../../shared/components/Button';
+import { ClientCreationStepper } from '../components/ClientCreationStepper';
+import { LoadingState } from '../../../shared/components/feedback/LoadingState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,49 +31,80 @@ const TABS: TabKey[] = ['Overview', 'Lifestyle', 'Measurements', 'Sessions', 'No
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
-const STATUS_COLORS = {
-  incomplete: '#f59e0b',
-  active:     '#10b981',
-  inactive:   '#6b7280',
-};
+const StatusBadge = ({ status }: { status: 'incomplete' | 'active' | 'inactive' }) => {
+  const styles = useAppStyle((t: AppTheme) => {
+    const colors = {
+      incomplete: t.colors.warning,
+      active:     t.colors.success,
+      inactive:   t.colors.textTertiary,
+    };
+    return StyleSheet.create({
+      badge: {
+        backgroundColor: colors[status] + '22',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+      },
+      text: {
+        color: colors[status],
+        fontWeight: '800',
+        fontSize: 10,
+        textTransform: 'uppercase',
+      }
+    });
+  });
 
-const StatusBadge = ({ status }: { status: 'incomplete' | 'active' | 'inactive' }) => (
-  <Chip
-    style={[styles.statusChip, { backgroundColor: STATUS_COLORS[status] + '22' }]}
-    textStyle={{ color: STATUS_COLORS[status], fontWeight: '600', fontSize: 12 }}
-    compact
-  >
-    {status.toUpperCase()}
-  </Chip>
-);
+  return (
+    <View style={styles.badge}>
+      <ThemeText style={styles.text}>{status}</ThemeText>
+    </View>
+  );
+};
 
 // ─── Tab Bar ──────────────────────────────────────────────────────────────────
 
-interface TabBarProps {
-  active: TabKey;
-  onPress: (tab: TabKey) => void;
-}
+const TabBar = ({ active, onPress }: { active: TabKey; onPress: (tab: TabKey) => void }) => {
+  const styles = useAppStyle((t: AppTheme) => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      backgroundColor: t.colors.surface,
+      paddingHorizontal: t.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border,
+    },
+    tab: {
+      paddingVertical: t.spacing.md,
+      paddingHorizontal: t.spacing.sm,
+      marginRight: t.spacing.md,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    activeTab: {
+      borderBottomColor: t.colors.primary,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: '600',
+    }
+  }));
 
-const TabBar = ({ active, onPress }: TabBarProps) => {
-  const theme = useTheme();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.container}>
       {TABS.map((tab) => {
         const isActive = tab === active;
         return (
           <Pressable
             key={tab}
             onPress={() => onPress(tab)}
-            style={[styles.tabItem, isActive && { borderBottomColor: theme.colors.primary, borderBottomWidth: 2 }]}
+            style={[styles.tab, isActive && styles.activeTab]}
           >
-            <Text
-              style={[
-                styles.tabLabel,
-                isActive ? { color: theme.colors.primary, fontWeight: '700' } : { color: '#888' },
-              ]}
+            <ThemeText 
+              style={styles.label} 
+              color={isActive ? 'primary' : 'textSecondary'}
             >
               {tab}
-            </Text>
+            </ThemeText>
           </Pressable>
         );
       })}
@@ -88,434 +112,208 @@ const TabBar = ({ active, onPress }: TabBarProps) => {
   );
 };
 
-// ─── Add Measurement Dialog ───────────────────────────────────────────────────
-
-interface AddMeasurementDialogProps {
-  visible: boolean;
-  clientId: string;
-  onDismiss: () => void;
-}
-
-const AddMeasurementDialog = ({ visible, clientId, onDismiss }: AddMeasurementDialogProps) => {
-  const { addMeasurement } = useClientStore();
-  const [weight, setWeight]   = useState('');
-  const [height, setHeight]   = useState('');
-  const [waist,  setWaist]    = useState('');
-  const [hip,    setHip]      = useState('');
-  const [chest,  setChest]    = useState('');
-  const [bfPct,  setBfPct]    = useState('');
-  const [notes,  setNotes]    = useState('');
-  const [saving, setSaving]   = useState(false);
-
-  const reset = () => {
-    setWeight(''); setHeight(''); setWaist('');
-    setHip(''); setChest(''); setBfPct(''); setNotes('');
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const input: MeasurementInput = {
-        date:        new Date(),
-        unit_system: 'metric',
-        source:      'manual',
-        ...(weight ? { weight: parseFloat(weight) } : {}),
-        ...(height ? { height: parseFloat(height) } : {}),
-        ...(waist  ? { waist:  parseFloat(waist)  } : {}),
-        ...(hip    ? { hip:    parseFloat(hip)    } : {}),
-        ...(chest  ? { chest:  parseFloat(chest)  } : {}),
-        ...(bfPct  ? { body_fat_pct: parseFloat(bfPct) } : {}),
-        ...(notes  ? { notes }                          : {}),
-      };
-      await addMeasurement(clientId, input);
-      reset();
-      onDismiss();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const numericInput = (label: string, value: string, onChange: (v: string) => void) => (
-    <TextInput
-      key={label}
-      label={label}
-      value={value}
-      onChangeText={onChange}
-      mode="outlined"
-      keyboardType="decimal-pad"
-      style={styles.measureInput}
-      dense
-    />
-  );
-
-  return (
-    <Portal>
-      <Dialog visible={visible} onDismiss={onDismiss} style={styles.dialog}>
-        <Dialog.Title>Add Measurement</Dialog.Title>
-        <Dialog.ScrollArea style={{ maxHeight: 380 }}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View style={styles.measureGrid}>
-                {numericInput('Weight (kg)',    weight, setWeight)}
-                {numericInput('Height (cm)',    height, setHeight)}
-                {numericInput('Waist (cm)',     waist,  setWaist)}
-                {numericInput('Hip (cm)',       hip,    setHip)}
-                {numericInput('Chest (cm)',     chest,  setChest)}
-                {numericInput('Body fat (%)', bfPct,  setBfPct)}
-              </View>
-              <TextInput
-                label="Notes (optional)"
-                value={notes}
-                onChangeText={setNotes}
-                mode="outlined"
-                multiline
-                numberOfLines={2}
-                style={[styles.measureInput, { marginHorizontal: 16 }]}
-              />
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </Dialog.ScrollArea>
-        <Dialog.Actions>
-          <Button onPress={onDismiss} disabled={saving}>Cancel</Button>
-          <Button onPress={handleSave} loading={saving} mode="contained">Save</Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
-  );
-};
-
-// ─── Tab content components ───────────────────────────────────────────────────
-
-const InfoRow = ({ label, value }: { label: string; value?: string }) => {
-  if (!value) return null;
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-};
-
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export const ClientDetailScreen = ({ route, navigation }: Props) => {
   const { clientId } = route.params;
-  const theme = useTheme();
+  const theme = useAppTheme();
+  
+  const { client, measurements, displayStatus, analytics, isLoading } = useClientDetail(clientId);
+  const { updateProfile, setSelectedClient, isSyncing } = useClientStore();
+  const { startEdit, resetForm } = useClientFormStore();
 
-  const { client, measurements, displayStatus, analytics, isLoading, error } =
-    useClientDetail(clientId);
+  const [activeTab, setActiveTab] = useState<TabKey>('Overview');
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const { updateProfile, error: storeError, clearError } = useClientStore();
+  // Sync selectedClient to store for tablet sidebar logic
+  useEffect(() => {
+    if (client) {
+      setSelectedClient(client);
+    }
+  }, [client, setSelectedClient]);
 
-  const [activeTab,            setActiveTab]            = useState<TabKey>('Overview');
-  const [showMeasureDialog,    setShowMeasureDialog]    = useState(false);
-  const [isEditingOverview,    setIsEditingOverview]    = useState(false);
-
-  // Inline edit state for Overview tab
-  const [editName,  setEditName]  = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editGoal,  setEditGoal]  = useState('');
-
-  const startEditOverview = () => {
-    setEditName(client?.name  ?? '');
-    setEditEmail(client?.email ?? '');
-    setEditPhone(client?.phone ?? '');
-    setEditGoal(client?.goal  ?? '');
-    setIsEditingOverview(true);
-  };
-
-  const saveOverview = async () => {
-    if (!client || !editName.trim()) return;
-    await updateProfile(
-      client.id,
-      { name: editName.trim(), email: editEmail, phone: editPhone, goal: editGoal },
-      client.version
-    );
-    setIsEditingOverview(false);
-  };
-
-  // ── Lifestyle edit state ──────────────────────────────────────────────────
-  const [saving, setSaving] = useState(false);
-  const [lifestyleForm, setLifestyleForm] = useState<Partial<ClientProfile>>({});
-
-  // Notes tab state — lifted here to avoid useState inside a render callback
-  const [noteText,   setNoteText]   = useState('');
-  const [noteSaving, setNoteSaving] = useState(false);
-
-  const initLifestyleForm = () => {
-    setLifestyleForm({
-      occupation:         client?.occupation         ?? '',
-      meal_timing:        client?.meal_timing        ?? '',
-      medical_conditions: client?.medical_conditions ?? '',
-    });
-  };
-
-  const saveLifestyle = async () => {
-    if (!client) return;
-    setSaving(true);
-    try {
-      await updateProfile(client.id, lifestyleForm, client.version);
-    } finally {
-      setSaving(false);
+  const handleEdit = () => {
+    if (client) {
+      startEdit({
+        id: client.id,
+        client_uuid: client.client_uuid,
+        name: client.name,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+        goal: client.goal,
+        occupation: client.occupation,
+        lifestyle: client.lifestyle,
+        medical_conditions: client.medical_conditions,
+        notes: client.notes,
+      });
+      setShowEditModal(true);
     }
   };
 
-  // ── Loading / Error states ────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
-  }
+  const onUpdateComplete = async () => {
+    const { formData } = useClientFormStore.getState();
+    if (client) {
+      await updateProfile(client.id, formData);
+    }
+    setShowEditModal(false);
+    resetForm();
+  };
 
-  if (!client) {
-    return (
-      <View style={styles.centered}>
-        <Text>Client not found.</Text>
-      </View>
-    );
-  }
+  const styles = useAppStyle((t: AppTheme) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.colors.background },
+    header: {
+      paddingHorizontal: t.spacing.lg,
+      paddingVertical: t.spacing.md,
+      backgroundColor: t.colors.background,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    content: { flex: 1 },
+    tabBody: { flex: 1, padding: t.spacing.lg },
+    card: {
+      backgroundColor: t.colors.surface,
+      borderRadius: 16,
+      padding: t.spacing.md,
+      marginBottom: t.spacing.md,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: t.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.border + '44',
+    },
+    syncIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      position: 'absolute',
+      top: 10,
+      right: 16,
+    }
+  }));
 
-  // ── Tab content ───────────────────────────────────────────────────────────
+  if (isLoading) return <LoadingState variant="skeleton" />;
+  if (!client) return <ThemeText>Client not found</ThemeText>;
 
   const renderOverview = () => (
-    <ScrollView contentContainerStyle={styles.tabContent}>
-      <View style={styles.overviewHeader}>
-        <StatusBadge status={displayStatus} />
-        {!isEditingOverview && (
-          <Button icon="pencil" onPress={startEditOverview} compact mode="text">
-            Edit
-          </Button>
-        )}
-      </View>
-
-      {isEditingOverview ? (
-        <View style={styles.editSection}>
-          <TextInput label="Name *" value={editName} onChangeText={setEditName} mode="outlined" style={styles.input} />
-          <TextInput label="Email"  value={editEmail} onChangeText={setEditEmail} mode="outlined" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
-          <TextInput label="Phone"  value={editPhone} onChangeText={setEditPhone} mode="outlined" keyboardType="phone-pad" style={styles.input} />
-          <TextInput label="Goal"   value={editGoal}  onChangeText={setEditGoal}  mode="outlined" multiline numberOfLines={2} style={styles.input} />
-          <View style={styles.editActions}>
-            <Button onPress={() => setIsEditingOverview(false)}>Cancel</Button>
-            <Button onPress={saveOverview} disabled={!editName.trim()} mode="contained">Save</Button>
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <Stack gap="lg">
+        <View style={styles.card}>
+          <ThemeText level="h2" style={{ marginBottom: 4 }}>{client.name}</ThemeText>
+          <StatusBadge status={displayStatus} />
+          <View style={{ marginTop: 16 }}>
+            <View style={styles.infoRow}>
+              <ThemeText color="textSecondary">Email</ThemeText>
+              <ThemeText>{client.email || '—'}</ThemeText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemeText color="textSecondary">Phone</ThemeText>
+              <ThemeText>{client.phone || '—'}</ThemeText>
+            </View>
+            <View style={styles.infoRow}>
+              <ThemeText color="textSecondary">Goal</ThemeText>
+              <ThemeText numberOfLines={1}>{client.goal || '—'}</ThemeText>
+            </View>
           </View>
         </View>
-      ) : (
-        <>
-          <Text variant="headlineSmall" style={styles.clientName}>{client.name}</Text>
-          <InfoRow label="Email"  value={client.email} />
-          <InfoRow label="Phone"  value={client.phone} />
-          <InfoRow label="Goal"   value={client.goal}  />
-          <Divider style={styles.divider} />
-          <Text variant="titleSmall" style={styles.sectionTitle}>Progress Summary</Text>
-          {analytics.latestWeight != null && (
-            <InfoRow label="Current weight" value={`${analytics.latestWeight} kg`} />
-          )}
-          {analytics.weightChange != null && (
-            <InfoRow
-              label="Weight change"
-              value={`${analytics.weightChange > 0 ? '+' : ''}${analytics.weightChange} kg`}
-            />
-          )}
-          {analytics.measurementTrend !== 'insufficient' && (
-            <InfoRow label="Trend" value={analytics.measurementTrend} />
-          )}
-          {analytics.lastMeasurementDate && (
-            <InfoRow
-              label="Last measurement"
-              value={analytics.lastMeasurementDate.toLocaleDateString()}
-            />
-          )}
-          <InfoRow label="Measurements" value={String(analytics.measurementCount)} />
-        </>
-      )}
+
+        <View style={styles.card}>
+          <ThemeText level="h3" style={{ marginBottom: 12 }}>Analytics</ThemeText>
+          <View style={styles.infoRow}>
+            <ThemeText color="textSecondary">Latest Weight</ThemeText>
+            <ThemeText>{analytics.latestWeight ? `${analytics.latestWeight} kg` : '—'}</ThemeText>
+          </View>
+          <View style={styles.infoRow}>
+            <ThemeText color="textSecondary">Trend</ThemeText>
+            <ThemeText color="primary">{analytics.measurementTrend.toUpperCase()}</ThemeText>
+          </View>
+        </View>
+      </Stack>
     </ScrollView>
   );
 
   const renderLifestyle = () => (
-    <ScrollView contentContainerStyle={styles.tabContent}>
-      <Text variant="titleSmall" style={styles.sectionTitle}>Lifestyle & Health</Text>
-
-      <TextInput
-        label="Occupation"
-        value={lifestyleForm.occupation ?? client.occupation ?? ''}
-        onFocus={initLifestyleForm}
-        onChangeText={(v) => setLifestyleForm((f) => ({ ...f, occupation: v }))}
-        mode="outlined" style={styles.input}
-      />
-      <TextInput
-        label="Meal timing / Diet notes"
-        value={lifestyleForm.meal_timing ?? client.meal_timing ?? ''}
-        onFocus={initLifestyleForm}
-        onChangeText={(v) => setLifestyleForm((f) => ({ ...f, meal_timing: v }))}
-        mode="outlined" multiline numberOfLines={2} style={styles.input}
-      />
-      <TextInput
-        label="Medical conditions"
-        value={lifestyleForm.medical_conditions ?? client.medical_conditions ?? ''}
-        onFocus={initLifestyleForm}
-        onChangeText={(v) => setLifestyleForm((f) => ({ ...f, medical_conditions: v }))}
-        mode="outlined" multiline numberOfLines={2} style={styles.input}
-      />
-
-      <Button
-        onPress={saveLifestyle}
-        loading={saving}
-        mode="contained"
-        style={styles.saveBtn}
-        disabled={Object.keys(sanitizeUpdate(lifestyleForm)).length === 0 || saving}
-      >
-        Save Lifestyle Info
-      </Button>
+    <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={styles.card}>
+        <ThemeText level="h3" style={{ marginBottom: 12 }}>Lifestyle Details</ThemeText>
+        <ThemeText color="textSecondary" level="caption">Occupation</ThemeText>
+        <ThemeText style={{ marginBottom: 12 }}>{client.occupation || '—'}</ThemeText>
+        
+        <ThemeText color="textSecondary" level="caption">Lifestyle</ThemeText>
+        <ThemeText style={{ marginBottom: 12 }}>{client.lifestyle || '—'}</ThemeText>
+        
+        <ThemeText color="textSecondary" level="caption">Medical Conditions</ThemeText>
+        <ThemeText>{client.medical_conditions || '—'}</ThemeText>
+      </View>
     </ScrollView>
   );
 
   const renderMeasurements = () => (
-    <>
-      <ScrollView contentContainerStyle={[styles.tabContent, { paddingBottom: 80 }]}>
-        {measurements.length === 0 ? (
-          <Text style={styles.emptyText}>No measurements yet. Tap + to add one.</Text>
-        ) : (
-          measurements.map((m, idx) => (
-            <View key={m.id} style={styles.measureCard}>
-              <Text variant="titleSmall" style={styles.measureDate}>
-                {m.date.toLocaleDateString()}
-                {idx === 0 ? '  ✦ Latest' : ''}
-              </Text>
-              <View style={styles.measureRow}>
-                {m.weight_kg     != null && <Text style={styles.measureStat}>{m.weight_kg} kg</Text>}
-                {m.body_fat_pct  != null && <Text style={styles.measureStat}>{m.body_fat_pct}% BF</Text>}
-                {m.waist_cm      != null && <Text style={styles.measureStat}>Waist {m.waist_cm} cm</Text>}
-              </View>
-              {m.notes && <Text style={styles.measureNote}>{m.notes}</Text>}
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => setShowMeasureDialog(true)}
-      />
-
-      <AddMeasurementDialog
-        visible={showMeasureDialog}
-        clientId={clientId}
-        onDismiss={() => setShowMeasureDialog(false)}
-      />
-    </>
+    <ScrollView showsVerticalScrollIndicator={false}>
+      {measurements.length === 0 ? (
+        <ThemeText color="textTertiary">No measurements yet.</ThemeText>
+      ) : (
+        measurements.map(m => (
+          <View key={m.id} style={styles.card}>
+            <ThemeText level="h3">{new Date(m.date).toLocaleDateString()}</ThemeText>
+            <ThemeText color="primary" level="h2">{m.weight_kg} kg</ThemeText>
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 
-  const renderSessions = () => (
-    <View style={styles.centered}>
-      <Text variant="titleMedium" style={styles.placeholderTitle}>Sessions</Text>
-      <Text style={styles.placeholderSub}>Session tracking is coming in Phase 2.</Text>
-    </View>
-  );
-
-  const renderNotes = () => {
-    const saveNotes = async () => {
-      setNoteSaving(true);
-      try {
-        if (!client) return;
-        await updateProfile(client.id, { notes: noteText }, client.version);
-      } finally {
-        setNoteSaving(false);
-      }
-    };
-
-    return (
-      <View style={styles.tabContent}>
-        <TextInput
-          label="Notes"
-          value={noteText}
-          onChangeText={setNoteText}
-          mode="outlined"
-          multiline
-          numberOfLines={10}
-          style={{ flex: 1 }}
-        />
-        <Button
-          onPress={saveNotes}
-          loading={noteSaving}
-          mode="contained"
-          style={styles.saveBtn}
-        >
-          Save Notes
-        </Button>
-      </View>
-    );
-  };
-
-  const tabRenderers: Record<TabKey, () => React.ReactNode> = {
-    Overview:     renderOverview,
-    Lifestyle:    renderLifestyle,
-    Measurements: renderMeasurements,
-    Sessions:     renderSessions,
-    Notes:        renderNotes,
-  };
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
-      <Appbar.Header elevated>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title={client.name} />
-      </Appbar.Header>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Icon name="chevron-left" size={32} color={theme.colors.textPrimary} />
+        </Pressable>
+        <ThemeText style={{ fontWeight: '800', fontSize: 18 }}>Profile</ThemeText>
+        <Pressable onPress={handleEdit}>
+          <Icon name="pencil-outline" size={24} color={theme.colors.primary} />
+        </Pressable>
+      </View>
 
-      <Banner
-        visible={!!(error || storeError)}
-        actions={[{ label: 'Dismiss', onPress: clearError }]}
-        icon="alert-circle-outline"
-      >
-        {error ?? storeError ?? ''}
-      </Banner>
+      {isSyncing && (
+        <View style={styles.syncIndicator}>
+          <Icon name="cloud-sync" size={16} color={theme.colors.primary} />
+          <ThemeText level="caption" color="primary">SYNCING</ThemeText>
+        </View>
+      )}
 
       <TabBar active={activeTab} onPress={setActiveTab} />
-      <Divider />
 
       <View style={styles.tabBody}>
-        {tabRenderers[activeTab]()}
+        {activeTab === 'Overview' && renderOverview()}
+        {activeTab === 'Lifestyle' && renderLifestyle()}
+        {activeTab === 'Measurements' && renderMeasurements()}
+        {activeTab === 'Sessions' && <ThemeText color="textTertiary">Coming in Phase 2</ThemeText>}
+        {activeTab === 'Notes' && (
+          <View style={styles.card}>
+            <ThemeText>{client.notes || 'No notes'}</ThemeText>
+          </View>
+        )}
       </View>
-    </View>
+
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <ClientCreationStepper 
+          onComplete={onUpdateComplete} 
+          onCancel={() => {
+            setShowEditModal(false);
+            resetForm();
+          }} 
+        />
+      </Modal>
+    </SafeAreaView>
   );
 };
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container:        { flex: 1 },
-  centered:         { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tabBar:           { flexGrow: 0, backgroundColor: '#fff' },
-  tabItem:          { paddingHorizontal: 16, paddingVertical: 12 },
-  tabLabel:         { fontSize: 13 },
-  tabBody:          { flex: 1 },
-  tabContent:       { padding: 16 },
-  overviewHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  statusChip:       { alignSelf: 'flex-start' },
-  clientName:       { fontWeight: '700', marginBottom: 12 },
-  infoRow:          { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  infoLabel:        { color: '#888', fontSize: 13 },
-  infoValue:        { color: '#222', fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-  divider:          { marginVertical: 16 },
-  sectionTitle:     { fontWeight: '700', marginBottom: 12, color: '#444' },
-  editSection:      { gap: 4 },
-  editActions:      { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
-  input:            { marginBottom: 8 },
-  saveBtn:          { marginTop: 16 },
-  measureCard:      { backgroundColor: '#f8f9fa', borderRadius: 12, padding: 12, marginBottom: 10 },
-  measureDate:      { fontWeight: '700', marginBottom: 4 },
-  measureRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  measureStat:      { backgroundColor: '#e8f5e9', color: '#2e7d32', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, fontSize: 13, fontWeight: '600' },
-  measureNote:      { marginTop: 6, color: '#666', fontSize: 12 },
-  measureGrid:      { flexDirection: 'row', flexWrap: 'wrap', padding: 8 },
-  measureInput:     { width: '47%', margin: '1.5%' },
-  emptyText:        { textAlign: 'center', marginTop: 50, color: '#aaa' },
-  placeholderTitle: { fontWeight: '700', marginBottom: 8, color: '#555' },
-  placeholderSub:   { color: '#aaa', textAlign: 'center' },
-  dialog:           { borderRadius: 16, marginHorizontal: 16 },
-  fab:              { position: 'absolute', right: 16, bottom: 16 },
-});

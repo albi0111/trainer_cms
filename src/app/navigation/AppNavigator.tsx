@@ -13,108 +13,147 @@ import {
 
 import { ClientListScreen }   from '../../features/clients/screens/ClientListScreen';
 import { ClientDetailScreen } from '../../features/clients/screens/ClientDetailScreen';
+import { CreateClientScreen } from '../../features/clients/screens/CreateClientScreen';
+import { useClientStore } from '../../store/useClientStore';
+import { useAppTheme } from '../../theme/ThemeContext';
 
 // ─── Param lists ──────────────────────────────────────────────────────────────
 
-/**
- * Type-safe param list for the Client Stack.
- * ClientDetail requires clientId — TypeScript enforces this at every navigate() call.
- */
 export type ClientStackParamList = {
   ClientList:   undefined;
   ClientDetail: { clientId: string };
+  CreateClient: undefined;
 };
 
 // ─── Client Stack ─────────────────────────────────────────────────────────────
 
 const ClientStack = createStackNavigator<ClientStackParamList>();
 
-/**
- * Inner stack for the Clients tab.
- * ClientListScreen → (item press) → ClientDetailScreen
- * headerShown: false — each screen manages its own Appbar for full control.
- */
 const ClientNavigator = () => (
   <ClientStack.Navigator screenOptions={{ headerShown: false }}>
     <ClientStack.Screen name="ClientList"   component={ClientListScreen} />
     <ClientStack.Screen name="ClientDetail" component={ClientDetailScreen} />
+    <ClientStack.Screen name="CreateClient" component={CreateClientScreen} />
   </ClientStack.Navigator>
 );
 
 // ─── Placeholder screens ───────────────────────────────────────────────────────
 
-const PlaceholderScreen = ({ name }: { name: string }) => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderText}>{name} Screen</Text>
-  </View>
-);
+const PlaceholderScreen = ({ name }: { name: string }) => {
+  const theme = useAppTheme();
+  return (
+    <View style={[styles.placeholder, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.placeholderText, { color: theme.colors.textSecondary }]}>{name} Screen</Text>
+    </View>
+  );
+};
 
 // ─── Screen definitions ───────────────────────────────────────────────────────
 
 type ScreenKey = 'Clients' | 'Sessions' | 'Physical';
 
+const SessionsScreen = () => <PlaceholderScreen name="Sessions" />;
+const PhysicalScreen = () => <PlaceholderScreen name="Physical Metrics" />;
+
 const SCREENS: Record<ScreenKey, { label: string; icon: string; component: React.ComponentType<any> }> = {
   Clients:  { label: 'Clients',          icon: 'account-group',    component: ClientNavigator },
-  Sessions: { label: 'Sessions',         icon: 'calendar-clock',   component: () => <PlaceholderScreen name="Sessions" /> },
-  Physical: { label: 'Physical Metrics', icon: 'chart-bell-curve', component: () => <PlaceholderScreen name="Physical Metrics" /> },
+  Sessions: { label: 'Sessions',         icon: 'calendar-clock',   component: SessionsScreen },
+  Physical: { label: 'Physical Metrics', icon: 'chart-bell-curve', component: PhysicalScreen },
 };
 
 // ─── Mobile: Bottom Tab Layout ────────────────────────────────────────────────
 
 const Tab = createBottomTabNavigator();
 
-const MobileTabs = () => (
-  <Tab.Navigator screenOptions={{ headerShown: false }}>
-    {(Object.keys(SCREENS) as ScreenKey[]).map((key) => {
-      const { label, icon, component } = SCREENS[key];
-      return (
-        <Tab.Screen
-          key={key}
-          name={`${key}Tab`}
-          component={component}
-          options={{
-            tabBarLabel: label,
-            tabBarIcon: ({ color, size }) => (
-              <Icon name={icon as any} color={color} size={size} />
-            ),
-          }}
-        />
-      );
-    })}
-  </Tab.Navigator>
-);
-
-// ─── Tablet: View-based Sidebar ───────────────────────────────────────────────
-// Pure React Native View layout — zero Reanimated/Drawer dependency.
-// ClientNavigator is rendered as the active content component,
-// preserving the full stack navigation (List → Detail) within the tablet layout.
-
-const TabletSidebar = () => {
-  const [activeScreen, setActiveScreen] = useState<ScreenKey>('Clients');
-  const ActiveComponent = SCREENS[activeScreen].component;
+const MobileTabs = () => {
+  const selectedClient = useClientStore(s => s.selectedClient);
+  const theme = useAppTheme();
+  const showTabs = !!selectedClient;
 
   return (
-    <SafeAreaView style={styles.tabletRoot}>
+    <Tab.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        tabBarStyle: { 
+          display: showTabs ? 'flex' : 'none', 
+          borderTopWidth: 0, 
+          elevation: 0,
+          backgroundColor: theme.colors.surface
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+      }}
+    >
+      {(Object.keys(SCREENS) as ScreenKey[]).map((key) => {
+        const { label, icon, component } = SCREENS[key];
+        return (
+          <Tab.Screen
+            key={key}
+            name={`${key}Tab`}
+            component={component}
+            options={{
+              tabBarLabel: label,
+              tabBarIcon: ({ color, size }) => (
+                <Icon name={icon as any} color={color} size={size} />
+              ),
+            }}
+          />
+        );
+      })}
+    </Tab.Navigator>
+  );
+};
+
+// ─── Tablet: Contextual Sidebar ───────────────────────────────────────────────
+
+const TabletSidebar = () => {
+  const theme = useAppTheme();
+  const selectedClient = useClientStore(s => s.selectedClient);
+  const [activeScreen, setActiveScreen] = useState<ScreenKey>('Clients');
+  
+  // Show sidebar ONLY after selecting a client
+  const showSidebar = !!selectedClient;
+  const ActiveComponent = SCREENS[activeScreen].component;
+
+  if (!showSidebar) {
+    return (
+      <SafeAreaView style={[styles.tabletRoot, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.tabletContent}>
+          <ClientNavigator />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.tabletRoot, { backgroundColor: theme.colors.background }]}>
       {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <Text style={styles.sidebarTitle}>Trainer CMS</Text>
+      <View style={[styles.sidebar, { backgroundColor: theme.colors.surface, borderRightColor: theme.colors.border }]}>
+        <Text style={[styles.sidebarTitle, { color: theme.colors.primary }]}>fit.persona</Text>
         {(Object.keys(SCREENS) as ScreenKey[]).map((key) => {
           const { label, icon } = SCREENS[key];
           const isActive = activeScreen === key;
           return (
             <TouchableOpacity
               key={key}
-              style={[styles.sidebarItem, isActive && styles.sidebarItemActive]}
+              style={[
+                styles.sidebarItem, 
+                isActive && { backgroundColor: theme.colors.surfaceElevated }
+              ]}
               onPress={() => setActiveScreen(key)}
               activeOpacity={0.7}
             >
               <Icon
                 name={icon as any}
                 size={22}
-                color={isActive ? '#6200ee' : '#555'}
+                color={isActive ? theme.colors.primary : theme.colors.textSecondary}
                 style={styles.sidebarIcon}
               />
-              <Text style={[styles.sidebarLabel, isActive && styles.sidebarLabelActive]}>
+              <Text style={[
+                styles.sidebarLabel, 
+                { color: theme.colors.textPrimary },
+                isActive && { fontWeight: '700', color: theme.colors.primary }
+              ]}>
                 {label}
               </Text>
             </TouchableOpacity>
@@ -122,7 +161,7 @@ const TabletSidebar = () => {
         })}
       </View>
 
-      {/* Main content — renders full ClientNavigator (stack) for Clients tab */}
+      {/* Main content */}
       <View style={styles.tabletContent}>
         <ActiveComponent />
       </View>
@@ -152,26 +191,18 @@ export const AppNavigator = () => {
 
 const styles = StyleSheet.create({
   placeholder:        { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  placeholderText:    { fontSize: 18, color: '#555' },
-  tabletRoot:         { flex: 1, flexDirection: 'row', backgroundColor: '#f4f4f8' },
+  placeholderText:    { fontSize: 18 },
+  tabletRoot:         { flex: 1, flexDirection: 'row' },
   sidebar:            {
-    width: 240,
-    backgroundColor: '#ffffff',
-    paddingTop: 24,
-    paddingHorizontal: 12,
+    width: 280, // More comfortable native iPad sidebar width
+    paddingTop: 32,
+    paddingHorizontal: 16,
     borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
+    elevation: 0, // Native Apple sidebars usually don't have deep shadows, just border
   },
-  sidebarTitle:       { fontSize: 16, fontWeight: '700', color: '#1a1a2e', marginBottom: 24, paddingLeft: 8, letterSpacing: 0.5 },
-  sidebarItem:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 10, marginBottom: 4 },
-  sidebarItemActive:  { backgroundColor: '#ede7f6' },
-  sidebarIcon:        { marginRight: 12 },
-  sidebarLabel:       { fontSize: 14, color: '#555', fontWeight: '500' },
-  sidebarLabelActive: { color: '#6200ee', fontWeight: '700' },
+  sidebarTitle:       { fontSize: 24, fontWeight: '900', textTransform: 'uppercase', marginBottom: 40, paddingLeft: 8, letterSpacing: 1.5 },
+  sidebarItem:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, borderRadius: 14, marginBottom: 6 },
+  sidebarIcon:        { marginRight: 16 },
+  sidebarLabel:       { fontSize: 16, fontWeight: '600' },
   tabletContent:      { flex: 1 },
 });

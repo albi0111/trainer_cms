@@ -34,7 +34,11 @@ export const measurementConverter: FirestoreDataConverter<ClientMeasurement> = {
 
       // ── Measurement fields ─────────────────────────────────────────────────
       client_id:   data.client_id   ?? '',
+      client_uuid: data.client_uuid ?? '', // FK reconciliation
       date:        data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date),
+      created_at_local: data.created_at_local instanceof Timestamp
+        ? data.created_at_local.toDate()
+        : (data.created_at_local ? new Date(data.created_at_local) : new Date()),
       unit_system: data.unit_system ?? 'metric',       // display context only
       source:      data.source      ?? 'manual',
 

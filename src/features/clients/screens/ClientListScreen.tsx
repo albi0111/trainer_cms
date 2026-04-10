@@ -1,90 +1,78 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { Appbar, Banner, FAB, Searchbar, Text, useTheme } from 'react-native-paper';
-import { FlashList } from '@shopify/flash-list';
+import { 
+  Pressable, 
+  StyleSheet, 
+  View, 
+  FlatList,
+  TextInput,
+  useWindowDimensions
+} from 'react-native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+
+import { ClientCard } from '../components/ClientCard';
+
+import { useAppTheme, useAppStyle } from '../../../theme/ThemeContext';
+import { AppTheme } from '../../../theme';
+import { ScreenContainer } from '../../../shared/components/layout/ScreenContainer';
+import { ThemeText } from '../../../shared/components/ThemeText';
+import { LoadingState } from '../../../shared/components/feedback/LoadingState';
+import { EmptyState } from '../../../shared/components/feedback/EmptyState';
+import { ErrorState } from '../../../shared/components/feedback/ErrorState';
+
 import { useClientStore } from '../../../store/useClientStore';
-import { useDeviceType } from '../../../shared/hooks/useDeviceType';
 import { ClientWithProfile, ClientDisplayStatus } from '../types';
-import { ClientFormModal } from '../components/ClientFormModal';
 import { ClientStackParamList } from '../../../app/navigation/AppNavigator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ListNav = StackNavigationProp<ClientStackParamList, 'ClientList'>;
 
-// ─── Status colour helper ─────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<ClientDisplayStatus, string> = {
-  incomplete: '#f59e0b',
-  active:     '#10b981',
-  inactive:   '#9ca3af',
-};
-
-// ─── List item ────────────────────────────────────────────────────────────────
-
-interface ClientItemProps {
-  client: ClientWithProfile;
-  onPress: () => void;
-}
-
-const ClientItem = React.memo(({ client, onPress }: ClientItemProps) => {
-  // Derive display status — measurements count is unknown at list level,
-  // so we use 0 as a conservative default. Detail screen has the full derivation.
-  // For the list we use stored status to distinguish inactive; otherwise we
-  // show 'active' (measurements are not loaded in the list subscription).
-  const displayStatus: ClientDisplayStatus =
-    client.status === 'inactive' ? 'inactive' : 'active';
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-      android_ripple={{ color: '#f0f0f0' }}
-    >
-      <View style={styles.itemContent}>
-        <Text variant="titleMedium" style={styles.itemName}>{client.name}</Text>
-        {client.goal ? (
-          <Text variant="bodySmall" style={styles.goalText} numberOfLines={1}>
-            {client.goal}
-          </Text>
-        ) : null}
-      </View>
-      <Text
-        variant="labelSmall"
-        style={[styles.statusText, { color: STATUS_COLORS[displayStatus] }]}
-      >
-        {displayStatus.toUpperCase()}
-      </Text>
-    </Pressable>
-  );
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 export const ClientListScreen = () => {
-  const theme       = useTheme();
-  const navigation  = useNavigation<ListNav>();
-  const deviceType  = useDeviceType();
+  const theme = useAppTheme();
+  const navigation = useNavigation<ListNav>();
+  const isFocused = useIsFocused();
 
-  const { clients, isLoading, error, subscribeClients, unsubscribeClients, clearError } =
-    useClientStore();
+  const { 
+    clients, 
+    isInitialLoading, 
+    isSyncing,
+    isOnline,
+    error, 
+    subscribeClients, 
+    unsubscribeClients,
+    setSelectedClient 
+  } = useClientStore();
 
-  const [rawQuery,     setRawQuery]     = useState('');
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isLandscape = width > 1000;
+  // Calculate columns based on layout for iPad
+  const numColumns = isTablet ? (isLandscape ? 3 : 2) : 1;
+
+  const [rawQuery, setRawQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Subscription lifecycle ──────────────────────────────────────────────────
+  // Clear selection when looking at the list (Hides sidebar on tablet)
+  useEffect(() => {
+    if (isFocused) {
+      setSelectedClient(null);
+    }
+  }, [isFocused, setSelectedClient]);
+
   useEffect(() => {
     subscribeClients();
     return () => unsubscribeClients();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subscribeClients, unsubscribeClients]);
 
-  // ── Debounced search ────────────────────────────────────────────────────────
   const onSearchChange = (text: string) => {
     setRawQuery(text);
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -94,118 +82,147 @@ export const ClientListScreen = () => {
     );
   };
 
-  useEffect(() => () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-  }, []);
-
-  // ── Filtered list ───────────────────────────────────────────────────────────
   const displayedClients = useMemo(() => {
     if (!searchQuery) return clients;
     return clients.filter((c) => c.name.toLowerCase().includes(searchQuery));
   }, [clients, searchQuery]);
 
-  // ── Render helpers ──────────────────────────────────────────────────────────
+  const styles = useAppStyle((t: AppTheme) => StyleSheet.create({
+    header: {
+      paddingVertical: t.spacing.xl,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+      letterSpacing: 1.5,
+    },
+    searchContainer: {
+      backgroundColor: t.colors.surface,
+      borderRadius: 16,
+      paddingHorizontal: t.spacing.md,
+      height: 54,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: t.spacing.lg,
+      borderWidth: 1,
+      borderColor: t.colors.border,
+    },
+    searchIcon: {
+      marginRight: t.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...t.typography.body1,
+      color: t.colors.textPrimary,
+    },
+    list: {
+      flex: 1,
+    },
+    listContent: {
+      paddingBottom: 100, // Space for FAB
+    },
+    columnWrapper: {
+      justifyContent: 'flex-start',
+      gap: t.spacing.md,
+      marginBottom: t.spacing.md,
+    },
+    gridItem: {
+      flex: 1,
+      maxWidth: numColumns > 1 ? `${100 / numColumns - 2}%` : '100%',
+      marginBottom: numColumns === 1 ? t.spacing.md : 0,
+    },
+    fab: {
+      position: 'absolute',
+      bottom: 24,
+      right: 24,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: t.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+    }
+  }));
+
   const renderItem = useCallback(
     ({ item }: { item: ClientWithProfile }) => (
-      <ClientItem
-        client={item}
-        onPress={() => navigation.navigate('ClientDetail', { clientId: item.id })}
-      />
+      <View style={styles.gridItem}>
+        <ClientCard
+          client={item}
+          onPress={() => {
+            setSelectedClient(item);
+            navigation.navigate('ClientDetail', { clientId: item.id });
+          }}
+        />
+      </View>
     ),
-    [navigation]
+    [navigation, setSelectedClient, styles.gridItem]
   );
 
-  const renderEmptyState = useCallback(
-    () =>
-      !isLoading ? (
-        <Text style={styles.empty}>
-          {searchQuery ? 'No clients match your search.' : 'No clients yet. Tap + to add one.'}
-        </Text>
-      ) : null,
-    [isLoading, searchQuery]
-  );
-
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
-      <Appbar.Header elevated>
-        <Appbar.Content title="My Clients" />
-      </Appbar.Header>
-
-      <Banner
-        visible={!!error}
-        actions={[{ label: 'Dismiss', onPress: clearError }]}
-        icon="alert-circle-outline"
-      >
-        {error ?? ''}
-      </Banner>
-
-      <Searchbar
-        placeholder="Search clients..."
-        onChangeText={onSearchChange}
-        value={rawQuery}
-        style={styles.searchBar}
-      />
-
-      {isLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      ) : (
-        <View style={[styles.content, deviceType === 'tablet' && styles.tabletLayout]}>
-          <View style={deviceType === 'tablet' ? styles.listPanel : styles.fullFlex}>
-            <FlashList
-              data={displayedClients}
-              renderItem={renderItem}
-              keyExtractor={(item) => item.id}
-              ListEmptyComponent={renderEmptyState}
-            />
-          </View>
-
-          {deviceType === 'tablet' && (
-            <View style={styles.detailPanel}>
-              <Text variant="displaySmall" style={styles.detailPlaceholder}>
-                Select a client
-              </Text>
+    <ScreenContainer>
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <ThemeText style={styles.title}>fit.persona</ThemeText>
+          {isSyncing && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon name="cloud-sync" size={18} color={theme.colors.primary} />
+              <ThemeText level="caption" color="primary">SYNCING</ThemeText>
             </View>
           )}
         </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Icon name="magnify" size={24} color={theme.colors.textSecondary} style={styles.searchIcon} />
+        <TextInput
+          placeholder="Search clients..."
+          placeholderTextColor={theme.colors.textSecondary}
+          onChangeText={onSearchChange}
+          value={rawQuery}
+          style={styles.searchInput}
+        />
+      </View>
+
+      {isInitialLoading && clients.length === 0 ? (
+        <LoadingState variant="skeleton" skeletonCount={5} />
+      ) : error ? (
+        <ErrorState message={error} onRetry={subscribeClients} />
+      ) : (
+        <FlatList
+          key={`grid-${numColumns}`} // Forces re-render when columns change
+          data={displayedClients}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.client_uuid || item.id}
+          numColumns={numColumns}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          ListEmptyComponent={
+            <EmptyState 
+              title={searchQuery ? "No results" : "No clients yet"} 
+              message={searchQuery ? "Try a different search term" : "Tap + to add your first client"}
+              icon={searchQuery ? "account-search-outline" : "account-plus-outline"}
+              actionLabel={searchQuery ? undefined : "Add Client"}
+              onAction={() => navigation.navigate('CreateClient')}
+            />
+          }
+        />
       )}
 
-      {/* Quick create modal */}
-      <ClientFormModal
-        visible={modalVisible}
-        onDismiss={() => setModalVisible(false)}
-        client={null}
-      />
-
-      <FAB
-        icon="plus"
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => setModalVisible(true)}
-      />
-    </View>
+      <Pressable 
+        style={styles.fab} 
+        onPress={() => navigation.navigate('CreateClient')}
+      >
+        <Icon name="plus" size={32} color={theme.colors.background} />
+      </Pressable>
+    </ScreenContainer>
   );
 };
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container:        { flex: 1 },
-  centered:         { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  searchBar:        { margin: 16, borderRadius: 12 },
-  content:          { flex: 1 },
-  tabletLayout:     { flexDirection: 'row' },
-  listPanel:        { width: 350, borderRightWidth: 1, borderRightColor: '#eee' },
-  fullFlex:         { flex: 1 },
-  detailPanel:      { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9f9f9' },
-  detailPlaceholder:{ opacity: 0.25 },
-  item:             { paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  itemPressed:      { backgroundColor: '#fafafa' },
-  itemContent:      { flex: 1 },
-  itemName:         { fontWeight: '600' },
-  goalText:         { opacity: 0.6, marginTop: 2 },
-  statusText:       { fontSize: 11, fontWeight: '700', marginLeft: 8 },
-  empty:            { textAlign: 'center', marginTop: 50, opacity: 0.45 },
-  fab:              { position: 'absolute', margin: 16, right: 0, bottom: 0 },
-});

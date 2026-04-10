@@ -7,8 +7,8 @@ import { ClientDisplayStatus } from '../types';
 // just to pre-declare future intent.
 
 export interface ClientStatusContext {
-  /** Trainer-stored override. Only 'inactive' is a meaningful stored value. */
-  storedStatus: 'active' | 'inactive';
+  /** Trainer-stored override. 'creating' is transient for optimistic UI. */
+  storedStatus: 'active' | 'inactive' | 'creating';
 
   /** True if the client has at least one non-deleted measurement. */
   hasMeasurements: boolean;

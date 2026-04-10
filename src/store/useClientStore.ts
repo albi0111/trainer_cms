@@ -1,8 +1,10 @@
 import { create } from 'zustand';
+import NetInfo from '@react-native-community/netinfo';
 import { ClientWithProfile, ClientMeasurement, ClientProfile } from '../features/clients/types';
 import { clientService, MeasurementInput } from '../features/clients/services/clientService';
 import { sessionService } from '../features/sessions/services/sessionService';
 import { SessionLogInput } from '../features/sessions/types';
+import { getChangedFields } from '../shared/utils/syncUtils';
 
 interface ClientState {
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -10,148 +12,228 @@ interface ClientState {
   selectedClient: ClientWithProfile | null;
 
   // ── Status ──────────────────────────────────────────────────────────────────
-  isLoading: boolean;   // true until first snapshot fires
+  isInitialLoading: boolean; // true until first snapshot fires
+  isSyncing: boolean;       // true during writes
+  isOnline: boolean;
   error: string | null;
 
   // ── Subscription lifecycle ──────────────────────────────────────────────────
   _unsubscribe: (() => void) | null;
 
   // ── Actions ─────────────────────────────────────────────────────────────────
-
-  /** Start live Firestore subscription. Safe to call multiple times. */
   subscribeClients: () => void;
-
-  /** Tear down the listener. Call on screen unmount. */
   unsubscribeClients: () => void;
-
-  /**
-   * Create a new client. Only name is required.
-   * Profile fields are optional — sanitized before write.
+  
+  /** 
+   * Create client with optimistic UI and UUID reconciliation.
    */
-  createClient: (name: string, profile?: Partial<ClientProfile>) => Promise<void>;
-
+  createClient: (name: string, profile?: Partial<ClientWithProfile>) => Promise<void>;
+  
   /**
-   * Partial profile update. Only non-empty fields are written.
-   * Existing Firestore values for omitted/empty keys are preserved.
+   * Delta-only update to prevent accidental overwrites.
    */
   updateProfile: (
     id: string,
-    data: { name?: string } & Partial<ClientProfile>,
-    currentVersion: number
+    data: Partial<ClientWithProfile>
   ) => Promise<void>;
 
-  /**
-   * Store the 'inactive' override flag.
-   * deriveClientStatus() will always respect this regardless of measurements.
-   */
   setInactive: (id: string, currentVersion: number) => Promise<void>;
-
-  /**
-   * Append a measurement to a client's subcollection.
-   * Never updates existing measurement documents.
-   */
   addMeasurement: (clientId: string, input: MeasurementInput) => Promise<void>;
-
-  /** Soft-delete — removes from list query immediately. */
   softDeleteClient: (id: string, currentVersion: number) => Promise<void>;
-
-  /**
-   * Append a session log entry to a client's subcollection.
-   * Handles validation and metric conversion at the service layer.
-   */
   addSessionLog: (clientId: string, input: SessionLogInput) => Promise<void>;
 
   setSelectedClient: (client: ClientWithProfile | null) => void;
   clearError: () => void;
+  setOnline: (isOnline: boolean) => void;
 }
 
-export const useClientStore = create<ClientState>((set, get) => ({
-  clients: [],
-  selectedClient: null,
-  isLoading: true,
-  error: null,
-  _unsubscribe: null,
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0,
+      v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
-  // ── Subscription ────────────────────────────────────────────────────────────
+export const useClientStore = create<ClientState>((set, get) => {
+  // Listen for network changes
+  NetInfo.addEventListener((state) => {
+    set({ isOnline: !!state.isConnected });
+  });
 
-  subscribeClients: () => {
-    if (get()._unsubscribe) return; // already subscribed — idempotent
+  return {
+    clients: [],
+    selectedClient: null,
+    isInitialLoading: true,
+    isSyncing: false,
+    isOnline: true,
+    error: null,
+    _unsubscribe: null,
 
-    const unsubscribe = clientService.subscribeToClients(
-      (clients) => set({ clients, isLoading: false, error: null }),
-      (error)   => set({ error: error.message, isLoading: false })
-    );
-    set({ _unsubscribe: unsubscribe });
-  },
+    setOnline: (isOnline) => set({ isOnline }),
 
-  unsubscribeClients: () => {
-    get()._unsubscribe?.();
-    set({ _unsubscribe: null });
-  },
+    subscribeClients: () => {
+      if (get()._unsubscribe) return; // idempotent
 
-  // ── Write actions ────────────────────────────────────────────────────────────
+      // SAFETY NET: If the network hangs (initial setup or invalid keys),
+      // we stop the loader after 10 seconds.
+      const fallbackTimer = setTimeout(() => {
+        if (get().isInitialLoading) {
+          set({ 
+            isInitialLoading: false, 
+            error: 'Connection Timeout. If this is a new project, ensure Firestore is enabled in Firebase Console and Security Rules are set to "test mode" or allow reads.' 
+          });
+        }
+      }, 10000);
 
-  createClient: async (name, profile) => {
-    set({ error: null });
-    try {
-      await clientService.createClient(name, profile);
-      // onSnapshot updates `clients` automatically — no manual refetch
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-      throw e;
-    }
-  },
+      const unsubscribe = clientService.subscribeToClients(
+        (serverClients) => {
+          clearTimeout(fallbackTimer);
+          set((state) => {
+            // SOFT-MERGE LOGIC
+            // 1. Preserve local UI flags (status: 'creating') for clients already in server list
+            const merged = serverClients.map((sd) => {
+              const local = state.clients.find((lc) => lc.client_uuid === sd.client_uuid);
+              if (local && (local as any).status === 'creating') {
+                return { ...sd, status: 'creating' } as ClientWithProfile;
+              }
+              return sd;
+            });
 
-  updateProfile: async (id, data, currentVersion) => {
-    set({ error: null });
-    try {
-      await clientService.updateProfile(id, data, currentVersion);
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-      throw e;
-    }
-  },
+            // 2. Keep "optimistic-only" clients that haven't hit the server yet
+            const localOnly = state.clients.filter(
+              (lc) => 
+                lc.id.startsWith('temp_') && 
+                !serverClients.some((sd) => sd.client_uuid === lc.client_uuid)
+            );
 
-  setInactive: async (id, currentVersion) => {
-    set({ error: null });
-    try {
-      await clientService.setInactive(id, currentVersion);
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-      throw e;
-    }
-  },
+            // 3. Sort by created_at_local (fallback) to ensure stable immediate ordering
+            const allClients = [...merged, ...localOnly].sort((a, b) => {
+              const dateA = a.created_at_local ? new Date(a.created_at_local).getTime() : 0;
+              const dateB = b.created_at_local ? new Date(b.created_at_local).getTime() : 0;
+              return dateB - dateA; // Newest first
+            });
 
-  addMeasurement: async (clientId, input) => {
-    set({ error: null });
-    try {
-      await clientService.addMeasurement(clientId, input);
-      // Measurements live in a subcollection — useClientDetail hook handles their subscription
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-      throw e;
-    }
-  },
+            return { 
+              clients: allClients, 
+              isInitialLoading: false, // Transition to false after first success
+              error: null 
+            };
+          });
+        },
+        (error) => {
+          clearTimeout(fallbackTimer);
+          set({ error: error.message, isInitialLoading: false });
+        }
+      );
+      set({ _unsubscribe: () => {
+        clearTimeout(fallbackTimer);
+        unsubscribe();
+      }});
+    },
 
-  softDeleteClient: async (id, currentVersion) => {
-    set({ error: null });
-    try {
-      await clientService.softDeleteClient(id, currentVersion);
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-    }
-  },
+    unsubscribeClients: () => {
+      get()._unsubscribe?.();
+      set({ _unsubscribe: null });
+    },
 
-  addSessionLog: async (clientId, input) => {
-    set({ error: null });
-    try {
-      await sessionService.addSessionLog(clientId, input);
-    } catch (e: unknown) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
-      throw e;
-    }
-  },
+    createClient: async (name, profile) => {
+      const client_uuid = generateUUID();
+      const tempId = `temp_${client_uuid}`;
+      
+      const optimisticClient: ClientWithProfile = {
+        id: tempId,
+        client_uuid,
+        name,
+        status: 'creating' as any,
+        created_at_local: new Date(),
+        search_tokens: [],
+        version: 1,
+        deleted: false,
+        ...(profile || {}),
+      } as ClientWithProfile;
 
-  setSelectedClient: (client) => set({ selectedClient: client }),
-  clearError: () => set({ error: null }),
-}));
+      // 1. ADD OPTIMISTICALLY (Instant local feedback)
+      set((state) => ({ 
+        clients: [optimisticClient, ...state.clients],
+        isSyncing: true,
+        error: null 
+      }));
+
+      // 2. DISPATCH BACKGROUND SYNC (Non-blocking)
+      clientService.createClient(name, { ...profile, client_uuid } as any)
+        .then(() => set({ isSyncing: false }))
+        .catch((e) => {
+          // Rollback on hard failure (e.g. perms)
+          set((state) => ({
+            clients: state.clients.filter((c) => c.id !== tempId),
+            error: e instanceof Error ? e.message : 'Creation failed',
+            isSyncing: false,
+          }));
+        });
+      
+      // Control returns to UI immediately — navigation happens while sync pulses
+    },
+
+    updateProfile: async (id, data) => {
+      const client = get().clients.find((c) => c.id === id);
+      if (!client) return;
+
+      const delta = getChangedFields(client, data);
+      if (Object.keys(delta).length === 0) return;
+
+      set({ isSyncing: true, error: null });
+      
+      // Background sync — fire and continue
+      clientService.updateProfile(id, delta, client.version)
+        .finally(() => set({ isSyncing: false }))
+        .catch((e) => set({ error: e instanceof Error ? e.message : 'Update failed' }));
+    },
+
+    setInactive: async (id, currentVersion) => {
+      set({ isSyncing: true, error: null });
+      try {
+        await clientService.setInactive(id, currentVersion);
+        set({ isSyncing: false });
+      } catch (e: unknown) {
+        set({ error: e instanceof Error ? e.message : 'Update failed', isSyncing: false });
+        throw e;
+      }
+    },
+
+    addMeasurement: async (clientId, input) => {
+      set({ isSyncing: true, error: null });
+      try {
+        await clientService.addMeasurement(clientId, input);
+        set({ isSyncing: false });
+      } catch (e: unknown) {
+        set({ error: e instanceof Error ? e.message : 'Measurement failed', isSyncing: false });
+        throw e;
+      }
+    },
+
+    softDeleteClient: async (id, currentVersion) => {
+      set({ isSyncing: true, error: null });
+      try {
+        await clientService.softDeleteClient(id, currentVersion);
+        set({ isSyncing: false });
+      } catch (e: unknown) {
+        set({ error: e instanceof Error ? e.message : 'Delete failed', isSyncing: false });
+      }
+    },
+
+    addSessionLog: async (clientId, input) => {
+      set({ isSyncing: true, error: null });
+      try {
+        await sessionService.addSessionLog(clientId, input);
+        set({ isSyncing: false });
+      } catch (e: unknown) {
+        set({ error: e instanceof Error ? e.message : 'Session failed', isSyncing: false });
+        throw e;
+      }
+    },
+
+    setSelectedClient: (client) => set({ selectedClient: client }),
+    clearError: () => set({ error: null }),
+  };
+});

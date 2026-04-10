@@ -1,4 +1,6 @@
 import { BaseModel } from '../../../types/base';
+import { Stack } from '../../../shared/components/layout/Stack';
+import { ClientStackParamList } from '../../../app/navigation/AppNavigator';
 
 // ─── Core Client ──────────────────────────────────────────────────────────────
 // Minimal document stored in Firestore.
@@ -10,9 +12,12 @@ import { BaseModel } from '../../../types/base';
 //   Use deriveClientStatus() for all UI rendering. Never read .status directly.
 
 export interface Client extends BaseModel {
+  id: string;                           // Firestore document ID (or tempId)
+  client_uuid: string;                  // Primary reconciliation key (UUID)
   name: string;                         // required — the only mandatory field
-  status: 'active' | 'inactive';        // stored: only 'inactive' is a meaningful stored value
+  status: 'active' | 'inactive' | 'creating'; // Added 'creating' for optimistic UI
   search_tokens: string[];              // prefix-token index for local search, bounded ≤20
+  created_at_local: Date;               // Immediate sorting key for optimistic UI
 }
 
 // ─── Client Profile ───────────────────────────────────────────────────────────
@@ -26,9 +31,11 @@ export interface Client extends BaseModel {
 export interface ClientProfile {
   email?: string;
   phone?: string;
+  address?: string; // missing but requested in flow
   goal?: string;
   occupation?: string;
   activity_level?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  lifestyle?: string; // added as per user requirement
   sleep_quality?: 'poor' | 'fair' | 'good';
   meal_timing?: string;
   medical_conditions?: string;
@@ -64,7 +71,9 @@ export type ClientDisplayStatus = 'incomplete' | 'active' | 'inactive';
 
 export interface ClientMeasurement extends BaseModel {
   client_id: string;                              // FK → clients/{id}; consistent naming for Session FK
+  client_uuid: string;                            // FK → clients.client_uuid
   date: Date;                                     // date measurements were taken (trainer-provided)
+  created_at_local: Date;                         // Local timestamp for immediate feedback
   unit_system: 'metric' | 'imperial';             // display context only — values are always metric
   source: 'manual' | 'device';                    // how data was collected, defaults to 'manual'
 
