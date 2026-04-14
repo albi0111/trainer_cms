@@ -20,7 +20,8 @@ import { getClientById } from '../../services/client/clientService';
 import { getSessionsByClient, markSessionMissed } from '../../services/session/sessionService';
 import { getMeasurements } from '../../services/measurement/measurementService';
 import { getPlansByClient } from '../../services/plan/planService';
-import { Client, ClientProfile, Session, Measurement, Plan } from '../../types';
+import { getWeightTrend, getCompletionStats, getClientStatus } from '../../services/analytics/analyticsService';
+import { Client, ClientProfile, Session, Measurement, Plan, ClientStatus } from '../../types';
 
 import AddSessionModal from '../../components/modals/AddSessionModal';
 import AddMeasurementModal from '../../components/modals/AddMeasurementModal';
@@ -37,6 +38,8 @@ export default function ClientScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [status, setStatus] = useState<ClientStatus>('active');
+  const [stats, setStats] = useState<{ total: number, completed: number, percentage: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals Visibility
@@ -48,16 +51,20 @@ export default function ClientScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [c, s, m, p] = await Promise.all([
+      const [c, s, m, p, st, an] = await Promise.all([
         getClientById(clientId),
         getSessionsByClient(clientId),
         getMeasurements(clientId),
         getPlansByClient(clientId),
+        getClientStatus(clientId),
+        getCompletionStats(clientId),
       ]);
       setClientData(c);
       setSessions(s);
       setMeasurements(m);
       setPlans(p);
+      setStatus(st);
+      setStats(an);
     } catch (error) {
       console.error('[ClientScreen] Fetch error:', error);
     } finally {
@@ -118,8 +125,29 @@ export default function ClientScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.name}>{clientData.name}</Text>
+          <View style={styles.rowCentered}>
+            <Text style={styles.name}>{clientData.name}</Text>
+            <View style={[styles.statusHeaderBadge, (styles as any)[`status_${status}`]]}>
+              <Text style={styles.statusHeaderText}>{status.toUpperCase()}</Text>
+            </View>
+          </View>
           <Text style={styles.goal}>{clientData.goal || 'No goal set'}</Text>
+        </View>
+
+        {/* ── Summary Stats ── */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statVal}>{stats?.percentage || 0}%</Text>
+            <Text style={styles.statLabel}>Completion</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statVal}>{measurements[0]?.weight_kg || '—'}</Text>
+            <Text style={styles.statLabel}>Current Kg</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statVal}>{sessions.length}</Text>
+            <Text style={styles.statLabel}>Total Sessions</Text>
+          </View>
         </View>
 
         {/* ── Plans Section ── */}
@@ -267,9 +295,24 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 20 },
-  header: { marginBottom: 32 },
+  header: { marginBottom: 24 },
+  rowCentered: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   name: { fontSize: 32, fontWeight: '800', color: '#FFF' },
+  statusHeaderBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  statusHeaderText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
   goal: { fontSize: 16, color: '#888', marginTop: 4 },
+  
+  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 32 },
+  statBox: { flex: 1, backgroundColor: SURFACE, padding: 16, borderRadius: 16, alignItems: 'center' },
+  statVal: { color: YELLOW, fontSize: 20, fontWeight: '800' },
+  statLabel: { color: '#888', fontSize: 11, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  status_active: { backgroundColor: '#1B3A1C' },
+  status_inactive: { backgroundColor: '#333' },
+  status_completed: { backgroundColor: '#1B2C3A' },
+  status_planned: { backgroundColor: '#333' },
+  status_missed: { backgroundColor: '#3A1B1B' },
+
   section: { marginBottom: 32 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: YELLOW, textTransform: 'uppercase', letterSpacing: 1.5 },
@@ -295,9 +338,6 @@ const styles = StyleSheet.create({
   sessionDate: { color: '#888', fontSize: 11, fontWeight: '600' },
   sessionFocus: { color: '#FFF', fontSize: 18, fontWeight: '700', marginTop: 2 },
   statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  status_planned: { backgroundColor: '#333' },
-  status_completed: { backgroundColor: '#1B3A1C' },
-  status_missed: { backgroundColor: '#3A1B1B' },
   statusText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
   sessionActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
   flex1: { flex: 1 },
