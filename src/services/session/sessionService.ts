@@ -64,7 +64,16 @@ export async function completeSession(
   const now = nowISO();
 
   await db.withTransactionAsync(async () => {
-    // 1. Update session status
+    // Audit Fix: Guard against double completion/duplicate SessionResult
+    const existing = await db.getFirstAsync<{ session_id: string }>(
+      'SELECT session_id FROM session_results WHERE session_id = ?',
+      [sessionId]
+    );
+    if (existing) {
+      throw new Error('This session is already completed.');
+    }
+
+    // 1. Update session status (strictly whitelisted fields only)
     await db.runAsync(
       `UPDATE sessions SET status = 'completed', updated_at = ? WHERE id = ?`,
       [now, sessionId]

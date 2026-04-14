@@ -6,7 +6,7 @@
 import { getDB } from '../db/database';
 import { Measurement } from '../../types';
 import { generateId } from '../../utils/id';
-import { nowISO } from '../../utils/date';
+import { nowISO, isValidDate } from '../../utils/date';
 import { enqueueClientUpdate } from '../sync/syncQueueService';
 
 /**
@@ -18,6 +18,11 @@ export async function addMeasurement(
   clientId: string,
   data: Omit<Measurement, 'id' | 'client_id' | 'created_at'>
 ): Promise<void> {
+  // Audit Fix: Strict date format enforcement
+  if (!isValidDate(data.date)) {
+    throw new Error('Measurements must use a valid YYYY-MM-DD date format.');
+  }
+
   const db = getDB();
   const id = generateId();
   const now = nowISO();

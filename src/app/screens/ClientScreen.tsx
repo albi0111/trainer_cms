@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Client Screen — Details, Sessions & Progress
-// Source of truth: Step 3 Requirements
+// Client Screen — Details, Sessions, Progress & Plans
+// Source of truth: Step 3 & Step 4 Requirements
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -19,11 +19,13 @@ import { RootStackParamList } from '../RootNavigator';
 import { getClientById } from '../../services/client/clientService';
 import { getSessionsByClient, markSessionMissed } from '../../services/session/sessionService';
 import { getMeasurements } from '../../services/measurement/measurementService';
-import { Client, ClientProfile, Session, Measurement, MissedReason } from '../../types';
+import { getPlansByClient } from '../../services/plan/planService';
+import { Client, ClientProfile, Session, Measurement, Plan } from '../../types';
 
 import AddSessionModal from '../../components/modals/AddSessionModal';
 import AddMeasurementModal from '../../components/modals/AddMeasurementModal';
 import CompleteSessionModal from '../../components/modals/CompleteSessionModal';
+import AddPlanModal from '../../components/modals/AddPlanModal';
 
 type ClientScreenRouteProp = RouteProp<RootStackParamList, 'Client'>;
 
@@ -34,23 +36,28 @@ export default function ClientScreen() {
   const [clientData, setClientData] = useState<Client & { profile: ClientProfile } | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modals Visibility
   const [isSessionModalVisible, setIsSessionModalVisible] = useState(false);
   const [isMeasurementModalVisible, setIsMeasurementModalVisible] = useState(false);
   const [activeSessionToComplete, setActiveSessionToComplete] = useState<string | null>(null);
+  const [isPlanModalVisible, setIsPlanModalVisible] = useState(false);
+  const [parentForNewWeekly, setParentForNewWeekly] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [c, s, m] = await Promise.all([
+      const [c, s, m, p] = await Promise.all([
         getClientById(clientId),
         getSessionsByClient(clientId),
         getMeasurements(clientId),
+        getPlansByClient(clientId),
       ]);
       setClientData(c);
       setSessions(s);
       setMeasurements(m);
+      setPlans(p);
     } catch (error) {
       console.error('[ClientScreen] Fetch error:', error);
     } finally {
@@ -61,6 +68,19 @@ export default function ClientScreen() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Hierarchy Logic
+  const monthlyPlans = useMemo(() => plans.filter(p => p.type === 'monthly'), [plans]);
+  const weeklyPlansByMonth = useMemo(() => {
+    const map: Record<string, Plan[]> = {};
+    plans.filter(p => p.type === 'weekly').forEach(w => {
+      if (w.parent_plan_id) {
+        if (!map[w.parent_plan_id]) map[w.parent_plan_id] = [];
+        map[w.parent_plan_id].push(w);
+      }
+    });
+    return map;
+  }, [plans]);
 
   const handleMarkMissed = (sessionId: string) => {
     Alert.alert('Mark as Missed', 'Select a reason:', [
@@ -102,12 +122,53 @@ export default function ClientScreen() {
           <Text style={styles.goal}>{clientData.goal || 'No goal set'}</Text>
         </View>
 
+        {/* ── Plans Section ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Plans & Hierarchy</Text>
+            <TouchableOpacity onPress={() => { setParentForNewWeekly(null); setIsPlanModalVisible(true); }}>
+              <Text style={styles.actionText}>+ Monthly</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {monthlyPlans.length === 0 ? (
+            <Text style={styles.emptyText}>No monthly plans defined</Text>
+          ) : (
+            monthlyPlans.map(month => (
+              <View key={month.id} style={styles.monthContainer}>
+                <View style={styles.monthHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.planTitle}>{month.title}</Text>
+                    <Text style={styles.planDates}>{month.start_date} → {month.end_date}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.addWeekBtn} onPress={() => { setParentForNewWeekly(month.id); setIsPlanModalVisible(true); }}>
+                    <Text style={styles.addWeekText}>+ Week</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Weeks under this month */}
+                <View style={styles.weeksList}>
+                  {(weeklyPlansByMonth[month.id] || []).map(week => (
+                    <View key={week.id} style={styles.weekCard}>
+                      <Text style={styles.weekOrder}>WEEK {week.order_index}</Text>
+                      <Text style={styles.weekTitle}>{week.title}</Text>
+                    </View>
+                  ))}
+                  {(!weeklyPlansByMonth[month.id] || weeklyPlansByMonth[month.id].length === 0) && (
+                    <Text style={styles.miniEmpty}>No weeks planned yet</Text>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
         {/* ── Sessions Section ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Sessions</Text>
             <TouchableOpacity onPress={() => setIsSessionModalVisible(true)}>
-              <Text style={styles.actionText}>+ Plan</Text>
+              <Text style={styles.actionText}>+ Manual</Text>
             </TouchableOpacity>
           </View>
           
@@ -136,9 +197,6 @@ export default function ClientScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-                {s.status === 'missed' && s.missed_reason && (
-                  <Text style={styles.missedNote}>Reason: {s.missed_reason} {s.missed_note ? `(${s.missed_note})` : ''}</Text>
-                )}
               </View>
             ))
           )}
@@ -157,7 +215,7 @@ export default function ClientScreen() {
             <Text style={styles.emptyText}>No measurements logged</Text>
           ) : (
             <View style={styles.measurementList}>
-              {measurements.map((m) => (
+              {measurements.slice(0, 3).map((m) => (
                 <View key={m.id} style={styles.measurementRow}>
                   <Text style={styles.mDate}>{m.date}</Text>
                   <Text style={styles.mValue}>{m.weight_kg} kg</Text>
@@ -189,6 +247,13 @@ export default function ClientScreen() {
         onClose={() => setActiveSessionToComplete(null)}
         onSuccess={() => { setActiveSessionToComplete(null); fetchData(); }}
       />
+      <AddPlanModal
+        visible={isPlanModalVisible}
+        clientId={clientId}
+        parentPlanId={parentForNewWeekly}
+        onClose={() => setIsPlanModalVisible(false)}
+        onSuccess={() => { setIsPlanModalVisible(false); fetchData(); }}
+      />
     </SafeAreaView>
   );
 }
@@ -196,6 +261,7 @@ export default function ClientScreen() {
 const YELLOW = '#FFD700';
 const GREEN = '#66BB6A';
 const RED = '#FF5252';
+const SURFACE = '#161616';
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0A0A0A' },
@@ -210,8 +276,21 @@ const styles = StyleSheet.create({
   actionText: { color: YELLOW, fontSize: 13, fontWeight: '700' },
   emptyText: { color: '#444', fontStyle: 'italic', fontSize: 14 },
   
-  // Session Cards
-  sessionCard: { backgroundColor: '#161616', borderRadius: 16, padding: 16, marginBottom: 12 },
+  // Plans
+  monthContainer: { backgroundColor: SURFACE, borderRadius: 16, padding: 16, marginBottom: 16 },
+  monthHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  planTitle: { color: '#FFF', fontSize: 18, fontWeight: '800' },
+  planDates: { color: '#555', fontSize: 11, marginTop: 2 },
+  addWeekBtn: { backgroundColor: '#222', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#333' },
+  addWeekText: { color: YELLOW, fontSize: 11, fontWeight: '700' },
+  weeksList: { borderTopWidth: 1, borderTopColor: '#222', paddingTop: 12 },
+  weekCard: { backgroundColor: '#1A1A1A', padding: 12, borderRadius: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
+  weekOrder: { color: YELLOW, fontSize: 10, fontWeight: '800', marginRight: 12 },
+  weekTitle: { color: '#AAA', fontSize: 14, fontWeight: '600' },
+  miniEmpty: { color: '#333', fontSize: 12, fontStyle: 'italic', marginLeft: 4 },
+
+  // Sessions
+  sessionCard: { backgroundColor: SURFACE, borderRadius: 16, padding: 16, marginBottom: 12 },
   sessionMain: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   sessionDate: { color: '#888', fontSize: 11, fontWeight: '600' },
   sessionFocus: { color: '#FFF', fontSize: 18, fontWeight: '700', marginTop: 2 },
@@ -221,13 +300,13 @@ const styles = StyleSheet.create({
   status_missed: { backgroundColor: '#3A1B1B' },
   statusText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
   sessionActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  flex1: { flex: 1 },
   btnComplete: { flex: 1, backgroundColor: GREEN, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   btnMissed: { flex: 1, backgroundColor: '#333', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   btnText: { color: '#000', fontSize: 12, fontWeight: '700' },
-  missedNote: { color: RED, fontSize: 12, marginTop: 8, fontStyle: 'italic' },
 
-  // Progress Section
-  measurementList: { backgroundColor: '#161616', borderRadius: 16, overflow: 'hidden' },
+  // Progress
+  measurementList: { backgroundColor: SURFACE, borderRadius: 16, overflow: 'hidden' },
   measurementRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#222' },
   mDate: { color: '#888', fontSize: 14, flex: 1 },
   mValue: { color: '#FFF', fontSize: 14, fontWeight: '700', flex: 1, textAlign: 'center' },
