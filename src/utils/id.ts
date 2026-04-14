@@ -1,13 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// UUID utility — wraps the uuid package for consistent ID generation
+// ID utility — wraps nanoid for consistent ID generation
+// Source of truth: resrc/system_prompt.md §2.1
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 /**
- * Generates a new UUID v4.
- * Used wherever the spec calls for a unique ID (clients, sessions, etc.)
+ * Generates a new nanoid.
+ * §Rule 2.1: Use nanoid for stable unique identifiers.
+ * 
+ * Note: Switched from uuid to nanoid to match Step 3 audit requirements.
  */
 export function generateId(): string {
-  return uuidv4();
+  return nanoid();
 }
