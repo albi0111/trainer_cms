@@ -1,31 +1,29 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Sync Queue — Table structure only (no sync logic yet)
-// Source of truth: resrc/system_prompt.md §5.5
+// Sync Constants — Hardcoded file names & folder names
+// Source of truth: resrc/system_prompt.md §4.2
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Drive domain file names — hardcoded constants.
- * §3 rule: "These names are hardcoded constants in the codebase.
- *           Any code that constructs a domain file name dynamically is a bug."
- */
-export const DOMAIN_FILES = {
+export const SYNC_CONFIG = {
+  RETRY_BACKOFF_SECONDS: [5, 30, 300],
+  MAX_RETRIES: 3,
+};
+
+export const DRIVE_FILE_NAMES = {
+  ROOT_FOLDER: 'fit.persona',
+  META: 'meta.json',
+  CLIENTS_INDEX: 'clients_index.json',
+};
+
+export const DOMAIN_FILE_NAMES: Record<string, string> = {
   core: 'core.json',
+  profiles: 'profiles.json', // Not in SyncDomain but part of core
+  lifestyles: 'lifestyles.json',
+  assessments: 'assessments.json',
   measurements: 'measurements.json',
-  progress_photos: 'progress_photos.json',
+  photos: 'photos.json',
   plans: 'plans.json',
   diet_plans: 'diet_plans.json',
   sessions: 'sessions.json',
-  session_results: 'session_results.json',
+  results: 'results.json',
   exercises: 'exercises.json',
-} as const;
-
-/**
- * Drive folder structure constants.
- * Root folder name is fixed — no dynamic naming allowed.
- */
-export const DRIVE_PATHS = {
-  ROOT_FOLDER: 'fit_persona',
-  META_FILE: 'meta.json',
-  CLIENTS_INDEX_FILE: 'clients_index.json',
-  CLIENTS_SUBFOLDER: 'clients',
-} as const;
+};
