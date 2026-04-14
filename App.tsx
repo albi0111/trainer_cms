@@ -1,41 +1,67 @@
 import 'react-native-gesture-handler';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { initDatabase } from './src/services/db/database';
+import RootNavigator from './src/app/RootNavigator';
 
 export default function App() {
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initDatabase()
+      .then(() => setDbReady(true))
+      .catch((err) => {
+        console.error('[App] Database init failed:', err);
+        setDbError(String(err));
+      });
+  }, []);
+
+  if (dbError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Failed to initialize database.</Text>
+        <Text style={styles.errorDetail}>{dbError}</Text>
+      </View>
+    );
+  }
+
+  if (!dbReady) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#FFD700" size="large" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Trainer CMS V2</Text>
-          <Text style={styles.subtitle}>Clean Base Ready</Text>
-        </View>
-        <StatusBar style="auto" />
-      </SafeAreaView>
+      <StatusBar style="light" />
+      <RootNavigator />
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
+    backgroundColor: '#0A0A0A',
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFD700', // Yellow as per branding mention in history
-  },
-  subtitle: {
+  errorText: {
+    color: '#FF5252',
     fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorDetail: {
     color: '#888',
+    fontSize: 12,
     marginTop: 8,
+    textAlign: 'center',
   },
 });

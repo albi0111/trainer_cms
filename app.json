@@ -4,8 +4,9 @@
     "slug": "trainer_cms",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "fitpersona",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
