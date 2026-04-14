@@ -31,10 +31,10 @@ export async function getClientStatus(clientId: string): Promise<ClientStatus> {
   // 2. No activity > 90 days AND has completed plan -> completed
   // 3. Else -> inactive
 
-  if (diffDays < 30) return 'active';
+  if (diffDays < 7) return 'active';
 
   if (diffDays >= 90) {
-    // Check if any plan is completed
+    // Check if any plan is completed (§2.12)
     const completedPlan = await db.getFirstAsync(
       "SELECT id FROM plans WHERE client_id = ? AND status = 'completed' LIMIT 1",
       [clientId]

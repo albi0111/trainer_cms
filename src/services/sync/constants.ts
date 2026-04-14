@@ -9,21 +9,23 @@ export const SYNC_CONFIG = {
 };
 
 export const DRIVE_FILE_NAMES = {
-  ROOT_FOLDER: 'fit.persona',
+  ROOT_FOLDER: 'fit_persona',
   META: 'meta.json',
   CLIENTS_INDEX: 'clients_index.json',
 };
 
+/**
+ * Hardcoded domain file names §12 R30.
+ * These are non-negotiable constants.
+ */
 export const DOMAIN_FILE_NAMES: Record<string, string> = {
   core: 'core.json',
-  profiles: 'profiles.json', // Not in SyncDomain but part of core
-  lifestyles: 'lifestyles.json',
-  assessments: 'assessments.json',
   measurements: 'measurements.json',
-  photos: 'photos.json',
+  progress_photos: 'progress_photos.json',
   plans: 'plans.json',
   diet_plans: 'diet_plans.json',
   sessions: 'sessions.json',
-  results: 'results.json',
+  session_results: 'session_results.json',
   exercises: 'exercises.json',
 };
+

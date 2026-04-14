@@ -20,8 +20,10 @@ import { getClientById } from '../../services/client/clientService';
 import { getSessionsByClient, markSessionMissed } from '../../services/session/sessionService';
 import { getMeasurements } from '../../services/measurement/measurementService';
 import { getPlansByClient } from '../../services/plan/planService';
+import * as ImagePicker from 'expo-image-picker';
+import { getPhotos, addProgressPhoto, deletePhoto } from '../../services/photo/photoService';
 import { getWeightTrend, getCompletionStats, getClientStatus } from '../../services/analytics/analyticsService';
-import { Client, ClientProfile, Session, Measurement, Plan, ClientStatus } from '../../types';
+import { Client, ClientProfile, Session, Measurement, Plan, ClientStatus, ProgressPhoto } from '../../types';
 
 import AddSessionModal from '../../components/modals/AddSessionModal';
 import AddMeasurementModal from '../../components/modals/AddMeasurementModal';
@@ -38,6 +40,7 @@ export default function ClientScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [status, setStatus] = useState<ClientStatus>('active');
   const [stats, setStats] = useState<{ total: number, completed: number, percentage: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,11 +54,12 @@ export default function ClientScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [c, s, m, p, st, an] = await Promise.all([
+      const [c, s, m, p, ph, st, an] = await Promise.all([
         getClientById(clientId),
         getSessionsByClient(clientId),
         getMeasurements(clientId),
         getPlansByClient(clientId),
+        getPhotos(clientId),
         getClientStatus(clientId),
         getCompletionStats(clientId),
       ]);
@@ -63,6 +67,7 @@ export default function ClientScreen() {
       setSessions(s);
       setMeasurements(m);
       setPlans(p);
+      setPhotos(ph);
       setStatus(st);
       setStats(an);
     } catch (error) {
@@ -102,6 +107,24 @@ export default function ClientScreen() {
       }},
       { text: 'Cancel', style: 'cancel' },
     ]);
+  };
+
+  const handleAddPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const date = new Date().toISOString().split('T')[0];
+        await addProgressPhoto(clientId, result.assets[0].uri, date);
+        fetchData();
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to pick photo');
+    }
   };
 
   if (loading) {
@@ -160,7 +183,9 @@ export default function ClientScreen() {
           </View>
           
           {monthlyPlans.length === 0 ? (
-            <Text style={styles.emptyText}>No monthly plans defined</Text>
+            <View style={styles.miniEmptyContainer}>
+              <Text style={styles.emptyText}>No monthly plans defined</Text>
+            </View>
           ) : (
             monthlyPlans.map(month => (
               <View key={month.id} style={styles.monthContainer}>
@@ -177,10 +202,10 @@ export default function ClientScreen() {
                 {/* Weeks under this month */}
                 <View style={styles.weeksList}>
                   {(weeklyPlansByMonth[month.id] || []).map(week => (
-                    <View key={week.id} style={styles.weekCard}>
+                    <TouchableOpacity key={week.id} style={styles.weekCard} activeOpacity={0.7}>
                       <Text style={styles.weekOrder}>WEEK {week.order_index}</Text>
                       <Text style={styles.weekTitle}>{week.title}</Text>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                   {(!weeklyPlansByMonth[month.id] || weeklyPlansByMonth[month.id].length === 0) && (
                     <Text style={styles.miniEmpty}>No weeks planned yet</Text>
@@ -201,7 +226,9 @@ export default function ClientScreen() {
           </View>
           
           {sessions.length === 0 ? (
-            <Text style={styles.emptyText}>No sessions planned</Text>
+            <View style={styles.miniEmptyContainer}>
+              <Text style={styles.emptyText}>No sessions planned</Text>
+            </View>
           ) : (
             sessions.map((s) => (
               <View key={s.id} style={styles.sessionCard}>
@@ -252,6 +279,30 @@ export default function ClientScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        {/* ── Photos Section ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Progress Photos</Text>
+            <TouchableOpacity onPress={handleAddPhoto}>
+              <Text style={styles.actionText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoList}>
+            {photos.map(p => (
+              <View key={p.id} style={styles.photoWrapper}>
+                <View style={styles.photoPlaceholder} />
+                {/* Real Image component should be added later */}
+                <Text style={styles.photoDate}>{p.date}</Text>
+                <Text style={styles.photoType}>{(p.type || 'front').toUpperCase()}</Text>
+              </View>
+            ))}
+            {photos.length === 0 && (
+              <Text style={styles.emptyText}>No photos captured yet</Text>
+            )}
+          </ScrollView>
         </View>
       </ScrollView>
 
@@ -353,4 +404,13 @@ const styles = StyleSheet.create({
   mSubValue: { color: '#555', fontSize: 13, flex: 1, textAlign: 'right' },
   
   errorText: { color: RED, fontSize: 16, fontWeight: '600' },
+
+  // Photos
+  photoList: { marginTop: 8 },
+  photoWrapper: { marginRight: 16, alignItems: 'center' },
+  photoPlaceholder: { width: 120, height: 160, backgroundColor: '#222', borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#333' },
+  photoDate: { color: '#888', fontSize: 11, fontWeight: '600' },
+  photoType: { color: YELLOW, fontSize: 10, fontWeight: '800', marginTop: 2 },
+
+  miniEmptyContainer: { paddingVertical: 12, alignItems: 'center', opacity: 0.5 },
 });

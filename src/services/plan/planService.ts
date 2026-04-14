@@ -1,13 +1,24 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Plan Service — Flat hierarchical plan management
-// Source of truth: resrc/system_prompt.md §2.4
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { getDB } from '../db/database';
-import { Plan } from '../../types';
+import { Plan, Session } from '../../types';
 import { generateId } from '../../utils/id';
 import { nowISO } from '../../utils/date';
 import { enqueueClientUpdate } from '../sync/syncQueueService';
+
+/**
+ * Validates plan-session integrity.
+ * §Rule: Session.plan_id MUST reference ONLY weekly plans.
+ */
+export async function validatePlanForSession(planId: string): Promise<void> {
+  const db = getDB();
+  const plan = await db.getFirstAsync<{ type: string }>(
+    'SELECT type FROM plans WHERE id = ?',
+    [planId]
+  );
+  if (!plan) throw new Error('Reference plan does not exist.');
+  if (plan.type !== 'weekly') {
+    throw new Error('Sessions can only be linked to Weekly plans, not Monthly containers.');
+  }
+}
 
 /**
  * Creates a monthly container plan.
@@ -102,6 +113,57 @@ export async function getPlansByClient(clientId: string): Promise<Plan[]> {
     'SELECT * FROM plans WHERE client_id = ? ORDER BY type DESC, start_date ASC', 
     [clientId]
   );
+}
+
+/**
+ * Deletes a plan and all its children/associated data.
+ * §Rule: Deleting Monthly → Delete all child Weekly plans → Delete all associated Sessions.
+ * §Rule: Deleting Weekly → Delete all associated Sessions.
+ */
+export async function deletePlan(planId: string, clientId: string): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  await db.withTransactionAsync(async () => {
+    // 1. Determine plan type
+    const plan = await db.getFirstAsync<{ type: string }>(
+      'SELECT type FROM plans WHERE id = ?',
+      [planId]
+    );
+    if (!plan) return;
+
+    if (plan.type === 'monthly') {
+      // Find all child weekly plans
+      const weeklyPlans = await db.getAllAsync<{ id: string }>(
+        'SELECT id FROM plans WHERE parent_plan_id = ? AND type = "weekly"',
+        [planId]
+      );
+      const weeklyIds = weeklyPlans.map(wp => wp.id);
+
+      if (weeklyIds.length > 0) {
+        const placeholders = weeklyIds.map(() => '?').join(',');
+        // Delete sessions belonging to these weeks
+        await db.runAsync(`DELETE FROM sessions WHERE plan_id IN (${placeholders})`, weeklyIds);
+        // Delete weekly plans
+        await db.runAsync(`DELETE FROM plans WHERE parent_plan_id = ?`, [planId]);
+      }
+    } else {
+      // Deleting a single weekly plan -> delete its sessions
+      await db.runAsync('DELETE FROM sessions WHERE plan_id = ?', [planId]);
+    }
+
+    // 2. Delete the plan itself
+    await db.runAsync('DELETE FROM plans WHERE id = ?', [planId]);
+
+    // 3. Update client version
+    await db.runAsync(
+      'UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?',
+      [now, clientId]
+    );
+
+    // 4. Enqueue sync for affected domains
+    await enqueueClientUpdate(clientId, ['plans', 'sessions']);
+  });
 }
 
 /**

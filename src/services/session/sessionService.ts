@@ -8,6 +8,7 @@ import { Session, SessionResult, MissedReason } from '../../types';
 import { generateId } from '../../utils/id';
 import { nowISO } from '../../utils/date';
 import { enqueueClientUpdate } from '../sync/syncQueueService';
+import { validatePlanForSession } from '../plan/planService';
 
 /**
  * Creates a new planned session.
@@ -21,6 +22,11 @@ export async function createSession(
   const now = nowISO();
 
   await db.withTransactionAsync(async () => {
+    // Audit Fix: Plan Integrity Validation
+    if (data.plan_id) {
+      await validatePlanForSession(data.plan_id);
+    }
+
     await db.runAsync(
       `INSERT INTO sessions (
         id, plan_id, client_id, date, day_name, focus, type, status, created_at, updated_at

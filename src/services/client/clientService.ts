@@ -114,3 +114,107 @@ export async function getClientById(id: string): Promise<Client & { profile: Cli
 
   return { ...client, profile: profile! };
 }
+
+/**
+ * Initiates client deletion (§5.6, R7).
+ * Logic: Soft-delete locally by setting sync_status = 'pending_delete'.
+ * The background worker will then process the hard delete.
+ */
+export async function deleteClient(clientId: string): Promise<void> {
+  const db = getDB();
+  const now = new Date().toISOString();
+
+  await db.withTransactionAsync(async () => {
+    // 1. Mark as pending delete (§5.6 Step 1)
+    await db.runAsync(
+      `UPDATE clients SET sync_status = 'pending_delete', updated_at = ? WHERE id = ?`,
+      [now, clientId]
+    );
+
+    // 2. Enqueue delete operation in sync queue (§5.6 Step 1.2)
+    // Note: Affected domains don't matter for delete, but we pass empty array.
+    await db.runAsync(
+      `INSERT INTO sync_queue (id, client_id, operation, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(client_id, operation) DO UPDATE SET status = 'pending'`,
+      [generateId(), clientId, 'delete', 'pending', now, now]
+    );
+  });
+}
+
+/**
+ * Updates a client's lifestyle data.
+ */
+export async function updateClientLifestyle(
+  clientId: string,
+  payload: Partial<any>
+): Promise<void> {
+  const db = getDB();
+  const now = new Date().toISOString();
+
+  await db.withTransactionAsync(async () => {
+    const fields = Object.keys(payload).filter(k => k !== 'client_id' && k !== 'updated_at');
+    if (fields.length > 0) {
+      const setClause = fields.map(f => `${f} = ?`).join(', ');
+      const values = fields.map(f => (payload as any)[f]);
+      await db.runAsync(
+        `UPDATE client_lifestyles SET ${setClause}, updated_at = ? WHERE client_id = ?`,
+        [...values, now, clientId]
+      );
+    }
+
+    await db.runAsync(
+      'UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?',
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['core']);
+  });
+}
+
+/**
+ * Updates a client's assessment data.
+ */
+export async function updateClientAssessment(
+  clientId: string,
+  payload: Partial<any>
+): Promise<void> {
+  const db = getDB();
+  const now = new Date().toISOString();
+
+  await db.withTransactionAsync(async () => {
+    const fields = Object.keys(payload).filter(k => k !== 'client_id' && k !== 'updated_at' && k !== 'exercises' && k !== 'flexibility');
+    
+    // Handle standard fields
+    if (fields.length > 0) {
+      const setClause = fields.map(f => `${f} = ?`).join(', ');
+      const values = fields.map(f => (payload as any)[f]);
+      await db.runAsync(
+        `UPDATE client_assessments SET ${setClause}, updated_at = ? WHERE client_id = ?`,
+        [...values, now, clientId]
+      );
+    }
+
+    // Handle JSON fields (§2.9 Rationale)
+    if (payload.exercises) {
+      await db.runAsync(
+        'UPDATE client_assessments SET exercises_json = ?, updated_at = ? WHERE client_id = ?',
+        [JSON.stringify(payload.exercises), now, clientId]
+      );
+    }
+    if (payload.flexibility) {
+      await db.runAsync(
+        'UPDATE client_assessments SET flexibility_json = ?, updated_at = ? WHERE client_id = ?',
+        [JSON.stringify(payload.flexibility), now, clientId]
+      );
+    }
+
+    await db.runAsync(
+      'UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?',
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['core']);
+  });
+}
+
