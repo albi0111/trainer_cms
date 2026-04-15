@@ -1,11 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Client Modal — Multi-Step Flow
 // Source of truth: system_prompt.md §11 (Add Client Flow)
-// Steps:
-//   1. Personal  — name* (required), phone, email
-//   2. Interview — training experience, injuries, lifestyle notes
-//   3. Assessment — vitals, flexibility tests, cardio, objectives, goal, status
-// All steps beyond name are skippable per R16.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -13,111 +8,22 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  ScrollView,
-  Image,
   Alert,
 } from 'react-native';
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  createClient, 
-  updateClientProfile, 
-  updateClientLifestyle, 
-  updateClientAssessment,
-  updateClientOverview,
-  updateClientCore,
-  batchUpdateClient
-} from '../../services/client/clientService';
-import { Client, ClientProfile, ClientLifestyle, ClientAssessment } from '../../types';
+import { createClient, batchUpdateClient } from '../../services/client/clientService';
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface AddClientModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess: (clientId: string) => void;
-  mode?: 'create' | 'edit';
-  clientId?: string;
-  initialData?: {
-    client: Client;
-    profile: ClientProfile;
-    lifestyle: ClientLifestyle;
-    assessment: ClientAssessment;
-  };
-  initialStep?: Step;
-}
-
-interface FormData {
-  // Step 1: Personal
-  name: string;
-  age: string;
-  gender: 'Male' | 'Female' | 'Other';
-  phone: string;
-  email: string;
-
-  // Step 2: Interview
-  training_experience: string;
-  injuries: string;
-  lifestyle_notes: string;
-
-  // Step 3: Assessment
-  weight_kg: string;
-  height_cm: string;
-  bp: string;         // "120/80" format
-  rhr: string;
-
-  // Strength Exercises — Notes/Remarks
-  strength_1_note: string;
-  strength_2_note: string;
-  strength_3_note: string;
-  strength_4_note: string;
-  strength_5_note: string;
-  strength_6_note: string;
-  strength_7_note: string;
-  strength_8_note: string;
-
-  // Flexibility tests — R/L checkboxes
-  flex_hamstrings_r: boolean;
-  flex_hamstrings_l: boolean;
-  flex_quadriceps_r: boolean;
-  flex_quadriceps_l: boolean;
-  flex_hip_flexors_r: boolean;
-  flex_hip_flexors_l: boolean;
-  flex_shoulders_r: boolean;
-  flex_shoulders_l: boolean;
-  flex_toe_reach: boolean;
-  flex_trunk_r: boolean;
-  flex_trunk_l: boolean;
-  // Cardio
-  cardio_done: boolean;
-  cardio_time: string;
-  cardio_distance: string;
-  cardio_mhr: string;
-  // Objectives + Goal
-  objectives: string;
-  primary_goal: string;
-}
-
-type Step = 'personal' | 'interview' | 'assessment';
-
-// ── Flexibility Tests Config ─────────────────────────────────────────────────
-
-const FLEXIBILITY_TESTS = [
-  { label: 'Hamstrings', keyR: 'flex_hamstrings_r', keyL: 'flex_hamstrings_l', bilateral: false },
-  { label: 'Quadriceps', keyR: 'flex_quadriceps_r', keyL: 'flex_quadriceps_l', bilateral: false },
-  { label: 'Hip Flexors', keyR: 'flex_hip_flexors_r', keyL: 'flex_hip_flexors_l', bilateral: false },
-  { label: 'Shoulders', keyR: 'flex_shoulders_r', keyL: 'flex_shoulders_l', bilateral: false },
-  { label: 'Toe Reach', keyR: 'flex_toe_reach', keyL: '', bilateral: true },
-  { label: 'Trunk Rotation', keyR: 'flex_trunk_r', keyL: 'flex_trunk_l', bilateral: false },
-] as const;
-
-// ── Component ─────────────────────────────────────────────────────────────────
+import { colors, borderRadius } from '../../theme/theme';
+import { FLEXIBILITY_TESTS, FormData, Step, AddClientModalProps } from './AddClientSteps/types';
+import { PersonalStep } from './AddClientSteps/PersonalStep';
+import { InterviewStep } from './AddClientSteps/InterviewStep';
+import { AssessmentStep } from './AddClientSteps/AssessmentStep';
 
 export default function AddClientModal({ 
   visible, 
@@ -128,20 +34,14 @@ export default function AddClientModal({
   initialData,
   initialStep = 'personal'
 }: AddClientModalProps) {
-  console.log('[AddClientModal] Rendered with mode:', mode, 'clientId:', clientId, 'hasInitialData:', !!initialData);
   const [step, setStep] = useState<Step>(initialStep);
   const [submitting, setSubmitting] = useState(false);
-  // Track which flex rows have notes panel open
-  const [openNotes, setOpenNotes] = useState<Record<string, boolean>>({});
-  // Store notes text per flex row key
   const [flexNotes, setFlexNotes] = useState<Record<string, string>>({});
 
-  const toggleNotes = (key: string) =>
-    setOpenNotes(prev => ({ ...prev, [key]: !prev[key] }));
   const setNote = (key: string, val: string) =>
     setFlexNotes(prev => ({ ...prev, [key]: val }));
 
-  const { control, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<FormData>({
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       name: '', age: '', gender: 'Male', phone: '', email: '',
       training_experience: '', injuries: '', lifestyle_notes: '',
@@ -159,14 +59,12 @@ export default function AddClientModal({
     },
   });
 
-  // Handle data pre-filling for edit mode
   React.useEffect(() => {
     if (visible) {
-      setSubmitting(false); // Force reset
+      setSubmitting(false);
       if (mode === 'edit' && initialData) {
         const { client, profile, lifestyle, assessment } = initialData;
         
-        // Transform flex results to form state
         const flexMap: any = {};
         assessment.flexibility?.forEach(f => {
           if (f.key === 'hamstrings') { flexMap.flex_hamstrings_r = f.right; flexMap.flex_hamstrings_l = f.left; }
@@ -176,11 +74,9 @@ export default function AddClientModal({
           const flexKey = (f.key as any);
           if (flexKey === 'seated_toe_reach' || flexKey === 'toe_reach') { flexMap.flex_toe_reach = f.right; }
           if (f.key === 'trunk_rotation') { flexMap.flex_trunk_r = f.right; flexMap.flex_trunk_l = f.left; }
-          // Pre-fill flexNotes state
           if (f.note) setNote(f.key, f.note);
         });
 
-        // Transform strength exercises
         const exMap: any = {};
         assessment.exercises?.forEach((ex, idx) => {
           exMap[`strength_${idx + 1}_note`] = ex.note || '';
@@ -192,7 +88,7 @@ export default function AddClientModal({
           gender: profile.gender === 'male' ? 'Male' : profile.gender === 'female' ? 'Female' : 'Other',
           phone: client.phone || '',
           email: client.email || '',
-          training_experience: lifestyle.job_type === 'Beginner' ? 'Beginner' : 'Experienced', // Basic mapping
+          training_experience: lifestyle.job_type === 'Beginner' ? 'Beginner' : 'Experienced',
           injuries: profile.medical_notes || '',
           lifestyle_notes: lifestyle.notes || '',
           weight_kg: profile.initial_weight_kg.toString(),
@@ -233,7 +129,6 @@ export default function AddClientModal({
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
-      // Parse BP
       const bpParts = (data.bp || '').split('/');
       const bp_systolic = parseInt(bpParts[0]) || null;
       const bp_diastolic = parseInt(bpParts[1]) || null;
@@ -317,8 +212,6 @@ export default function AddClientModal({
     }
   };
 
-  // ── Tab Bar ────────────────────────────────────────────────────────────────
-
   const TABS: { key: Step; label: string; icon: string }[] = [
     { key: 'personal', label: 'PERSONAL', icon: 'person' },
     { key: 'interview', label: 'INTERVIEW', icon: 'chatbubble-ellipses' },
@@ -327,7 +220,6 @@ export default function AddClientModal({
 
   const stepOrder: Step[] = ['personal', 'interview', 'assessment'];
   const currentIdx = stepOrder.indexOf(step);
-
   const isCompleted = (tabKey: Step) => stepOrder.indexOf(tabKey) < currentIdx;
   const isActive = (tabKey: Step) => tabKey === step;
 
@@ -343,421 +235,19 @@ export default function AddClientModal({
             <Ionicons
               name={isCompleted(tab.key) ? 'checkmark' : tab.icon as any}
               size={16}
-              color={isActive(tab.key) || isCompleted(tab.key) ? '#000' : '#666'}
+              color={isActive(tab.key) || isCompleted(tab.key) ? colors.textDark : colors.textLabel}
             />
           </View>
           <Text style={[styles.tabLabel, (isActive(tab.key) || isCompleted(tab.key)) && styles.tabLabelActive]}>
             {tab.label}
           </Text>
           {isActive(tab.key) && <View style={styles.activeIndicator} />}
-          {isCompleted(tab.key) && <View style={[styles.activeIndicator, { backgroundColor: '#888' }]} />}
+          {isCompleted(tab.key) && <View style={[styles.activeIndicator, { backgroundColor: colors.textMuted }]} />}
         </TouchableOpacity>
       ))}
       <View style={styles.tabsBottomLine} />
     </View>
   );
-
-  // ── Step 1: Personal ───────────────────────────────────────────────────────
-
-  const renderPersonal = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>FULL NAME *</Text>
-        <Controller
-          control={control}
-          name="name"
-          rules={{ required: 'Name is required' }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, !!errors.name && styles.inputError]}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="e.g. John Smith"
-              placeholderTextColor="#444"
-            />
-          )}
-        />
-        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
-      </View>
-
-      <View style={styles.row}>
-        <View style={[styles.fieldGroup, { flex: 1, marginRight: 12 }]}>
-          <Text style={styles.label}>AGE</Text>
-          <Controller
-            control={control}
-            name="age"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                style={styles.input}
-                onBlur={onBlur}
-                onChangeText={onChange}
-                value={value}
-                placeholder="28"
-                placeholderTextColor="#444"
-                keyboardType="numeric"
-              />
-            )}
-          />
-        </View>
-        <View style={[styles.fieldGroup, { flex: 1 }]}>
-          <Text style={styles.label}>GENDER</Text>
-          <TouchableOpacity
-            style={styles.selectBtn}
-            onPress={() => {
-              const next = gender === 'Male' ? 'Female' : gender === 'Female' ? 'Other' : 'Male';
-              setValue('gender', next);
-            }}
-          >
-            <Text style={styles.selectBtnText}>{gender}</Text>
-            <Ionicons name="chevron-down" size={14} color="#666" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>PHONE</Text>
-        <Controller
-          control={control}
-          name="phone"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="+1 234 567 8901"
-              placeholderTextColor="#444"
-              keyboardType="phone-pad"
-            />
-          )}
-        />
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>EMAIL</Text>
-        <Controller
-          control={control}
-          name="email"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="client@email.com"
-              placeholderTextColor="#444"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          )}
-        />
-      </View>
-    </ScrollView>
-  );
-
-  // ── Step 2: Interview ──────────────────────────────────────────────────────
-
-  const renderInterview = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <Text style={styles.stepHint}>Optional — helps personalize the program</Text>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>TRAINING EXPERIENCE</Text>
-        <Controller
-          control={control}
-          name="training_experience"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="e.g. 2 years gym experience, mostly self-taught..."
-              placeholderTextColor="#444"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          )}
-        />
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>INJURIES / MEDICAL CONDITIONS</Text>
-        <Controller
-          control={control}
-          name="injuries"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="e.g. Right knee strain, avoid heavy pressing..."
-              placeholderTextColor="#444"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          )}
-        />
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>LIFESTYLE NOTES</Text>
-        <Controller
-          control={control}
-          name="lifestyle_notes"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="e.g. Desk job, sleeps 6 hrs, high stress..."
-              placeholderTextColor="#444"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          )}
-        />
-      </View>
-    </ScrollView>
-  );
-
-  // ── Step 3: Assessment ─────────────────────────────────────────────────────
-
-  const renderCheckbox = (fieldKey: keyof FormData) => (
-    <Controller
-      control={control}
-      name={fieldKey}
-      render={({ field: { value, onChange } }) => (
-        <TouchableOpacity
-          style={[styles.checkbox, value && styles.checkboxChecked]}
-          onPress={() => onChange(!value)}
-        >
-          {value && <Ionicons name="checkmark" size={12} color="#000" />}
-        </TouchableOpacity>
-      )}
-    />
-  );
-
-  const renderAssessment = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      {/* Vitals Row */}
-      <View style={styles.row}>
-        <View style={[styles.fieldGroup, { flex: 1, marginRight: 12 }]}>
-          <Text style={styles.label}>WEIGHT (KG)</Text>
-          <Controller control={control} name="weight_kg" render={({ field: { onChange, value } }) => (
-            <View style={styles.iconInput}>
-              <Ionicons name="barbell-outline" size={14} color="#666" />
-              <TextInput style={styles.iconInputField} value={value} onChangeText={onChange} placeholder="75" placeholderTextColor="#555" keyboardType="numeric" />
-            </View>
-          )} />
-        </View>
-        <View style={[styles.fieldGroup, { flex: 1 }]}>
-          <Text style={styles.label}>HEIGHT (CM)</Text>
-          <Controller control={control} name="height_cm" render={({ field: { onChange, value } }) => (
-            <View style={styles.iconInput}>
-              <Ionicons name="barbell-outline" size={14} color="#666" />
-              <TextInput style={styles.iconInputField} value={value} onChangeText={onChange} placeholder="175" placeholderTextColor="#555" keyboardType="numeric" />
-            </View>
-          )} />
-        </View>
-      </View>
-
-      <View style={styles.row}>
-        <View style={[styles.fieldGroup, { flex: 1, marginRight: 12 }]}>
-          <Text style={styles.label}>BP (MMHG)</Text>
-          <Controller control={control} name="bp" render={({ field: { onChange, value } }) => (
-            <View style={styles.iconInput}>
-              <Ionicons name="pulse-outline" size={14} color="#666" />
-              <TextInput style={styles.iconInputField} value={value} onChangeText={onChange} placeholder="120/80" placeholderTextColor="#555" />
-            </View>
-          )} />
-        </View>
-        <View style={[styles.fieldGroup, { flex: 1 }]}>
-          <Text style={styles.label}>RHR (BPM)</Text>
-          <Controller control={control} name="rhr" render={({ field: { onChange, value } }) => (
-            <View style={styles.iconInput}>
-              <Ionicons name="heart-outline" size={14} color="#666" />
-              <TextInput style={styles.iconInputField} value={value} onChangeText={onChange} placeholder="65" placeholderTextColor="#555" keyboardType="numeric" />
-            </View>
-          )} />
-        </View>
-      </View>
-
-      {/* Strength Exercises */}
-      <View style={[styles.sectionBlock, { marginBottom: 32 }]}>
-        <View style={styles.sectionBlockHeader}>
-          <Ionicons name="barbell-outline" size={14} color="#FFD700" />
-          <Text style={styles.sectionBlockTitle}>EXERCISES</Text>
-        </View>
-        {[
-          { label: 'Exercise 1', field: 'strength_1_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_8ve3pp8ve3pp8ve3.png') },
-          { label: 'Exercise 2', field: 'strength_2_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_e2cq7we2cq7we2cq.png') },
-          { label: 'Exercise 3', field: 'strength_3_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_if45hfif45hfif45.png') },
-          { label: 'Exercise 4', field: 'strength_4_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_pld916pld916pld9.png') },
-          { label: 'Exercise 5', field: 'strength_5_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_t28a37t28a37t28a.png') },
-          { label: 'Exercise 6', field: 'strength_6_note', icon: require('../../../resrc/icons/WhatsApp Image 2026-04-14 at 10.10.16 PM (1).jpeg') },
-          { label: 'Exercise 7', field: 'strength_7_note', icon: require('../../../resrc/icons/WhatsApp Image 2026-04-14 at 10.10.16 PM.jpeg') },
-          { label: 'Exercise 8', field: 'strength_8_note', icon: require('../../../resrc/icons/Gemini_Generated_Image_fvo1befvo1befvo1.png') },
-        ].map((ex) => (
-          <View key={ex.field} style={styles.strengthRow}>
-            <View style={styles.strengthIconWrap}>
-              <Image source={ex.icon} style={styles.strengthIcon} resizeMode="contain" />
-            </View>
-            <View style={styles.strengthInputWrap}>
-              <Controller
-                control={control}
-                name={ex.field as any}
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    style={styles.strengthInput}
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Add remark..."
-                    placeholderTextColor="#555"
-                    multiline
-                  />
-                )}
-              />
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Flexibility Tests */}
-      <View style={[styles.sectionBlock, { marginBottom: 32 }]}>
-        <View style={styles.sectionBlockHeader}>
-          <Ionicons name="stats-chart" size={14} color="#FFD700" />
-          <Text style={styles.sectionBlockTitle}>FITNESS TESTS</Text>
-        </View>
-        <View style={styles.flexTableHeader}>
-          <Text style={[styles.flexTableCell, { flex: 1 }]}>EXERCISE</Text>
-          <Text style={[styles.flexTableCell, styles.flexTableRLHeader]}>R</Text>
-          <Text style={[styles.flexTableCell, styles.flexTableRLHeader]}>L</Text>
-          <View style={{ width: 38, marginLeft: 4 }} />
-        </View>
-        {FLEXIBILITY_TESTS.map((test) => {
-          const noteOpen = !!openNotes[test.label];
-          const hasNote = (flexNotes[test.label] || '').length > 0;
-          return (
-            <View key={test.label} style={styles.flexRowWrapper}>
-              <View style={[styles.flexTableRow, noteOpen && styles.flexTableRowOpen]}>
-                <View style={styles.flexTableExerciseCell}>
-                  <Ionicons name="fitness-outline" size={22} color="#666" style={{ marginRight: 12 }} />
-                  <Text style={styles.flexTableExerciseText}>{test.label}</Text>
-                </View>
-                {test.bilateral ? (
-                  <>
-                    {renderCheckbox(test.keyR as keyof FormData)}
-                    <View style={[styles.checkbox, { opacity: 0.15, marginHorizontal: 3 }]} />
-                  </>
-                ) : (
-                  <>
-                    {renderCheckbox(test.keyR as keyof FormData)}
-                    {renderCheckbox((test.keyL as keyof FormData) || (test.keyR as keyof FormData))}
-                  </>
-                )}
-                <TouchableOpacity
-                  style={[styles.notesBtn, (noteOpen || hasNote) && styles.notesBtnActive]}
-                  onPress={() => toggleNotes(test.label)}
-                >
-                  <Ionicons
-                    name={noteOpen ? 'document' : 'document-outline'}
-                    size={18}
-                    color={noteOpen || hasNote ? '#FFD700' : '#555'}
-                  />
-                </TouchableOpacity>
-              </View>
-              {noteOpen && (
-                <View style={styles.flexNoteRow}>
-                  <TextInput
-                    style={styles.flexNoteInput}
-                    value={flexNotes[test.label] || ''}
-                    onChangeText={(val) => setNote(test.label, val)}
-                    placeholder="Add remarks..."
-                    placeholderTextColor="#444"
-                    multiline
-                    autoFocus
-                  />
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Cardio Section */}
-      <View style={[styles.flexRowWrapper, { marginBottom: 8 }]}>
-        <View style={styles.flexTableRow}>
-          <View style={styles.flexTableExerciseCell}>
-            <Text style={styles.flexTableExerciseText}>Treadmill</Text>
-          </View>
-          {renderCheckbox('cardio_done')}
-          <TouchableOpacity style={styles.notesBtn}>
-            <Ionicons name="document-outline" size={18} color="#555" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={[styles.row, { marginBottom: 32 }]}>
-        <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
-          <Text style={styles.label}>TIME (MIN)</Text>
-          <Controller control={control} name="cardio_time" render={({ field: { onChange, value } }) => (
-            <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="30" placeholderTextColor="#555" keyboardType="numeric" />
-          )} />
-        </View>
-        <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
-          <Text style={styles.label}>DISTANCE</Text>
-          <Controller control={control} name="cardio_distance" render={({ field: { onChange, value } }) => (
-            <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="5.0 km" placeholderTextColor="#555" />
-          )} />
-        </View>
-        <View style={[styles.fieldGroup, { flex: 1 }]}>
-          <Text style={styles.label}>MHR (BPM)</Text>
-          <Controller control={control} name="cardio_mhr" render={({ field: { onChange, value } }) => (
-            <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="180" placeholderTextColor="#555" keyboardType="numeric" />
-          )} />
-        </View>
-      </View>
-
-      {/* Objectives */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>OBJECTIVES</Text>
-        <Controller control={control} name="objectives" render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.iconInput}>
-            <Ionicons name="radio-button-on-outline" size={14} color="#666" style={{ alignSelf: 'flex-start', marginTop: 2 }} />
-            <TextInput
-              style={[styles.iconInputField, styles.textArea]}
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              placeholder="e.g. Improve cardiovascular fitness, increase mobility..."
-              placeholderTextColor="#444"
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-        )} />
-      </View>
-
-      {/* Primary Goal */}
-      <View style={styles.fieldGroup}>
-        <Text style={styles.label}>PRIMARY GOAL</Text>
-        <Controller control={control} name="primary_goal" render={({ field: { onChange, value } }) => (
-          <TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="Build Muscle Mass" placeholderTextColor="#444" />
-        )} />
-      </View>
-
-    </ScrollView>
-  );
-
-  // ── Footer Buttons ─────────────────────────────────────────────────────────
 
   const renderFooter = () => {
     const isFirst = step === 'personal';
@@ -777,7 +267,7 @@ export default function AddClientModal({
       <View style={styles.footer}>
         {!isFirst ? (
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <Ionicons name="chevron-back" size={16} color="#AAA" />
+            <Ionicons name="chevron-back" size={16} color={colors.textLight} />
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
         ) : (
@@ -790,18 +280,17 @@ export default function AddClientModal({
           <TouchableOpacity
             activeOpacity={0.7}
             style={[styles.nextBtn, styles.nextBtnYellow, submitting && styles.nextBtnDisabled]}
-            onPress={handleSubmit(onSubmit as any, (err) => {
-              console.warn('[AddClientModal] Validation Errors:', err);
+            onPress={handleSubmit(onSubmit as any, () => {
               Alert.alert('Form Error', 'Please check all required fields (*) on all tabs.');
             })}
             disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator color="#000" size="small" />
+              <ActivityIndicator color={colors.textDark} size="small" />
             ) : (
                <>
-                <Ionicons name="checkmark" size={16} color="#000" />
-                <Text style={[styles.nextBtnText, { color: '#000' }]}>
+                <Ionicons name="checkmark" size={16} color={colors.textDark} />
+                <Text style={[styles.nextBtnText, { color: colors.textDark }]}>
                   {mode === 'create' ? 'Create Client' : 'Update Client'}
                 </Text>
               </>
@@ -812,14 +301,12 @@ export default function AddClientModal({
             <Text style={styles.nextBtnText}>
               {step === 'personal' ? 'Next (Interview)' : 'Next (Assessment)'}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color="#FFF" />
+            <Ionicons name="chevron-forward" size={16} color={colors.textPrimary} />
           </TouchableOpacity>
         )}
       </View>
     );
   };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
@@ -829,23 +316,35 @@ export default function AddClientModal({
           style={styles.keyboardView}
         >
           <View style={styles.container}>
-            {/* Header */}
             <View style={styles.header}>
               <View>
                 <Text style={styles.subHeader}>{mode === 'create' ? 'NEW CLIENT' : 'EDIT PROFILE'}</Text>
                 <Text style={styles.mainTitle}>{mode === 'create' ? 'Add Client' : 'Update Client'}</Text>
               </View>
               <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
-                <Ionicons name="close" size={18} color="#888" />
+                <Ionicons name="close" size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             {renderTabs()}
 
             <View style={styles.stepContent}>
-              {step === 'personal' && renderPersonal()}
-              {step === 'interview' && renderInterview()}
-              {step === 'assessment' && renderAssessment()}
+              {step === 'personal' && (
+                <PersonalStep 
+                  control={control as any} 
+                  errors={errors} 
+                  gender={gender as any} 
+                  onGenderChange={(next) => setValue('gender', next)} 
+                />
+              )}
+              {step === 'interview' && <InterviewStep control={control as any} />}
+              {step === 'assessment' && (
+                <AssessmentStep 
+                  control={control as any} 
+                  flexNotes={flexNotes} 
+                  setNote={setNote} 
+                />
+              )}
             </View>
 
             {renderFooter()}
@@ -856,12 +355,10 @@ export default function AddClientModal({
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.88)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -872,14 +369,13 @@ const styles = StyleSheet.create({
     maxHeight: '92%',
   },
   container: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: colors.background,
     borderRadius: 20,
     padding: 24,
     paddingBottom: 20,
     width: '100%',
     borderWidth: 1,
-    borderColor: '#282828',
-    // Flex column so footer is always inside the card
+    borderColor: colors.borderContainer,
     flex: 1,
     flexDirection: 'column',
   },
@@ -890,27 +386,25 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   subHeader: {
-    color: '#FFD700',
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   mainTitle: {
-    color: '#FFF',
+    color: colors.textPrimary,
     fontSize: 22,
     fontWeight: '800',
   },
   closeBtn: {
     width: 30,
     height: 30,
-    borderRadius: 8,
-    backgroundColor: '#262626',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // Tabs
   tabsContainer: {
     flexDirection: 'row',
     marginBottom: 28,
@@ -918,213 +412,43 @@ const styles = StyleSheet.create({
   },
   tabItem: { flex: 1, alignItems: 'center', paddingBottom: 12 },
   tabIconCircle: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#262626',
+    width: 36, height: 36, borderRadius: borderRadius.xxl,
+    backgroundColor: colors.surface,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 6,
   },
-  tabIconCircleActive: { backgroundColor: '#FFD700' },
-  tabIconCircleCompleted: { backgroundColor: '#FFD700' },
-  tabLabel: { fontSize: 10, fontWeight: '800', color: '#555', letterSpacing: 0.5 },
-  tabLabelActive: { color: '#FFD700' },
+  tabIconCircleActive: { backgroundColor: colors.primary },
+  tabIconCircleCompleted: { backgroundColor: colors.primary },
+  tabLabel: { fontSize: 10, fontWeight: '800', color: colors.textInactive, letterSpacing: 0.5 },
+  tabLabelActive: { color: colors.primary },
   activeIndicator: {
     position: 'absolute', bottom: -1,
-    width: '80%', height: 2, backgroundColor: '#FFD700', zIndex: 2,
+    width: '80%', height: 2, backgroundColor: colors.primary, zIndex: 2,
   },
   tabsBottomLine: {
     position: 'absolute', bottom: 0,
-    width: '100%', height: 1, backgroundColor: '#333',
+    width: '100%', height: 1, backgroundColor: colors.borderDefault,
   },
-
   stepContent: { flex: 1, minHeight: 0 },
-  stepHint: { color: '#666', fontSize: 13, fontStyle: 'italic', marginBottom: 20 },
-
-  // Form
-  fieldGroup: { marginBottom: 24 },
-  row: { flexDirection: 'row' },
-  label: { color: '#666', fontSize: 10, fontWeight: '800', letterSpacing: 0.8, marginBottom: 8 },
-  input: {
-    backgroundColor: '#262626',
-    color: '#FFF',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  inputError: { borderColor: '#FF5252' },
-  textArea: { minHeight: 90, paddingTop: 12 },
-  errorText: { color: '#FF5252', fontSize: 11, marginTop: 4 },
-
-  selectBtn: {
-    backgroundColor: '#262626',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#333',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectBtnText: { color: '#FFF', fontSize: 14 },
-
-  iconInput: {
-    backgroundColor: '#262626',
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#333',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  iconInputField: { flex: 1, color: '#FFF', fontSize: 14 },
-
-  // Section blocks (for Assessment)
-  sectionBlock: { marginBottom: 8 },
-  sectionBlockHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginBottom: 12, marginTop: 4,
-  },
-  sectionBlockTitle: { color: '#FFF', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-
-  // Flexibility table
-  flexTableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14, // Matches flexTableRow
-    marginBottom: 6,
-  },
-  flexTableCell: { color: '#555', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  flexTableRLHeader: { width: 36, textAlign: 'center' }, // 28 (checkbox) + 4+4 (margins) = 36
-  flexRowWrapper: { marginBottom: 6 },
-  flexTableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#262626',
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 0,
-  },
-  flexTableRowOpen: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  flexTableExerciseCell: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  flexTableExerciseText: { color: '#E0E0E0', fontSize: 14, fontWeight: '600' },
-  checkbox: {
-    width: 28, height: 28, borderRadius: 6,
-    borderWidth: 1, borderColor: '#444',
-    backgroundColor: '#1E1E1E',
-    justifyContent: 'center', alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  checkboxChecked: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
-  notesBtn: {
-    width: 34, height: 34,
-    justifyContent: 'center', alignItems: 'center',
-    marginLeft: 4,
-    borderRadius: 8,
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  notesBtnActive: {
-    backgroundColor: '#2A2500',
-    borderColor: '#FFD700',
-  },
-  flexNoteRow: {
-    backgroundColor: '#262626',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    borderTopWidth: 0,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  flexNoteInput: {
-    color: '#DDD',
-    fontSize: 13,
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
-
-  // Strength Row
-  strengthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#262626',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  strengthIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 18,
-    backgroundColor: '#1E1E1E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    overflow: 'hidden', // Clips icon's white corners
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  strengthIcon: {
-    width: '100%',
-    height: '100%',
-  },
-  strengthInputWrap: {
-    flex: 1,
-    height: 80,
-    justifyContent: 'center',
-  },
-  strengthInput: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '400',
-    padding: 10,
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
-    height: '100%',
-    textAlignVertical: 'top',
-  },
-
-  // Status selector
-  statusRow: { flexDirection: 'row', gap: 10 },
-  statusBtn: {
-    flex: 1, paddingVertical: 14,
-    backgroundColor: '#262626', borderRadius: 10,
-    alignItems: 'center', borderWidth: 1, borderColor: '#333',
-  },
-  statusBtnActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
-  statusBtnText: { color: '#888', fontSize: 14, fontWeight: '600' },
-  statusBtnTextActive: { color: '#000', fontWeight: '800' },
-
-  // Footer
   footer: { flexDirection: 'row', gap: 12, marginTop: 20 },
   cancelBtn: {
-    flex: 1, backgroundColor: '#262626', padding: 16,
-    borderRadius: 10, alignItems: 'center',
+    flex: 1, backgroundColor: colors.surface, padding: 16,
+    borderRadius: borderRadius.lg, alignItems: 'center',
   },
-  cancelBtnText: { color: '#AAA', fontWeight: '700', fontSize: 14 },
+  cancelBtnText: { color: colors.textLight, fontWeight: '700', fontSize: 14 },
   backBtn: {
-    flex: 1, backgroundColor: '#262626', padding: 16,
-    borderRadius: 10, flexDirection: 'row',
+    flex: 1, backgroundColor: colors.surface, padding: 16,
+    borderRadius: borderRadius.lg, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 4,
   },
-  backBtnText: { color: '#AAA', fontWeight: '700', fontSize: 14 },
+  backBtnText: { color: colors.textLight, fontWeight: '700', fontSize: 14 },
   nextBtn: {
-    flex: 2, backgroundColor: '#2A2A2A', padding: 16,
-    borderRadius: 10, flexDirection: 'row',
+    flex: 2, backgroundColor: colors.surfaceLight, padding: 16,
+    borderRadius: borderRadius.lg, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center',
     gap: 6, borderWidth: 1, borderColor: '#3A3A3A',
   },
-  nextBtnYellow: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  nextBtnYellow: { backgroundColor: colors.primary, borderColor: colors.primary },
   nextBtnDisabled: { opacity: 0.5 },
-  nextBtnText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
+  nextBtnText: { color: colors.textPrimary, fontWeight: '800', fontSize: 14 },
 });
