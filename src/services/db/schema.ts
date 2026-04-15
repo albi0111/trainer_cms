@@ -10,16 +10,17 @@
 export const CREATE_TABLES: string[] = [
   // ── clients (parent of almost everything) ────────────────────────────────
   `CREATE TABLE IF NOT EXISTS clients (
-    id          TEXT PRIMARY KEY NOT NULL,
-    name        TEXT NOT NULL,
-    phone       TEXT,
-    email       TEXT,
-    goal        TEXT NOT NULL,
-    version     INTEGER NOT NULL DEFAULT 1,
-    sync_status TEXT NOT NULL DEFAULT 'pending'
-                  CHECK(sync_status IN ('synced', 'pending', 'pending_delete')),
-    created_at  TEXT NOT NULL,
-    updated_at  TEXT NOT NULL
+    id             TEXT PRIMARY KEY NOT NULL,
+    name           TEXT NOT NULL,
+    phone          TEXT,
+    email          TEXT,
+    goal           TEXT NOT NULL,
+    overview_notes TEXT,
+    version        INTEGER NOT NULL DEFAULT 1,
+    sync_status    TEXT NOT NULL DEFAULT 'pending'
+                   CHECK(sync_status IN ('synced', 'pending', 'pending_delete')),
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
   )`,
 
   // ── client_profiles (1:1 with clients) ───────────────────────────────────

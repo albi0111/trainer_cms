@@ -105,3 +105,41 @@ export async function getMissedSessionStats(clientId: string) {
   );
   return rows;
 }
+
+/**
+ * High-performance fetch for the main Dashboard screen.
+ * Returns counts and the "Today's Schedule" list.
+ */
+export async function getDashboardStats() {
+  const db = getDB();
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1. Today's Sessions with Client Name
+  const todaySchedule = await db.getAllAsync<any>(
+    `SELECT s.*, c.name as client_name 
+     FROM sessions s
+     JOIN clients c ON s.client_id = c.id
+     WHERE s.date = ?
+     ORDER BY s.date ASC, s.created_at ASC`,
+    [today]
+  );
+
+  // 2. Counts
+  const activeCountRows = await db.getAllAsync<{ id: string }>(
+    "SELECT id FROM clients WHERE sync_status != 'pending_delete'"
+  );
+  
+  // We need to check actual 'active' status derived logic for each if we want strict accuracy,
+  // but for the dashboard count, a simple "non-deleted" count is often what trainers expect,
+  // OR we can map them.
+  let activeCount = 0;
+  for (const row of activeCountRows) {
+    const status = await getClientStatus(row.id);
+    if (status === 'active') activeCount++;
+  }
+
+  return {
+    todaySessions: todaySchedule,
+    activeClientCount: activeCount,
+  };
+}

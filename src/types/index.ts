@@ -16,6 +16,7 @@ export interface Client {
   phone?: string;
   email?: string;
   goal: string;
+  overview_notes?: string;
   /** DERIVED — never stored. Computed on every read per §2.12. */
   status: ClientStatus;
   /** Increments on every write. Used for multi-device conflict resolution. */
