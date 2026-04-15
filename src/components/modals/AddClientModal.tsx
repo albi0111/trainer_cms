@@ -25,12 +25,12 @@ import { PersonalStep } from './AddClientSteps/PersonalStep';
 import { InterviewStep } from './AddClientSteps/InterviewStep';
 import { AssessmentStep } from './AddClientSteps/AssessmentStep';
 
-export default function AddClientModal({ 
-  visible, 
-  onClose, 
-  onSuccess, 
-  mode = 'create', 
-  clientId, 
+export default function AddClientModal({
+  visible,
+  onClose,
+  onSuccess,
+  mode = 'create',
+  clientId,
   initialData,
   initialStep = 'personal'
 }: AddClientModalProps) {
@@ -64,7 +64,7 @@ export default function AddClientModal({
       setSubmitting(false);
       if (mode === 'edit' && initialData) {
         const { client, profile, lifestyle, assessment } = initialData;
-        
+
         const flexMap: any = {};
         assessment.flexibility?.forEach(f => {
           if (f.key === 'hamstrings') { flexMap.flex_hamstrings_r = f.right; flexMap.flex_hamstrings_l = f.left; }
@@ -104,7 +104,7 @@ export default function AddClientModal({
           objectives: assessment.objectives || '',
           primary_goal: client.goal || 'Build Muscle Mass',
         });
-        
+
         if (initialStep) setStep(initialStep);
       }
     }
@@ -288,7 +288,7 @@ export default function AddClientModal({
             {submitting ? (
               <ActivityIndicator color={colors.textDark} size="small" />
             ) : (
-               <>
+              <>
                 <Ionicons name="checkmark" size={16} color={colors.textDark} />
                 <Text style={[styles.nextBtnText, { color: colors.textDark }]}>
                   {mode === 'create' ? 'Create Client' : 'Update Client'}
@@ -330,19 +330,19 @@ export default function AddClientModal({
 
             <View style={styles.stepContent}>
               {step === 'personal' && (
-                <PersonalStep 
-                  control={control as any} 
-                  errors={errors} 
-                  gender={gender as any} 
-                  onGenderChange={(next) => setValue('gender', next)} 
+                <PersonalStep
+                  control={control as any}
+                  errors={errors}
+                  gender={gender as any}
+                  onGenderChange={(next) => setValue('gender', next)}
                 />
               )}
               {step === 'interview' && <InterviewStep control={control as any} />}
               {step === 'assessment' && (
-                <AssessmentStep 
-                  control={control as any} 
-                  flexNotes={flexNotes} 
-                  setNote={setNote} 
+                <AssessmentStep
+                  control={control as any}
+                  flexNotes={flexNotes}
+                  setNote={setNote}
                 />
               )}
             </View>
@@ -365,14 +365,14 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     width: '100%',
-    maxWidth: 520,
-    maxHeight: '92%',
+    maxWidth: 900,
+    maxHeight: '94%',
   },
   container: {
     backgroundColor: colors.background,
-    borderRadius: 20,
-    padding: 24,
-    paddingBottom: 20,
+    borderRadius: 24,
+    padding: 32,
+    paddingBottom: 32,
     width: '100%',
     borderWidth: 1,
     borderColor: colors.borderContainer,
