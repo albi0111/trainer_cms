@@ -17,7 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
-import { createMonthlyPlan, createWeeklyPlan } from '../../services/plan/planService';
+import { createMonthlyPlan, createWeeklyPlan, updatePlan } from '../../services/plan/planService';
 
 interface AddPlanModalProps {
   visible: boolean;
@@ -25,6 +25,8 @@ interface AddPlanModalProps {
   parentPlanId?: string | null; // If provided, creates a weekly plan
   onClose: () => void;
   onSuccess: () => void;
+  mode?: 'create' | 'edit';
+  initialData?: { id: string, title: string, goal: string } | null;
 }
 
 interface FormData {
@@ -41,6 +43,8 @@ export default function AddPlanModal({
   parentPlanId,
   onClose,
   onSuccess,
+  mode = 'create',
+  initialData,
 }: AddPlanModalProps) {
   const {
     control,
@@ -49,39 +53,59 @@ export default function AddPlanModal({
     formState: { isSubmitting },
   } = useForm<FormData>({
     defaultValues: {
-      planType: parentPlanId ? 'weekly' : 'monthly',
-      title: parentPlanId ? `Week ${new Date().getDate()}` : '',
-      goal: '',
+      planType: mode === 'edit' ? 'monthly' : (parentPlanId ? 'weekly' : 'monthly'),
+      title: initialData?.title || (parentPlanId ? `Week ${new Date().getDate()}` : ''),
+      goal: initialData?.goal || '',
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 28 * 24 * 3600 * 1000).toISOString().split('T')[0],
     },
   });
 
+  React.useEffect(() => {
+    if (visible && mode === 'edit' && initialData) {
+      reset({
+        planType: 'monthly',
+        title: initialData.title,
+        goal: initialData.goal,
+      });
+    } else if (visible && mode === 'create') {
+        reset({
+            planType: parentPlanId ? 'weekly' : 'monthly',
+            title: parentPlanId ? `Week ${new Date().getDate()}` : '',
+            goal: '',
+        });
+    }
+  }, [visible, mode, initialData, reset, parentPlanId]);
+
   const onSubmit = async (data: FormData) => {
     try {
-      if (data.planType === 'weekly') {
-        const start = new Date().toISOString().split('T')[0];
-        const end = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
-        await createWeeklyPlan(
-          clientId,
-          parentPlanId || null,
-          data.title,
-          data.goal,
-          start,
-          end,
-          1
-        );
+      if (mode === 'edit' && initialData) {
+        await updatePlan(initialData.id, clientId, { title: data.title, goal: data.goal });
       } else {
-        await createMonthlyPlan(
-          clientId,
-          data.title,
-          data.goal
-        );
+        if (data.planType === 'weekly') {
+          const start = new Date().toISOString().split('T')[0];
+          const end = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+          await createWeeklyPlan(
+            clientId,
+            parentPlanId || null,
+            data.title,
+            data.goal,
+            start,
+            end,
+            1
+          );
+        } else {
+          await createMonthlyPlan(
+            clientId,
+            data.title,
+            data.goal
+          );
+        }
       }
       reset();
       onSuccess();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create plan.');
+      Alert.alert('Error', error.message || 'Failed to save plan.');
     }
   };
 
@@ -90,12 +114,14 @@ export default function AddPlanModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>{parentPlanId ? 'Add Weekly Plan' : 'Add New Plan'}</Text>
+            <Text style={styles.title}>
+                {mode === 'edit' ? 'Edit Plan Details' : (parentPlanId ? 'Add Weekly Plan' : 'Add New Plan')}
+            </Text>
             <TouchableOpacity onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
           </View>
 
           <View style={styles.form}>
-            {!parentPlanId && (
+            {!parentPlanId && mode === 'create' && (
               <View>
                 <Text style={styles.label}>Plan Frequency</Text>
                 <Controller
@@ -134,7 +160,7 @@ export default function AddPlanModal({
             />
 
             <TouchableOpacity style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>Create Plan</Text>}
+              {isSubmitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>{mode === 'edit' ? 'Save Changes' : 'Create Plan'}</Text>}
             </TouchableOpacity>
           </View>
         </View>

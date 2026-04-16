@@ -173,34 +173,27 @@ export async function deletePlan(planId: string, clientId: string): Promise<void
   const now = nowISO();
 
   await db.withTransactionAsync(async () => {
-    // 1. Determine plan type
-    const plan = await db.getFirstAsync<{ type: string }>(
-      'SELECT type FROM plans WHERE id = ?',
-      [planId]
+    // 1. Audit Fix: Cascade Cleanup across hierarchy (§2.7)
+    // Delete exercises first (lowest level)
+    await db.runAsync(
+      `DELETE FROM exercises WHERE session_id IN (
+        SELECT id FROM sessions WHERE plan_id = ? 
+        OR plan_id IN (SELECT id FROM plans WHERE parent_plan_id = ?)
+      )`,
+      [planId, planId]
     );
-    if (!plan) return;
 
-    if (plan.type === 'monthly') {
-      // Find all child weekly plans
-      const weeklyPlans = await db.getAllAsync<{ id: string }>(
-        'SELECT id FROM plans WHERE parent_plan_id = ? AND type = "weekly"',
-        [planId]
-      );
-      const weeklyIds = weeklyPlans.map(wp => wp.id);
+    // Delete sessions (middle level)
+    await db.runAsync(
+      `DELETE FROM sessions WHERE plan_id = ? 
+       OR plan_id IN (SELECT id FROM plans WHERE parent_plan_id = ?)`,
+      [planId, planId]
+    );
 
-      if (weeklyIds.length > 0) {
-        const placeholders = weeklyIds.map(() => '?').join(',');
-        // Delete sessions belonging to these weeks
-        await db.runAsync(`DELETE FROM sessions WHERE plan_id IN (${placeholders})`, weeklyIds);
-        // Delete weekly plans
-        await db.runAsync(`DELETE FROM plans WHERE parent_plan_id = ?`, [planId]);
-      }
-    } else {
-      // Deleting a single weekly plan -> delete its sessions
-      await db.runAsync('DELETE FROM sessions WHERE plan_id = ?', [planId]);
-    }
+    // Delete children plans (recursive step)
+    await db.runAsync('DELETE FROM plans WHERE parent_plan_id = ?', [planId]);
 
-    // 2. Delete the plan itself
+    // Delete the plan itself
     await db.runAsync('DELETE FROM plans WHERE id = ?', [planId]);
 
     // 3. Update client version
@@ -210,7 +203,7 @@ export async function deletePlan(planId: string, clientId: string): Promise<void
     );
 
     // 4. Enqueue sync for affected domains
-    await enqueueClientUpdate(clientId, ['plans', 'sessions']);
+    await enqueueClientUpdate(clientId, ['plans', 'sessions', 'exercises']);
   });
 }
 

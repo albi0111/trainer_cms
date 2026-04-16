@@ -95,6 +95,25 @@ export async function getExercisesBySession(sessionId: string): Promise<Exercise
 }
 
 /**
+ * Fetches all exercises for a client.
+ */
+export async function getExercisesByClient(clientId: string): Promise<Exercise[]> {
+  const db = getDB();
+  const rows = await db.getAllAsync<any>(
+    `SELECT e.* FROM exercises e
+     INNER JOIN sessions s ON e.session_id = s.id
+     WHERE s.client_id = ?
+     ORDER BY e.order_index ASC`,
+    [clientId]
+  );
+
+  return rows.map(row => ({
+    ...row,
+    sets: JSON.parse(row.sets_json)
+  }));
+}
+
+/**
  * Deletes an exercise entirely.
  */
 export async function deleteExercise(clientId: string, exerciseId: string): Promise<void> {

@@ -46,9 +46,12 @@ export default function EditWeeklyPlanModal({
   const [editingSession, setEditingSession] = useState<Partial<Session> & { exercises: any[] } | null>(null);
   const [conflict, setConflict] = useState<ScheduledSession | null>(null);
 
+  const [isModified, setIsModified] = useState(false);
+
   useEffect(() => {
     if (visible && planId) {
       loadData();
+      setIsModified(false);
     }
   }, [visible, planId]);
 
@@ -71,6 +74,14 @@ export default function EditWeeklyPlanModal({
       Alert.alert('Error', e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (isModified) {
+       onSuccess(); // Close and Refresh parent
+    } else {
+       onClose(); // Just close
     }
   };
 
@@ -127,6 +138,7 @@ export default function EditWeeklyPlanModal({
     }
     
     setSaving(true);
+    let sessionId = editingSession.id;
     try {
       // Calculate Duration automatically (§Polish)
       let duration = 60;
@@ -139,12 +151,18 @@ export default function EditWeeklyPlanModal({
         }
       }
 
-      let sessionId = editingSession.id;
       if (!sessionId) {
         sessionId = await createSession({
-          ...editingSession,
+          client_id: editingSession.client_id,
+          plan_id: editingSession.plan_id,
+          date: editingSession.date,
+          day_name: editingSession.day_name,
+          start_time: editingSession.start_time,
+          end_time: editingSession.end_time,
           duration_minutes: duration,
-          exercises: undefined 
+          focus: editingSession.focus || '',
+          type: editingSession.type || 'strength',
+          notes: editingSession.notes || '',
         } as any);
       } else {
         await updateSession(sessionId, clientId, {
@@ -157,38 +175,52 @@ export default function EditWeeklyPlanModal({
         });
       }
 
-      // Sync Exercises
+      // Sync Exercises — Refactored to handle order_index and missing fields
+      let exerciseCount = 0;
       for (const ex of editingSession.exercises) {
+          if (ex._isDeleted) {
+              if (!ex._isNew) {
+                  await deleteExercise(clientId, ex.id);
+              }
+              continue;
+          }
+
+          const currentIdx = exerciseCount++;
           const setsVal = parseInt(ex.target_sets) || 0;
-          const repsVal = parseInt(ex.target_reps) || 0;
-          if (ex._isDeleted && !ex._isNew) {
-              await deleteExercise(clientId, ex.id);
-          } else if (ex._isNew && !ex._isDeleted) {
+          const repsVal = ex.target_reps?.toString() || '0';
+
+          if (ex._isNew) {
               await addExercise(clientId, {
                   session_id: sessionId!,
-                  name: ex.name,
-                  order_index: ex.order_index,
+                  name: ex.name || 'New Exercise',
+                  order_index: currentIdx,
                   target_sets: setsVal,
-                  target_reps: repsVal.toString(),
-                  notes: ex.notes,
+                  target_reps: repsVal,
+                  notes: ex.notes || '',
                   sets: []
               });
-          } else if (!ex._isDeleted && !ex._isNew) {
+          } else {
               await updateExercise(clientId, ex.id, { 
-                ...ex, 
+                session_id: sessionId!,
+                name: ex.name,
+                order_index: currentIdx,
                 target_sets: setsVal, 
-                target_reps: repsVal.toString()
+                target_reps: repsVal,
+                notes: ex.notes || '',
+                sets: ex.sets || []
               });
           }
       }
 
       setIsEditorVisible(false);
+      setIsModified(true); // Fixed: Mark as modified
       
       // Delay refresh slightly to ensure modal closes smoothly on web
       setTimeout(() => {
         loadData();
       }, 100);
     } catch (e: any) {
+      console.error('[saveEditedSession] Error:', e);
       Alert.alert('Save Failed', e.message);
     } finally {
       setSaving(false);
@@ -202,6 +234,7 @@ export default function EditWeeklyPlanModal({
         { text: 'Delete', style: 'destructive', onPress: async () => {
             await deleteSession(editingSession.id!, clientId);
             setIsEditorVisible(false);
+            setIsModified(true); // Fixed: Mark as modified
             loadData();
         }}
     ]);
@@ -210,7 +243,7 @@ export default function EditWeeklyPlanModal({
   if (loading) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={[styles.header, { alignItems: 'center' }]}>
@@ -225,7 +258,10 @@ export default function EditWeeklyPlanModal({
                    placeholder="Note - what this week focus on..."
                    placeholderTextColor="#666"
                    value={plan?.goal || ''}
-                   onChangeText={(val) => setPlan(p => p ? { ...p, goal: val } : null)}
+                   onChangeText={(val) => {
+                       setPlan(p => p ? { ...p, goal: val } : null);
+                       setIsModified(true); // Fixed: Mark as modified
+                   }}
                    onBlur={async () => {
                        if (plan) {
                            const db = getDB();
@@ -235,8 +271,8 @@ export default function EditWeeklyPlanModal({
                 />
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color="#888" />
+            <TouchableOpacity onPress={handleClose} style={[styles.closeBtn, isModified && { backgroundColor: '#FFD700' }]}>
+              <Ionicons name={isModified ? "checkmark" : "close"} size={24} color={isModified ? "#000" : "#888"} />
             </TouchableOpacity>
           </View>
 

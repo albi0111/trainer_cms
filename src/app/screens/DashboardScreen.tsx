@@ -18,7 +18,7 @@ import {
   SafeAreaView,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../RootNavigator';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,9 +39,10 @@ export default function DashboardScreen() {
   const isWide = width >= 768; // Tablet & Desktop breakpoint
 
   const [clients, setClients] = useState<Client[]>([]);
-  const [stats, setStats] = useState<{ todaySessions: any[], activeClientCount: number }>({
+  const [stats, setStats] = useState<{ todaySessions: any[], activeClientCount: number, clientDataMap: any }>({
     todaySessions: [],
     activeClientCount: 0,
+    clientDataMap: {}
   });
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -81,21 +82,27 @@ export default function DashboardScreen() {
     }
   }, [fetchData]);
 
-  useEffect(() => {
-    fetchData();
-    handleSync();
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+      handleSync();
+    }, [fetchData, handleSync])
+  );
 
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') handleSync();
     });
 
     return () => subscription.remove();
-  }, [fetchData, handleSync]);
+  }, [handleSync]);
 
   const filteredClients = clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const renderClientItem = ({ item }: { item: Client }) => {
-    const isActive = item.status === 'active';
+    const clientState = stats.clientDataMap[item.id] || { status: 'active', nextSession: 'loading...' };
+    const isActive = clientState.status === 'active';
+    const isCompleted = clientState.status === 'completed';
     const initials = item.name.substring(0, 2).toUpperCase();
 
     return (
@@ -110,17 +117,22 @@ export default function DashboardScreen() {
         <View style={styles.clientInfo}>
           <Text style={styles.clientName}>{item.name}</Text>
           <Text style={styles.clientGoal} numberOfLines={1}>{item.goal || 'General Fitness'}</Text>
-          {/* Mock UI for Next Session - to match Figma exactly we show some stub data or nothing if missing */}
           <View style={styles.nextSessionRow}>
-            <Ionicons name="time-outline" size={12} color="#FFD700" />
-            <Text style={styles.nextSessionText}>Today · 09:00 · Strength</Text>
+            <Ionicons name="time-outline" size={12} color={isActive ? "#FFD700" : "#666"} />
+            <Text style={styles.nextSessionText}>{clientState.nextSession}</Text>
           </View>
         </View>
 
         <View style={styles.clientRightActions}>
-          <View style={[styles.statusBadge, isActive ? styles.statusActive : styles.statusOnHold]}>
-            <Text style={[styles.statusText, isActive ? styles.statusTextActive : styles.statusTextOnHold]}>
-              {isActive ? 'Active' : 'On Hold'}
+          <View style={[
+            styles.statusBadge, 
+            isActive ? styles.statusActive : (isCompleted ? {backgroundColor: '#1E3A8A'} : styles.statusOnHold)
+          ]}>
+            <Text style={[
+              styles.statusText, 
+              isActive ? styles.statusTextActive : (isCompleted ? {color: '#60A5FA'} : styles.statusTextOnHold)
+            ]}>
+              {isActive ? 'Active' : (isCompleted ? 'Completed' : 'On Hold')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="#666" />

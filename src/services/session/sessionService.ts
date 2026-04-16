@@ -154,10 +154,14 @@ export async function markSessionMissed(
 /**
  * Fetches sessions for a client.
  */
-export async function getSessionsByClient(clientId: string): Promise<Session[]> {
+export async function getSessionsByClient(clientId: string): Promise<any[]> {
   const db = getDB();
-  return await db.getAllAsync<Session>(
-    `SELECT * FROM sessions WHERE client_id = ? ORDER BY date DESC, created_at DESC`,
+  return await db.getAllAsync<any>(
+    `SELECT s.*, p.title as plan_title, p.goal as plan_goal
+     FROM sessions s 
+     LEFT JOIN plans p ON s.plan_id = p.id
+     WHERE s.client_id = ? 
+     ORDER BY s.date DESC, s.created_at DESC`,
     [clientId]
   );
 }

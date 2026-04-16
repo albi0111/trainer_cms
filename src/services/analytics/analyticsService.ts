@@ -112,7 +112,8 @@ export async function getMissedSessionStats(clientId: string) {
  */
 export async function getDashboardStats() {
   const db = getDB();
-  const today = new Date().toISOString().split('T')[0];
+  // Use local date string (YYYY-MM-DD) to ensure schedule matches trainer's local day
+  const today = new Date().toLocaleDateString('en-CA'); 
 
   // 1. Today's Sessions with Client Name
   const todaySchedule = await db.getAllAsync<any>(
@@ -124,22 +125,35 @@ export async function getDashboardStats() {
     [today]
   );
 
-  // 2. Counts
-  const activeCountRows = await db.getAllAsync<{ id: string }>(
-    "SELECT id FROM clients WHERE sync_status != 'pending_delete'"
-  );
-  
-  // We need to check actual 'active' status derived logic for each if we want strict accuracy,
-  // but for the dashboard count, a simple "non-deleted" count is often what trainers expect,
-  // OR we can map them.
+  // 2. Client Statuses and Next Sessions
+  const allClients = await db.getAllAsync<any>("SELECT id, name FROM clients WHERE sync_status != 'pending_delete'");
+  const clientDataMap: Record<string, { status: ClientStatus, nextSession?: string }> = {};
   let activeCount = 0;
-  for (const row of activeCountRows) {
-    const status = await getClientStatus(row.id);
+
+  for (const client of allClients) {
+    const status = await getClientStatus(client.id);
     if (status === 'active') activeCount++;
+
+    // Fetch next session
+    const nextS = await db.getFirstAsync<{ date: string, start_time: string, focus: string }>(
+      `SELECT date, start_time, focus FROM sessions 
+       WHERE client_id = ? AND status = 'planned' AND date >= ?
+       ORDER BY date ASC, start_time ASC LIMIT 1`,
+      [client.id, today]
+    );
+
+    let nextSessionStr = 'no upcoming sessions';
+    if (nextS) {
+      const isToday = nextS.date === today;
+      nextSessionStr = `${isToday ? 'Today' : nextS.date} · ${nextS.start_time || '--:--'} · ${nextS.focus}`;
+    }
+
+    clientDataMap[client.id] = { status, nextSession: nextSessionStr };
   }
 
   return {
     todaySessions: todaySchedule,
     activeClientCount: activeCount,
+    clientDataMap
   };
 }
