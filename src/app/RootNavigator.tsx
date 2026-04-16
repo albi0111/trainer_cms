@@ -42,7 +42,7 @@ export default function RootNavigator() {
             fontWeight: '700',
             fontSize: 18,
           },
-          cardStyle: { backgroundColor: '#0A0A0A' },
+          cardStyle: { flex: 1, backgroundColor: '#0A0A0A' },
         }}
       >
         <Stack.Screen

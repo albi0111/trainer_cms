@@ -59,4 +59,26 @@ export async function initDatabase(): Promise<void> {
     SET status = 'pending', next_retry_at = NULL
     WHERE status = 'processing'
   `);
+
+  // Migration logic for production reliability:
+  // Dynamically add columns if missing due to interrupted creation or browser cache quirks
+  const migrations = [
+    'ALTER TABLE sessions ADD COLUMN start_time TEXT;',
+    'ALTER TABLE sessions ADD COLUMN end_time TEXT;',
+    'ALTER TABLE sessions ADD COLUMN duration_minutes INTEGER;',
+    'ALTER TABLE sessions ADD COLUMN day_name TEXT;',
+    'ALTER TABLE sessions ADD COLUMN focus TEXT;',
+    'ALTER TABLE sessions ADD COLUMN type TEXT;',
+    'ALTER TABLE sessions ADD COLUMN status TEXT;',
+    'ALTER TABLE sessions ADD COLUMN postponed_note TEXT;',
+    'ALTER TABLE sessions ADD COLUMN notes TEXT;'
+  ];
+
+  for (const m of migrations) {
+    try {
+      await _db.execAsync(m);
+    } catch (e) {
+      // Column likely already exists
+    }
+  }
 }

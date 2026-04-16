@@ -14,10 +14,10 @@ import {
   AppStateStatus,
   Alert,
   ScrollView,
-  useWindowDimensions,
   TextInput,
+  SafeAreaView,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../RootNavigator';
@@ -116,7 +116,7 @@ export default function DashboardScreen() {
             <Text style={styles.nextSessionText}>Today · 09:00 · Strength</Text>
           </View>
         </View>
-        
+
         <View style={styles.clientRightActions}>
           <View style={[styles.statusBadge, isActive ? styles.statusActive : styles.statusOnHold]}>
             <Text style={[styles.statusText, isActive ? styles.statusTextActive : styles.statusTextOnHold]}>
@@ -146,10 +146,10 @@ export default function DashboardScreen() {
           <Text style={styles.navDate}>{currentDateStr}</Text>
           <View style={styles.navButtonGroup}>
             <TouchableOpacity style={styles.navBtnLight}>
-               <Ionicons name="moon-outline" size={16} color="#FFE600" />
+              <Ionicons name="moon-outline" size={16} color="#FFE600" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.navBtnDark}>
-               <Ionicons name="sunny-outline" size={16} color="#666" />
+              <Ionicons name="sunny-outline" size={16} color="#666" />
             </TouchableOpacity>
           </View>
           <View style={styles.userBadge}>
@@ -158,10 +158,10 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.flex1} contentContainerStyle={styles.scrollContent}>
         {/* ── Page Header ── */}
         <View style={styles.pageHeader}>
-          <Text style={styles.greeting}>{getGreeting()}, Coach 👋</Text>
+          <Text style={styles.greeting}>{getGreeting()}, Ajith 👋</Text>
           <Text style={styles.dateText}>{currentDateStr}</Text>
         </View>
 
@@ -266,7 +266,8 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0F0F0F' },
-  
+  flex1: { flex: 1 },
+
   topNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   logoBox: { backgroundColor: '#FFD700', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 4, marginRight: 8 },
   logoBoxText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: -0.5 },
   logoText: { color: '#FFD700', fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
-  
+
   topNavRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   navDate: { color: '#888', fontSize: 14 },
   navButtonGroup: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 20, padding: 2 },
@@ -294,10 +295,10 @@ const styles = StyleSheet.create({
   pageHeader: { marginBottom: 32 },
   greeting: { fontSize: 32, fontWeight: '800', color: '#FFF' },
   dateText: { fontSize: 16, color: '#888', marginTop: 8 },
-  
+
   mainLayout: { flexDirection: 'column', gap: 24 },
   mainLayoutWide: { flexDirection: 'row', alignItems: 'flex-start' },
-  
+
   leftColumn: { gap: 24, width: '100%' },
   rightColumn: { flex: 1, width: '100%' },
 
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 12, fontWeight: '800', color: '#FFF', letterSpacing: 1 },
   emptySchedule: { padding: 20, alignItems: 'center' },
   emptyScheduleText: { color: '#666', fontSize: 14 },
-  
+
   scheduleItem: { backgroundColor: '#262626', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 12 },
   scheduleAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center' },
   scheduleAvatarText: { color: '#000', fontWeight: '800', fontSize: 14 },
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
   addClientBtnText: { color: '#000', fontWeight: '700', fontSize: 15 },
 
   clientCountText: { color: '#888', fontSize: 14, marginBottom: 16, fontWeight: '500' },
-  
+
   rosterContainer: { gap: 12 },
   clientCard: { backgroundColor: '#1A1A1A', borderRadius: 16, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 16, borderWidth: 1, borderColor: '#2A2A2A' },
   clientAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#262626', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#FFD700' },

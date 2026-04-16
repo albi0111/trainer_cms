@@ -14,7 +14,7 @@ interface PersonalStepProps {
 
 export const PersonalStep: React.FC<PersonalStepProps> = ({ control, errors, gender, onGenderChange }) => {
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView>
       <Controller
         control={control}
         name="name"

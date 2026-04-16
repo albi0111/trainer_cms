@@ -23,9 +23,9 @@ export async function addExercise(
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `INSERT INTO exercises (
-        id, session_id, name, order_index, sets_json, progression_note, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.session_id, data.name, data.order_index, JSON.stringify(data.sets), data.progression_note ?? null, now]
+        id, session_id, name, order_index, target_sets, target_reps, notes, sets_json, progression_note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, data.session_id, data.name, data.order_index, data.target_sets ?? null, data.target_reps ?? null, data.notes ?? null, JSON.stringify(data.sets), data.progression_note ?? null, now]
     );
 
     // Update client version
@@ -61,9 +61,9 @@ export async function updateExercise(
     // 2. INSERT new record with new ID
     await db.runAsync(
       `INSERT INTO exercises (
-        id, session_id, name, order_index, sets_json, progression_note, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [newId, newData.session_id, newData.name, newData.order_index, JSON.stringify(newData.sets), newData.progression_note ?? null, now]
+        id, session_id, name, order_index, target_sets, target_reps, notes, sets_json, progression_note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [newId, newData.session_id, newData.name, newData.order_index, newData.target_sets ?? null, newData.target_reps ?? null, newData.notes ?? null, JSON.stringify(newData.sets), newData.progression_note ?? null, now]
     );
 
     // 3. Update client version
@@ -92,4 +92,24 @@ export async function getExercisesBySession(sessionId: string): Promise<Exercise
     ...row,
     sets: JSON.parse(row.sets_json)
   }));
+}
+
+/**
+ * Deletes an exercise entirely.
+ */
+export async function deleteExercise(clientId: string, exerciseId: string): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM exercises WHERE id = ?', [exerciseId]);
+
+    // Update client version
+    await db.runAsync(
+      'UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?',
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['exercises']);
+  });
 }

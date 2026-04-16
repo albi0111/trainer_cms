@@ -93,6 +93,9 @@ export interface Session {
   plan_id: string | null;
   client_id: string;              // FK → Client.id (denormalized for fast queries)
   date: string;                   // ISO 8601 date only
+  start_time?: string;            // e.g. "09:00"
+  end_time?: string;              // e.g. "10:00"
+  duration_minutes?: number;      // Deprecated in favor of end_time
   day_name: string;               // e.g., "Monday"
   focus: string;                  // e.g., "Upper Body"
   type: SessionType;
@@ -101,6 +104,7 @@ export interface Session {
   missed_reason?: MissedReason;
   /** Free-text only when missed_reason = 'other' */
   missed_note?: string;
+  postponed_note?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -133,7 +137,10 @@ export interface Exercise {
   session_id: string;            // FK → Session.id
   name: string;
   order_index: number;           // display order within session
-  /** Stored as JSON in SQLite */
+  target_sets?: number;
+  target_reps?: string;
+  notes?: string;
+  /** Stored as JSON in SQLite - used to track actual performed sets */
   sets: ExerciseSet[];
   progression_note?: string;
   created_at: string;
@@ -220,6 +227,11 @@ export interface ClientAssessment {
 
 // ── §2.10 DietPlan ───────────────────────────────────────────────────────────
 
+export interface DietMeal {
+  name: string;
+  foods: string;
+}
+
 export interface DietPlan {
   id: string;
   client_id: string;             // FK → Client.id
@@ -232,6 +244,7 @@ export interface DietPlan {
   carbs_g?: number;
   fats_g?: number;
   water_liters?: number;
+  meals?: DietMeal[];            // Stored as JSON in DB
   meal_notes?: string;           // general meal guidance
   notes?: string;
   created_at: string;

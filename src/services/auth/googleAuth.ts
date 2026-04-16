@@ -7,9 +7,34 @@
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 // Required for expo-auth-session to work correctly on Android/iOS
 WebBrowser.maybeCompleteAuthSession();
+
+// ── Web-safe Storage helpers ──────────────────────────────────────────────────
+async function getItem(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+  return await SecureStore.getItemAsync(key);
+}
+
+async function setItem(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    try { localStorage.setItem(key, value); } catch (e) {}
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function deleteItem(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    try { localStorage.removeItem(key); } catch (e) {}
+    return;
+  }
+  await SecureStore.deleteItemAsync(key);
+}
 
 // ── SecureStore keys ─────────────────────────────────────────────────────────
 const KEY_ACCESS_TOKEN = 'google_access_token';
@@ -83,8 +108,8 @@ export async function login(): Promise<void> {
  * Returns null if the user is not authenticated.
  */
 export async function getAccessToken(): Promise<string | null> {
-  const accessToken = await SecureStore.getItemAsync(KEY_ACCESS_TOKEN);
-  const expiryStr = await SecureStore.getItemAsync(KEY_TOKEN_EXPIRY);
+  const accessToken = await getItem(KEY_ACCESS_TOKEN);
+  const expiryStr = await getItem(KEY_TOKEN_EXPIRY);
 
   if (!accessToken) return null;
 
@@ -94,7 +119,7 @@ export async function getAccessToken(): Promise<string | null> {
   if (!isExpired) return accessToken;
 
   // Token expired — attempt refresh
-  const refreshToken = await SecureStore.getItemAsync(KEY_REFRESH_TOKEN);
+  const refreshToken = await getItem(KEY_REFRESH_TOKEN);
   if (!refreshToken) {
     await logout();
     return null;
@@ -106,7 +131,7 @@ export async function getAccessToken(): Promise<string | null> {
       discovery
     );
     await _storeTokens(refreshed);
-    return (await SecureStore.getItemAsync(KEY_ACCESS_TOKEN)) ?? null;
+    return (await getItem(KEY_ACCESS_TOKEN)) ?? null;
   } catch {
     // Refresh failed — user must re-authenticate
     await logout();
@@ -121,9 +146,9 @@ export async function getAccessToken(): Promise<string | null> {
  * Does NOT revoke the token server-side (acceptable for this use case).
  */
 export async function logout(): Promise<void> {
-  await SecureStore.deleteItemAsync(KEY_ACCESS_TOKEN);
-  await SecureStore.deleteItemAsync(KEY_REFRESH_TOKEN);
-  await SecureStore.deleteItemAsync(KEY_TOKEN_EXPIRY);
+  await deleteItem(KEY_ACCESS_TOKEN);
+  await deleteItem(KEY_REFRESH_TOKEN);
+  await deleteItem(KEY_TOKEN_EXPIRY);
 }
 
 // ── isAuthenticated ───────────────────────────────────────────────────────────
@@ -133,7 +158,7 @@ export async function logout(): Promise<void> {
  * Use getAccessToken() to get a guaranteed-fresh token.
  */
 export async function isAuthenticated(): Promise<boolean> {
-  const token = await SecureStore.getItemAsync(KEY_ACCESS_TOKEN);
+  const token = await getItem(KEY_ACCESS_TOKEN);
   return token !== null;
 }
 
@@ -143,12 +168,12 @@ async function _storeTokens(
   tokenResponse: AuthSession.TokenResponse
 ): Promise<void> {
   if (tokenResponse.accessToken) {
-    await SecureStore.setItemAsync(KEY_ACCESS_TOKEN, tokenResponse.accessToken);
+    await setItem(KEY_ACCESS_TOKEN, tokenResponse.accessToken);
   }
   if (tokenResponse.refreshToken) {
-    await SecureStore.setItemAsync(KEY_REFRESH_TOKEN, tokenResponse.refreshToken);
+    await setItem(KEY_REFRESH_TOKEN, tokenResponse.refreshToken);
   }
   // expiresIn is seconds from now
   const expiry = Date.now() + (tokenResponse.expiresIn ?? 3600) * 1000;
-  await SecureStore.setItemAsync(KEY_TOKEN_EXPIRY, expiry.toString());
+  await setItem(KEY_TOKEN_EXPIRY, expiry.toString());
 }

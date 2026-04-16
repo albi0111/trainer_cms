@@ -29,13 +29,16 @@ export async function createSession(
 
     await db.runAsync(
       `INSERT INTO sessions (
-        id, plan_id, client_id, date, day_name, focus, type, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, plan_id, client_id, date, start_time, end_time, duration_minutes, day_name, focus, type, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.plan_id ?? null,
         data.client_id,
         data.date,
+        data.start_time ?? null,
+        data.end_time ?? null,
+        data.duration_minutes ?? null,
         data.day_name,
         data.focus,
         data.type,
@@ -158,3 +161,90 @@ export async function getSessionsByClient(clientId: string): Promise<Session[]> 
     [clientId]
   );
 }
+
+/**
+ * Updates an existing session's details.
+ * §Rule: Always updates client version and enqueues sync.
+ */
+export async function updateSession(
+  sessionId: string,
+  clientId: string,
+  data: Partial<Omit<Session, 'id' | 'client_id' | 'created_at' | 'updated_at'>>
+): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  // Build dynamic update query
+  const fields: string[] = [];
+  const values: any[] = [];
+  
+  if (data.date !== undefined) { fields.push('date = ?'); values.push(data.date); }
+  if (data.start_time !== undefined) { fields.push('start_time = ?'); values.push(data.start_time); }
+  if (data.end_time !== undefined) { fields.push('end_time = ?'); values.push(data.end_time); }
+  if (data.duration_minutes !== undefined) { fields.push('duration_minutes = ?'); values.push(data.duration_minutes); }
+  if (data.focus !== undefined) { fields.push('focus = ?'); values.push(data.focus); }
+  if (data.type !== undefined) { fields.push('type = ?'); values.push(data.type); }
+  if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
+  if (data.postponed_note !== undefined) { fields.push('postponed_note = ?'); values.push(data.postponed_note); }
+  if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes); }
+
+  if (fields.length === 0) return;
+
+  fields.push('updated_at = ?');
+  values.push(now);
+  values.push(sessionId);
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      `UPDATE sessions SET ${fields.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    await db.runAsync(
+      `UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?`,
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['sessions']);
+  });
+}
+
+/**
+ * Postpones a session to a new date/time with a note.
+ */
+export async function postponeSession(
+  sessionId: string,
+  clientId: string,
+  newDate: string,
+  newTime: string | null,
+  newEndTime: string | null,
+  note: string | null
+): Promise<void> {
+  return updateSession(sessionId, clientId, {
+    date: newDate,
+    start_time: newTime ?? undefined,
+    end_time: newEndTime ?? undefined,
+    postponed_note: note ?? undefined
+  });
+}
+
+/**
+ * Deletes a session explicitly (e.g. Remove Day).
+ */
+export async function deleteSession(sessionId: string, clientId: string): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(`DELETE FROM exercises WHERE session_id = ?`, [sessionId]); // cascade delete exercises
+    await db.runAsync(`DELETE FROM sessions WHERE id = ?`, [sessionId]);
+
+    await db.runAsync(
+      `UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?`,
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['sessions', 'exercises']);
+  });
+}
+

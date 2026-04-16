@@ -28,11 +28,11 @@ interface AddPlanModalProps {
 }
 
 interface FormData {
+  planType: 'monthly' | 'weekly';
   title: string;
   goal: string;
   startDate: string;
   endDate: string;
-  orderIndex?: string; // only for weekly
 }
 
 export default function AddPlanModal({
@@ -42,8 +42,6 @@ export default function AddPlanModal({
   onClose,
   onSuccess,
 }: AddPlanModalProps) {
-  const isWeekly = !!parentPlanId;
-
   const {
     control,
     handleSubmit,
@@ -51,33 +49,33 @@ export default function AddPlanModal({
     formState: { isSubmitting },
   } = useForm<FormData>({
     defaultValues: {
-      title: isWeekly ? `Week ${new Date().getDate()}` : 'New Monthly Goal',
+      planType: parentPlanId ? 'weekly' : 'monthly',
+      title: parentPlanId ? `Week ${new Date().getDate()}` : '',
       goal: '',
       startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
-      orderIndex: '1',
+      endDate: new Date(Date.now() + 28 * 24 * 3600 * 1000).toISOString().split('T')[0],
     },
   });
 
   const onSubmit = async (data: FormData) => {
     try {
-      if (isWeekly) {
+      if (data.planType === 'weekly') {
+        const start = new Date().toISOString().split('T')[0];
+        const end = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
         await createWeeklyPlan(
           clientId,
-          parentPlanId!,
+          parentPlanId || null,
           data.title,
           data.goal,
-          data.startDate,
-          data.endDate,
-          parseInt(data.orderIndex || '1', 10)
+          start,
+          end,
+          1
         );
       } else {
         await createMonthlyPlan(
           clientId,
           data.title,
-          data.goal,
-          data.startDate,
-          data.endDate
+          data.goal
         );
       }
       reset();
@@ -92,64 +90,48 @@ export default function AddPlanModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>{isWeekly ? 'Add Weekly Plan' : 'Add Monthly Plan'}</Text>
+            <Text style={styles.title}>{parentPlanId ? 'Add Weekly Plan' : 'Add New Plan'}</Text>
             <TouchableOpacity onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
           </View>
 
           <View style={styles.form}>
+            {!parentPlanId && (
+              <View>
+                <Text style={styles.label}>Plan Frequency</Text>
+                <Controller
+                  control={control}
+                  name="planType"
+                  render={({ field: { onChange, value } }) => (
+                    <View style={styles.row}>
+                      <TouchableOpacity style={[styles.typeBtn, value === 'monthly' && styles.typeBtnActive]} onPress={() => onChange('monthly')}>
+                        <Text style={[styles.typeBtnText, value === 'monthly' && styles.typeBtnTextActive]}>Monthly (Auto 4-Weeks)</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.typeBtn, value === 'weekly' && styles.typeBtnActive]} onPress={() => onChange('weekly')}>
+                        <Text style={[styles.typeBtnText, value === 'weekly' && styles.typeBtnTextActive]}>Standalone Weekly</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              </View>
+            )}
+
             <Text style={styles.label}>Title</Text>
             <Controller
               control={control}
               name="title"
               render={({ field: { onChange, value } }) => (
-                <TextInput style={styles.input} onChangeText={onChange} value={value} />
+                <TextInput style={styles.input} onChangeText={onChange} value={value} placeholder="e.g. Summer Shred" placeholderTextColor="#555" />
               )}
             />
 
-            <Text style={styles.label}>Primary Goal</Text>
+            <Text style={styles.label}>Primary Goal / Focus</Text>
             <Controller
               control={control}
               name="goal"
               render={({ field: { onChange, value } }) => (
-                <TextInput style={styles.input} onChangeText={onChange} value={value} placeholder="Muscle gain..." placeholderTextColor="#555" />
+                <TextInput style={[styles.input, styles.textArea]} multiline numberOfLines={3} onChangeText={onChange} value={value} placeholder="Muscle gain..." placeholderTextColor="#555" />
               )}
             />
-
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <Text style={styles.label}>Start (YYYY-MM-DD)</Text>
-                <Controller
-                  control={control}
-                  name="startDate"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput style={styles.input} onChangeText={onChange} value={value} />
-                  )}
-                />
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.label}>End (YYYY-MM-DD)</Text>
-                <Controller
-                  control={control}
-                  name="endDate"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput style={styles.input} onChangeText={onChange} value={value} />
-                  )}
-                />
-              </View>
-            </View>
-
-            {isWeekly && (
-              <View>
-                <Text style={styles.label}>Week Order (Position)</Text>
-                <Controller
-                  control={control}
-                  name="orderIndex"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="numeric" />
-                  )}
-                />
-              </View>
-            )}
 
             <TouchableOpacity style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
               {isSubmitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>Create Plan</Text>}
@@ -172,6 +154,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12 },
   label: { color: '#AAA', fontSize: 13, fontWeight: '600', marginBottom: 4 },
   input: { backgroundColor: '#222', color: '#FFF', borderRadius: 12, padding: 14, fontSize: 16, borderWidth: 1, borderColor: '#333' },
+  textArea: { height: 80, textAlignVertical: 'top' },
+  typeBtn: { flex: 1, padding: 12, backgroundColor: '#222', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  typeBtnActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  typeBtnText: { color: '#888', fontWeight: '700', fontSize: 11 },
+  typeBtnTextActive: { color: '#000' },
   submitButton: { backgroundColor: '#FFD700', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16 },
   submitButtonDisabled: { opacity: 0.6 },
   submitButtonText: { color: '#000', fontWeight: '700', fontSize: 16 },

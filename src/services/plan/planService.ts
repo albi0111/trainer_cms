@@ -28,14 +28,18 @@ export async function createMonthlyPlan(
   clientId: string,
   title: string,
   goal: string,
-  startDate: string,
-  endDate: string
+  startDateArg?: string,
+  endDateArg?: string
 ): Promise<string> {
   const db = getDB();
   const id = generateId();
   const now = nowISO();
+  
+  const startDate = startDateArg || now.split('T')[0];
+  const endDate = endDateArg || new Date(new Date(startDate).getTime() + 28 * 24 * 3600 * 1000).toISOString().split('T')[0];
 
   await db.withTransactionAsync(async () => {
+    // 1. Insert Monthly Plan
     await db.runAsync(
       `INSERT INTO plans (
         id, client_id, type, title, goal, start_date, end_date, 
@@ -43,6 +47,22 @@ export async function createMonthlyPlan(
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, clientId, 'monthly', title, goal, startDate, endDate, null, null, 'upcoming', now, now]
     );
+
+    // 2. Automatically generate 4 weekly plans
+    const startObj = new Date(startDate);
+    for (let i = 1; i <= 4; i++) {
+      const weekId = generateId();
+      const weekStart = new Date(startObj.getTime() + (i - 1) * 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+      const weekEnd = new Date(startObj.getTime() + (i * 7 - 1) * 24 * 3600 * 1000).toISOString().split('T')[0];
+      
+      await db.runAsync(
+        `INSERT INTO plans (
+          id, client_id, type, title, goal, start_date, end_date, 
+          parent_plan_id, order_index, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [weekId, clientId, 'weekly', `Week ${i}`, '', weekStart, weekEnd, id, i, 'upcoming', now, now]
+      );
+    }
 
     await db.runAsync(
       `UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?`,
@@ -56,13 +76,39 @@ export async function createMonthlyPlan(
 }
 
 /**
+ * Updates an existing plan's title and goal.
+ */
+export async function updatePlan(
+  planId: string,
+  clientId: string,
+  data: Partial<Pick<Plan, 'title' | 'goal' | 'status'>>
+): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      'UPDATE plans SET title = COALESCE(?, title), goal = COALESCE(?, goal), status = COALESCE(?, status), updated_at = ? WHERE id = ?',
+      [data.title ?? null, data.goal ?? null, data.status ?? null, now, planId]
+    );
+
+    await db.runAsync(
+      'UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?',
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['plans']);
+  });
+}
+
+/**
  * Creates a weekly plan under a monthly parent.
  * §Rule: weekly must have monthly parent (logical hierarchy).
  * §Rule: order_index required for weekly plans.
  */
 export async function createWeeklyPlan(
   clientId: string,
-  parentPlanId: string,
+  parentPlanId: string | null,
   title: string,
   goal: string,
   startDate: string,
@@ -74,14 +120,16 @@ export async function createWeeklyPlan(
   const now = nowISO();
 
   await db.withTransactionAsync(async () => {
-    // 1. Validate parent is monthly
-    const parent = await db.getFirstAsync<Plan>(
-      'SELECT type FROM plans WHERE id = ?',
-      [parentPlanId]
-    );
+    // 1. Validate parent is monthly if provided
+    if (parentPlanId) {
+      const parent = await db.getFirstAsync<Plan>(
+        'SELECT type FROM plans WHERE id = ?',
+        [parentPlanId]
+      );
 
-    if (!parent || parent.type !== 'monthly') {
-      throw new Error('Weekly plans must have a valid Monthly parent plan.');
+      if (!parent || parent.type !== 'monthly') {
+        throw new Error('Weekly plans must have a valid Monthly parent plan if linked.');
+      }
     }
 
     // 2. Insert weekly plan

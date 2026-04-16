@@ -32,12 +32,12 @@ export async function saveDietPlan(
         `UPDATE diet_plans SET 
           title = ?, goal = ?, start_date = ?, end_date = ?, 
           calories = ?, protein_g = ?, carbs_g = ?, fats_g = ?, 
-          water_liters = ?, meal_notes = ?, notes = ?, updated_at = ?
+          water_liters = ?, meals_json = ?, meal_notes = ?, notes = ?, updated_at = ?
          WHERE id = ?`,
         [
           data.title, data.goal, data.start_date ?? null, data.end_date ?? null,
           data.calories ?? null, data.protein_g ?? null, data.carbs_g ?? null, data.fats_g ?? null,
-          data.water_liters ?? null, data.meal_notes ?? null, data.notes ?? null, now,
+          data.water_liters ?? null, JSON.stringify(data.meals || []), data.meal_notes ?? null, data.notes ?? null, now,
           data.id
         ]
       );
@@ -47,12 +47,12 @@ export async function saveDietPlan(
         `INSERT INTO diet_plans (
           id, client_id, title, goal, start_date, end_date, 
           calories, protein_g, carbs_g, fats_g, water_liters, 
-          meal_notes, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          meals_json, meal_notes, notes, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.id, clientId, data.title, data.goal, data.start_date ?? null, data.end_date ?? null,
           data.calories ?? null, data.protein_g ?? null, data.carbs_g ?? null, data.fats_g ?? null,
-          data.water_liters ?? null, data.meal_notes ?? null, data.notes ?? null, now, now
+          data.water_liters ?? null, JSON.stringify(data.meals || []), data.meal_notes ?? null, data.notes ?? null, now, now
         ]
       );
     }
@@ -74,8 +74,13 @@ export async function saveDietPlan(
  */
 export async function getDietPlansByClient(clientId: string): Promise<DietPlan[]> {
   const db = getDB();
-  return await db.getAllAsync<DietPlan>(
+  const rawPlans = await db.getAllAsync<any>(
     'SELECT * FROM diet_plans WHERE client_id = ? ORDER BY created_at DESC',
     [clientId]
   );
+  return rawPlans.map(row => {
+    let meals = [];
+    try { if (row.meals_json) meals = JSON.parse(row.meals_json); } catch (e) {}
+    return { ...row, meals };
+  });
 }

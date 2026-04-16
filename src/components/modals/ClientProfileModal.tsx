@@ -72,7 +72,7 @@ export default function ClientProfileModal({ visible, onClose, data, onEditSecti
             </View>
           </View>
 
-          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scrollContent}>
             {/* Personal Info */}
             <View style={styles.section}>
               {renderSectionHeader('PERSONAL INFO', 'person-outline', 'personal')}

@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   StyleSheet,
   Text,
@@ -78,14 +79,14 @@ export default function AddMeasurementModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Add Progress</Text>
-            <TouchableOpacity onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+            <Text style={styles.title}>Log Progress</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Ionicons name="close" size={20} color="#AAA" /></TouchableOpacity>
           </View>
 
           <View style={styles.form}>
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+                <Text style={styles.label}>DATE (YYYY-MM-DD)</Text>
                 <Controller
                   control={control}
                   rules={{ required: 'Required', pattern: { value: /^\d{4}-\d{2}-\d{2}$/, message: 'Invalid format' } }}
@@ -95,8 +96,11 @@ export default function AddMeasurementModal({
                   )}
                 />
               </View>
+            </View>
+
+            <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>Weight (kg)</Text>
+                <Text style={styles.label}>WEIGHT (KG) *</Text>
                 <Controller
                   control={control}
                   rules={{ required: 'Required' }}
@@ -106,29 +110,35 @@ export default function AddMeasurementModal({
                   )}
                 />
               </View>
+              <View style={styles.flex1}>
+                <Text style={styles.label}>BODY FAT %</Text>
+                <Controller
+                  control={control}
+                  name="body_fat_pct"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="numeric" placeholder="15.2" placeholderTextColor="#555" />
+                  )}
+                />
+              </View>
             </View>
 
-            <Text style={styles.label}>Body Fat % (Optional)</Text>
-            <Controller
-              control={control}
-              name="body_fat_pct"
-              render={({ field: { onChange, value } }) => (
-                <TextInput style={styles.input} onChangeText={onChange} value={value} keyboardType="numeric" placeholder="15.2" placeholderTextColor="#555" />
-              )}
-            />
-
-            <Text style={styles.label}>Notes</Text>
+            <Text style={styles.label}>NOTES</Text>
             <Controller
               control={control}
               name="notes"
               render={({ field: { onChange, value } }) => (
-                <TextInput style={[styles.input, styles.textArea]} onChangeText={onChange} value={value} multiline numberOfLines={3} placeholder="Feeling stronger..." placeholderTextColor="#555" />
+                <TextInput style={[styles.input, styles.textArea]} onChangeText={onChange} value={value} multiline numberOfLines={3} placeholder="Observations, how client felt..." placeholderTextColor="#555" />
               )}
             />
 
-            <TouchableOpacity style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>Save Progress</Text>}
-            </TouchableOpacity>
+            <View style={[styles.row, { marginTop: 16 }]}>
+              <TouchableOpacity style={[styles.cancelButton, { flex: 1 }]} onPress={onClose} disabled={isSubmitting}>
+                 <Text style={[styles.cancelButtonText, { textAlign: 'center' }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled, { flex: 1, marginTop: 0 }]} onPress={handleSubmit(onSubmit)} disabled={isSubmitting}>
+                {isSubmitting ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>✓ Log Entry</Text>}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -142,6 +152,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFD700' },
   cancelText: { color: '#888', fontSize: 15 },
+  closeBtn: { padding: 4 },
   form: { gap: 16 },
   row: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },
@@ -151,4 +162,6 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#FFD700', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16 },
   submitButtonDisabled: { opacity: 0.6 },
   submitButtonText: { color: '#000', fontWeight: '700', fontSize: 16 },
+  cancelButton: { backgroundColor: '#222', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  cancelButtonText: { color: '#AAA', fontWeight: '600', fontSize: 16 },
 });

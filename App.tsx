@@ -58,7 +58,7 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider style={styles.flex1}>
       <StatusBar style="light" />
       <RootNavigator />
     </SafeAreaProvider>
@@ -66,6 +66,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
   center: {
     flex: 1,
     backgroundColor: '#0A0A0A',

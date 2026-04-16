@@ -10,7 +10,7 @@ interface InterviewStepProps {
 
 export const InterviewStep: React.FC<InterviewStepProps> = ({ control }) => {
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView>
       <Text style={styles.stepHint}>Optional — helps personalize the program</Text>
 
       <Controller

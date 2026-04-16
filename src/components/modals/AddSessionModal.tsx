@@ -23,6 +23,7 @@ import { SessionType } from '../../types';
 interface AddSessionModalProps {
   visible: boolean;
   clientId: string;
+  planId?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -38,6 +39,7 @@ const SESSION_TYPES: SessionType[] = ['strength', 'cardio', 'mobility', 'mixed']
 export default function AddSessionModal({
   visible,
   clientId,
+  planId,
   onClose,
   onSuccess,
 }: AddSessionModalProps) {
@@ -61,7 +63,7 @@ export default function AddSessionModal({
 
       await createSession({
         client_id: clientId,
-        plan_id: null,
+        plan_id: planId || null,
         date: data.date,
         day_name: dayName,
         focus: data.focus,

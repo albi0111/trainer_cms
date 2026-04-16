@@ -17,7 +17,7 @@ interface AssessmentStepProps {
 
 export const AssessmentStep: React.FC<AssessmentStepProps> = ({ control, flexNotes, setNote }) => {
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView>
       <AssessmentVitals control={control} />
       <AssessmentExercises control={control} />
       <AssessmentFlexibility control={control} flexNotes={flexNotes} setNote={setNote} />

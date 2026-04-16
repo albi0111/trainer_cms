@@ -208,6 +208,7 @@ async function hardDeleteClient(clientId: string, rootId: string) {
   });
 
   // 5. Delete from FileSystem (§5.6 Step 2.7)
+  // @ts-ignore
   const dir = `${FileSystem.documentDirectory}clients/${clientId}`;
   const info = await FileSystem.getInfoAsync(dir);
   if (info.exists) {
@@ -301,6 +302,7 @@ async function downloadAndMerge(rootId: string): Promise<void> {
         await db.runAsync("DELETE FROM client_domain_sync_state WHERE client_id = ?", [lc.id]);
       });
       // Delete photos dir
+      // @ts-ignore
       const dir = `${FileSystem.documentDirectory}clients/${lc.id}`;
       if ((await FileSystem.getInfoAsync(dir)).exists) {
         await FileSystem.deleteAsync(dir);
