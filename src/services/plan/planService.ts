@@ -69,7 +69,7 @@ export async function createMonthlyPlan(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['plans']);
+    await enqueueClientUpdate(clientId, ['plans'], db);
   });
 
   return id;
@@ -97,7 +97,7 @@ export async function updatePlan(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['plans']);
+    await enqueueClientUpdate(clientId, ['plans'], db);
   });
 }
 
@@ -146,7 +146,7 @@ export async function createWeeklyPlan(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['plans']);
+    await enqueueClientUpdate(clientId, ['plans'], db);
   });
 
   return id;
@@ -203,7 +203,7 @@ export async function deletePlan(planId: string, clientId: string): Promise<void
     );
 
     // 4. Enqueue sync for affected domains
-    await enqueueClientUpdate(clientId, ['plans', 'sessions', 'exercises']);
+    await enqueueClientUpdate(clientId, ['plans', 'sessions', 'exercises'], db);
   });
 }
 

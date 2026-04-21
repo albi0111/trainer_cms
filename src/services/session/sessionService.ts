@@ -53,7 +53,7 @@ export async function createSession(
       [now, data.client_id]
     );
 
-    await enqueueClientUpdate(data.client_id, ['sessions']);
+    await enqueueClientUpdate(data.client_id, ['sessions'], db);
   });
 
   return id;
@@ -110,7 +110,7 @@ export async function completeSession(
     );
 
     // 4. Enqueue sync for BOTH domains (§5.3 rule: affected_domains collected)
-    await enqueueClientUpdate(clientId, ['sessions', 'session_results']);
+    await enqueueClientUpdate(clientId, ['sessions', 'session_results'], db);
   });
 }
 
@@ -147,7 +147,7 @@ export async function markSessionMissed(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['sessions']);
+    await enqueueClientUpdate(clientId, ['sessions'], db);
   });
 }
 
@@ -209,7 +209,7 @@ export async function updateSession(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['sessions']);
+    await enqueueClientUpdate(clientId, ['sessions'], db);
   });
 }
 
@@ -248,7 +248,7 @@ export async function deleteSession(sessionId: string, clientId: string): Promis
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['sessions', 'exercises']);
+    await enqueueClientUpdate(clientId, ['sessions', 'exercises'], db);
   });
 }
 

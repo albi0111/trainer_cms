@@ -34,7 +34,7 @@ export async function addExercise(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['exercises']);
+    await enqueueClientUpdate(clientId, ['exercises'], db);
   });
 
   return id;
@@ -72,7 +72,7 @@ export async function updateExercise(
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['exercises']);
+    await enqueueClientUpdate(clientId, ['exercises'], db);
   });
 
   return newId;
@@ -129,6 +129,6 @@ export async function deleteExercise(clientId: string, exerciseId: string): Prom
       [now, clientId]
     );
 
-    await enqueueClientUpdate(clientId, ['exercises']);
+    await enqueueClientUpdate(clientId, ['exercises'], db);
   });
 }

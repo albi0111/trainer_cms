@@ -47,13 +47,39 @@ export interface Measurement {
   id: string;
   client_id: string;        // FK → Client.id
   date: string;             // ISO 8601 date only
-  weight_kg: number;
+  weight_kg?: number;
+  height_cm?: number;
   body_fat_pct?: number;
   chest_cm?: number;
   waist_cm?: number;
   hips_cm?: number;
+  arm_cm?: number;
+  thigh_cm?: number;
+  neck_cm?: number;
+  calf_cm?: number;
+  pull_strength_kg?: number;
+  push_strength_kg?: number;
+  lower_body_strength_kg?: number;
+  cardio_endurance_min?: number;
+  /** JSON-encoded values for dynamic fields */
+  custom_values_json?: string;
+  /** Parsed local-only helper for dynamic fields */
+  values?: Record<string, number | undefined>;
   notes?: string;
   created_at: string;
+}
+
+export type MeasurementCategory = 'body' | 'performance';
+
+export interface MeasurementConfig {
+  client_id: string;
+  key: string;
+  label: string;
+  unit?: string;
+  category: MeasurementCategory;
+  target_min?: number;
+  target_max?: number;
+  updated_at: string;
 }
 
 // ── §2.4 Plan ────────────────────────────────────────────────────────────────

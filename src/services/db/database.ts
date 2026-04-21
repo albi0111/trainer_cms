@@ -6,7 +6,7 @@
 import * as SQLite from 'expo-sqlite';
 import { CREATE_INDEXES, CREATE_TABLES } from './schema';
 
-const DB_NAME = 'fit_persona.db';
+const DB_NAME = 'fit_persona_v3.db';
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -19,6 +19,9 @@ export function getDB(): SQLite.SQLiteDatabase {
     throw new Error(
       '[DB] Database not initialized. Call initDatabase() first.'
     );
+  }
+  if (typeof window !== 'undefined') {
+    (window as any).__expo_db = _db;
   }
   return _db;
 }
@@ -77,7 +80,21 @@ export async function initDatabase(): Promise<void> {
     'ALTER TABLE exercises ADD COLUMN target_reps TEXT;',
     'ALTER TABLE exercises ADD COLUMN notes TEXT;',
     'ALTER TABLE exercises ADD COLUMN sets_json TEXT;',
-    'ALTER TABLE exercises ADD COLUMN progression_note TEXT;'
+    'ALTER TABLE exercises ADD COLUMN progression_note TEXT;',
+    'ALTER TABLE measurements ADD COLUMN height_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN body_fat_pct REAL;',
+    'ALTER TABLE measurements ADD COLUMN chest_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN waist_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN hips_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN arm_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN thigh_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN neck_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN calf_cm REAL;',
+    'ALTER TABLE measurements ADD COLUMN pull_strength_kg REAL;',
+    'ALTER TABLE measurements ADD COLUMN push_strength_kg REAL;',
+    'ALTER TABLE measurements ADD COLUMN lower_body_strength_kg REAL;',
+    'ALTER TABLE measurements ADD COLUMN cardio_endurance_min REAL;',
+    "ALTER TABLE measurements ADD COLUMN custom_values_json TEXT NOT NULL DEFAULT '{}';"
   ];
 
   for (const m of migrations) {

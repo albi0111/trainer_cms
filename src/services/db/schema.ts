@@ -75,14 +75,37 @@ export const CREATE_TABLES: string[] = [
     id           TEXT PRIMARY KEY NOT NULL,
     client_id    TEXT NOT NULL REFERENCES clients(id),
     date         TEXT NOT NULL,
-    weight_kg    REAL NOT NULL,
+    weight_kg    REAL,
+    height_cm    REAL,
     body_fat_pct REAL,
     chest_cm     REAL,
     waist_cm     REAL,
     hips_cm      REAL,
+    arm_cm       REAL,
+    thigh_cm     REAL,
+    neck_cm      REAL,
+    calf_cm      REAL,
+    pull_strength_kg REAL,
+    push_strength_kg REAL,
+    lower_body_strength_kg REAL,
+    cardio_endurance_min REAL,
+    custom_values_json TEXT NOT NULL DEFAULT '{}',
     notes        TEXT,
     created_at   TEXT NOT NULL,
     UNIQUE(client_id, date)
+  )`,
+
+  // ── client_measurement_configs (per-client dynamic fields) ────────────────
+  `CREATE TABLE IF NOT EXISTS client_measurement_configs (
+    client_id    TEXT NOT NULL REFERENCES clients(id),
+    key          TEXT NOT NULL,
+    label        TEXT NOT NULL,
+    unit         TEXT,
+    category     TEXT NOT NULL CHECK(category IN ('body', 'performance')),
+    target_min   REAL,
+    target_max   REAL,
+    updated_at   TEXT NOT NULL,
+    PRIMARY KEY (client_id, key)
   )`,
 
   // ── progress_photos (append-only, tracks upload state) ────────────────────
