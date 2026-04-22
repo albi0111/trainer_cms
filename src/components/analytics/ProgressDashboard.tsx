@@ -125,7 +125,7 @@ export default function ProgressDashboard({
         <Text style={styles.chartTitle}>{configs.find(c => c.key === selectedBodyMetric)?.label} Trend</Text>
         <LineChart
           data={data}
-          width={SCREEN_WIDTH - 40}
+          width={SCREEN_WIDTH - 80}
           height={220}
           chartConfig={{
             backgroundColor: '#1A1A1A',
@@ -171,7 +171,7 @@ export default function ProgressDashboard({
                  data: perfConfigs.map(c => (latestM?.values?.[c.key] ?? latestM?.[c.key as keyof Measurement] as number) || 0)
                }]
             }}
-            width={SCREEN_WIDTH - 40}
+            width={SCREEN_WIDTH - 80}
             height={220}
             yAxisLabel=""
             yAxisSuffix=""
@@ -193,9 +193,9 @@ export default function ProgressDashboard({
   };
 
   const renderRadarChart = (perfConfigs: MeasurementConfig[]) => {
-    const size = SCREEN_WIDTH - 80;
+    const size = 240;
     const center = size / 2;
-    const radius = size * 0.4;
+    const radius = 85;
     const angleStep = (Math.PI * 2) / perfConfigs.length;
 
     // Normalization: (val / target_max) * radius
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   deltaModeLabel: { fontSize: 10, fontWeight: '400', color: '#555' },
   cardActive: { borderColor: '#FFD700', backgroundColor: '#222' },
 
-  chartArea: { minHeight: 300, backgroundColor: '#161616', borderRadius: 20, marginTop: 20, padding: 12, borderWidth: 1, borderColor: '#222' },
+  chartArea: { minHeight: 300, backgroundColor: '#161616', borderRadius: 20, marginTop: 20, padding: 12, borderWidth: 1, borderColor: '#222', overflow: 'hidden' },
   chartBox: { flex: 1 },
   chartTitle: { color: '#AAA', fontSize: 13, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   chartPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },

@@ -53,7 +53,7 @@ export default function RootNavigator() {
         <Stack.Screen
           name="Client"
           component={ClientScreen}
-          options={{ title: 'Client' }}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
