@@ -11,10 +11,10 @@ import {
   Platform,
 } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
-import { RootStackParamList } from '../RootNavigator';
+import { RootStackParamList, RootStackNavigationProp } from '../RootNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getClientById, updateClientOverview, getDetailedClient } from '../../services/client/clientService';
+import { getClientById, updateClientOverview, getDetailedClient, deleteClient } from '../../services/client/clientService';
 import { getSessionsByClient } from '../../services/session/sessionService';
 import { getExercisesByClient } from '../../services/session/exerciseService';
 import { getMeasurements, getClientMeasurementConfigs } from '../../services/measurement/measurementService';
@@ -30,6 +30,7 @@ import AddPlanModal from '../../components/modals/AddPlanModal';
 import AddClientModal from '../../components/modals/AddClientModal';
 import ManageSessionModal from '../../components/modals/ManageSessionModal';
 import EditWeeklyPlanModal from '../../components/modals/EditWeeklyPlanModal';
+import ConfirmDeleteModal from '../../components/modals/ConfirmDeleteModal';
 
 // Shared components
 import TopNavBar from '../../components/shared/TopNavBar';
@@ -57,7 +58,7 @@ const CLIENT_TABS: TabDefinition[] = [
 
 export default function ClientScreen() {
   const route = useRoute<ClientScreenRouteProp>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<RootStackNavigationProp>();
   const { clientId } = route.params;
 
   // ── Core Data State ──
@@ -99,6 +100,9 @@ export default function ClientScreen() {
   const [detailedClientData, setDetailedClientData] = useState<any>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editStep, setEditStep] = useState<'personal' | 'interview' | 'assessment'>('personal');
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isDeletePlanModalVisible, setIsDeletePlanModalVisible] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<{ id: string, title: string } | null>(null);
 
   // ── Data Fetching ──
   const fetchData = useCallback(async () => {
@@ -237,16 +241,22 @@ export default function ClientScreen() {
   };
 
   const confirmDeletePlan = (id: string, title: string) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${title}"?`)) {
-        handleDeletePlan(id);
-      }
-    } else {
-      Alert.alert('Delete Plan', `Are you sure you want to delete "${title}"?`, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => handleDeletePlan(id) },
-      ]);
+    setPlanToDelete({ id, title });
+    setIsDeletePlanModalVisible(true);
+  };
+
+  const handleDeleteClient = async () => {
+    try {
+      await deleteClient(clientId);
+      navigation.navigate('Dashboard');
+    } catch (err: any) {
+      console.error('[ClientScreen] deleteClient failed:', err);
+      Alert.alert('Error', 'Failed to delete client: ' + err.message);
     }
+  };
+
+  const confirmDeleteClient = () => {
+    setIsDeleteModalVisible(true);
   };
 
   const toggleWeekExpand = (weekId: string) => {
@@ -316,6 +326,7 @@ export default function ClientScreen() {
           <ProfileSection
             data={detailedClientData}
             onEditSection={handleEditProfileSection}
+            onDeleteClient={confirmDeleteClient}
           />
         );
       default:
@@ -362,6 +373,26 @@ export default function ClientScreen() {
       <ManageSessionModal visible={isManageSessionVisible} session={activeSessionToManage} clientId={clientId} onClose={() => setIsManageSessionVisible(false)} onSuccess={() => { setIsManageSessionVisible(false); fetchData(); }} onOpenComplete={() => setActiveSessionToComplete(activeSessionToManage?.id || '')} />
       {editWeeklyPlanId && <EditWeeklyPlanModal visible={isEditWeeklyVisible} planId={editWeeklyPlanId} clientId={clientId} onClose={() => setIsEditWeeklyVisible(false)} onSuccess={() => { setIsEditWeeklyVisible(false); fetchData(); }} />}
       <AddClientModal visible={isEditModalVisible} mode="edit" clientId={clientId} initialData={detailedClientData} initialStep={editStep} onClose={() => setIsEditModalVisible(false)} onSuccess={() => { setIsEditModalVisible(false); setDetailedClientData(null); fetchData(); }} />
+      <ConfirmDeleteModal
+        visible={isDeleteModalVisible}
+        onClose={() => setIsDeleteModalVisible(false)}
+        onConfirm={() => { setIsDeleteModalVisible(false); handleDeleteClient(); }}
+        title="Delete Client"
+        message={`Are you sure you want to delete ${clientData?.name || 'this client'}? This will permanently remove all their data and history.`}
+      />
+      <ConfirmDeleteModal
+        visible={isDeletePlanModalVisible}
+        onClose={() => { setIsDeletePlanModalVisible(false); setPlanToDelete(null); }}
+        onConfirm={() => {
+          if (planToDelete) {
+            handleDeletePlan(planToDelete.id);
+            setIsDeletePlanModalVisible(false);
+            setPlanToDelete(null);
+          }
+        }}
+        title="Delete Plan"
+        message={`Are you sure you want to delete "${planToDelete?.title}"? This will remove the plan and its associated schedule.`}
+      />
     </SafeAreaView>
   );
 }

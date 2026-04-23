@@ -35,9 +35,10 @@ interface ProfileSectionProps {
     assessment: ClientAssessment;
   } | null;
   onEditSection: (section: 'personal' | 'interview' | 'assessment') => void;
+  onDeleteClient: () => void;
 }
 
-export default function ProfileSection({ data, onEditSection }: ProfileSectionProps) {
+export default function ProfileSection({ data, onEditSection, onDeleteClient }: ProfileSectionProps) {
   if (!data) {
     return (
       <View style={styles.loadingContainer}>
@@ -200,6 +201,25 @@ export default function ProfileSection({ data, onEditSection }: ProfileSectionPr
           </View>
         )}
       </View>
+
+      <View style={styles.divider} />
+
+      {/* Danger Zone */}
+      <View style={styles.dangerZone}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.row}>
+            <Ionicons name="warning-outline" size={18} color="#FF5252" style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { color: '#FF5252' }]}>DANGER ZONE</Text>
+          </View>
+        </View>
+        <Text style={styles.dangerText}>
+          Deleting this client will remove all their data, including assessments, plans, and session history. This action cannot be undone.
+        </Text>
+        <TouchableOpacity style={styles.deleteClientBtn} onPress={onDeleteClient}>
+          <Ionicons name="trash-outline" size={16} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.deleteClientBtnText}>Delete Client</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -343,4 +363,32 @@ const styles = StyleSheet.create({
   flexChipText: { fontSize: 11, fontWeight: '700' },
   flexChipTextPass: { color: '#4ADE80' },
   flexChipTextFail: { color: '#F87171' },
+  // ── Danger Zone ──
+  dangerZone: {
+    marginTop: 8,
+    padding: 16,
+    backgroundColor: 'rgba(255, 82, 82, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 82, 82, 0.2)',
+  },
+  dangerText: {
+    color: '#888',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  deleteClientBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF5252',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  deleteClientBtnText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

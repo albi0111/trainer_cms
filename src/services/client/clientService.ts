@@ -265,7 +265,7 @@ export async function batchUpdateClient(
 
 export async function getAllClients(): Promise<Client[]> {
   const db = getDB();
-  return await db.getAllAsync<Client>(`SELECT * FROM clients ORDER BY name ASC`);
+  return await db.getAllAsync<Client>(`SELECT * FROM clients WHERE sync_status != 'pending_delete' OR sync_status IS NULL ORDER BY name ASC`);
 }
 
 export async function getClientById(id: string): Promise<Client & { profile: ClientProfile } | null> {
