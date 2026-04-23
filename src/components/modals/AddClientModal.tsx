@@ -18,6 +18,7 @@ import {
 import { useForm, useWatch } from 'react-hook-form';
 import { Ionicons } from '@expo/vector-icons';
 import { createClient, batchUpdateClient } from '../../services/client/clientService';
+import { AssessmentExerciseKey } from '../../types';
 
 import { colors, borderRadius } from '../../theme/theme';
 import { FLEXIBILITY_TESTS, FormData, Step, AddClientModalProps } from './AddClientSteps/types';
@@ -55,7 +56,7 @@ export default function AddClientModal({
       flex_toe_reach: false, flex_trunk_r: false, flex_trunk_l: false,
       cardio_done: false,
       cardio_time: '', cardio_distance: '', cardio_mhr: '',
-      objectives: '', primary_goal: 'Build Muscle Mass',
+      objectives: '',
     },
   });
 
@@ -102,7 +103,6 @@ export default function AddClientModal({
           cardio_distance: assessment.cardio_distance_km?.toString() || '',
           cardio_mhr: assessment.cardio_mhr?.toString() || '',
           objectives: assessment.objectives || '',
-          primary_goal: client.goal || 'Build Muscle Mass',
         });
 
         if (initialStep) setStep(initialStep);
@@ -142,12 +142,11 @@ export default function AddClientModal({
         cardio_mhr: parseInt(data.cardio_mhr) || null,
         objectives: data.objectives,
         flexibility: FLEXIBILITY_TESTS.map(t => {
-          const key = t.label === 'Toe Reach' ? 'seated_toe_reach' : t.label.toLowerCase().replace(/ /g, '_');
           return {
-            key,
+            key: t.key,
             right: (data as any)[t.keyR] ?? false,
             left: t.keyL ? ((data as any)[t.keyL] ?? false) : null,
-            note: (flexNotes && flexNotes[key]) || '',
+            note: (flexNotes && flexNotes[t.key]) || '',
           };
         }),
         exercises: [
@@ -157,8 +156,10 @@ export default function AddClientModal({
           { label: 'Lat Pulldown', note: data.strength_4_note, order: 4, key: 'lat_pulldown' },
           { label: 'Seated Row', note: data.strength_5_note, order: 5, key: 'seated_row' },
           { label: 'Leg Curl', note: data.strength_6_note, order: 6, key: 'leg_curl' },
+          { label: 'Cardio', note: data.strength_7_note, order: 7, key: 'cardio' },
+          { label: 'Other', note: data.strength_8_note, order: 8, key: 'other' },
         ].map(ex => ({
-          key: ex.key,
+          key: ex.key as AssessmentExerciseKey,
           order_index: ex.order,
           note: ex.note
         }))
@@ -170,7 +171,7 @@ export default function AddClientModal({
             name: data.name,
             phone: data.phone,
             email: data.email,
-            goal: data.primary_goal,
+            goal: data.objectives,
           },
           profile: {
             age: parseInt(data.age) || 0,
@@ -196,7 +197,7 @@ export default function AddClientModal({
           medicalNotes: data.injuries,
           height: parseFloat(data.height_cm) || 0,
           initialWeight: parseFloat(data.weight_kg) || 0,
-          primaryGoal: data.primary_goal,
+          primaryGoal: data.objectives,
           lifestyle: { notes: data.lifestyle_notes },
           assessment: assessmentData,
         });

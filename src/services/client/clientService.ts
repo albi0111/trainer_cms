@@ -133,7 +133,7 @@ export async function createClient(params: {
     await db.runAsync(
       `INSERT INTO clients (id, name, phone, email, goal, version, sync_status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, params.name, params.phone || '', params.email || '', params.primaryGoal || '', 1, 'pending', now, now]
+      [id, params.name, params.phone || '', params.email || '', params.primaryGoal || params.assessment?.objectives || '', 1, 'pending', now, now]
     );
 
     await db.runAsync(

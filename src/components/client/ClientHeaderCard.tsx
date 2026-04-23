@@ -1,15 +1,17 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Client, ClientProfile } from '../../types';
+import { Client, ClientProfile, ClientAssessment } from '../../types';
 import AvatarCircle from '../shared/AvatarCircle';
 import StatusBadge from '../shared/StatusBadge';
 
 interface ClientHeaderCardProps {
   clientData: Client & { profile: ClientProfile };
   latestWeight: number | null;
+  assessment?: ClientAssessment | null;
 }
 
-export default function ClientHeaderCard({ clientData, latestWeight }: ClientHeaderCardProps) {
+export default function ClientHeaderCard({ clientData, latestWeight, assessment }: ClientHeaderCardProps) {
+  const displayObjective = assessment?.objectives || clientData.goal || 'General Fitness';
   return (
     <View style={styles.clientHeaderCard}>
       <View style={styles.headerTopRow}>
@@ -19,7 +21,7 @@ export default function ClientHeaderCard({ clientData, latestWeight }: ClientHea
             <Text style={styles.headerName}>{clientData.name}</Text>
             <StatusBadge status="active" />
           </View>
-          <Text style={styles.headerGoal}>{clientData.goal || 'General Fitness'}</Text>
+          <Text style={styles.headerGoal}>{displayObjective}</Text>
         </View>
       </View>
 

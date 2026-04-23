@@ -26,19 +26,6 @@ export const AssessmentObjectives: React.FC<AssessmentObjectivesProps> = ({ cont
           />
         )}
       />
-
-      <Controller
-        control={control}
-        name="primary_goal"
-        render={({ field: { onChange, value } }) => (
-          <AppInput
-            label="PRIMARY GOAL"
-            value={value}
-            onChangeText={onChange}
-            placeholder="Build Muscle Mass"
-          />
-        )}
-      />
     </>
   );
 };

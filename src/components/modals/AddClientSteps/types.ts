@@ -63,16 +63,15 @@ export interface FormData {
   cardio_mhr: string;
   // Objectives + Goal
   objectives: string;
-  primary_goal: string;
 }
 
 export type Step = 'personal' | 'interview' | 'assessment';
 
 export const FLEXIBILITY_TESTS = [
-  { label: 'Hamstrings', keyR: 'flex_hamstrings_r', keyL: 'flex_hamstrings_l', bilateral: false },
-  { label: 'Quadriceps', keyR: 'flex_quadriceps_r', keyL: 'flex_quadriceps_l', bilateral: false },
-  { label: 'Hip Flexors', keyR: 'flex_hip_flexors_r', keyL: 'flex_hip_flexors_l', bilateral: false },
-  { label: 'Shoulders', keyR: 'flex_shoulders_r', keyL: 'flex_shoulders_l', bilateral: false },
-  { label: 'Toe Reach', keyR: 'flex_toe_reach', keyL: '', bilateral: true },
-  { label: 'Trunk Rotation', keyR: 'flex_trunk_r', keyL: 'flex_trunk_l', bilateral: false },
+  { label: 'Hamstrings', key: 'hamstrings', keyR: 'flex_hamstrings_r', keyL: 'flex_hamstrings_l', bilateral: false },
+  { label: 'Quadriceps', key: 'quadriceps', keyR: 'flex_quadriceps_r', keyL: 'flex_quadriceps_l', bilateral: false },
+  { label: 'Hip Flexors', key: 'hip_flexors', keyR: 'flex_hip_flexors_r', keyL: 'flex_hip_flexors_l', bilateral: false },
+  { label: 'Shoulders', key: 'shoulders', keyR: 'flex_shoulders_r', keyL: 'flex_shoulders_l', bilateral: false },
+  { label: 'Toe Reach', key: 'seated_toe_reach', keyR: 'flex_toe_reach', keyL: '', bilateral: true },
+  { label: 'Trunk Rotation', key: 'trunk_rotation', keyR: 'flex_trunk_r', keyL: 'flex_trunk_l', bilateral: false },
 ] as const;

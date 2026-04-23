@@ -160,12 +160,12 @@ export default function ClientScreen() {
     }
   };
 
-  // ── Fetch profile data when switching to profile tab ──
+  // ── Fetch profile data (needed for header objectives + profile tab) ──
   useEffect(() => {
-    if (activeTab === 'profile' && !detailedClientData) {
+    if (!detailedClientData) {
       getDetailedClient(clientId).then(setDetailedClientData).catch(console.error);
     }
-  }, [activeTab, clientId, detailedClientData]);
+  }, [clientId, detailedClientData]);
 
   const handleEditProfileSection = (section: 'personal' | 'interview' | 'assessment') => {
     setEditStep(section);
@@ -351,7 +351,7 @@ export default function ClientScreen() {
       />
 
       <ScrollView style={styles.flex1} contentContainerStyle={styles.content}>
-        <ClientHeaderCard clientData={clientData} latestWeight={latestWeight ?? null} />
+        <ClientHeaderCard clientData={clientData} latestWeight={latestWeight ?? null} assessment={detailedClientData?.assessment} />
         <TabBar tabs={CLIENT_TABS} activeTab={activeTab} onTabChange={setActiveTab} />
         {renderTabContent()}
       </ScrollView>

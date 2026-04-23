@@ -200,7 +200,9 @@ export type AssessmentExerciseKey =
   | 'leg_press'      // Pictogram 3 — seated/knee-bent exercise
   | 'lat_pulldown'   // Pictogram 4 — hanging / pull movement
   | 'seated_row'     // Pictogram 5 — seated rowing/press
-  | 'leg_curl';      // Pictogram 6 — lying face-down leg exercise
+  | 'leg_curl'       // Pictogram 6 — lying face-down leg exercise
+  | 'cardio'         // Pictogram 7 — treadmill/cardio
+  | 'other';          // Pictogram 8 — other test
   // Pictogram 7 = cardio → stored in cardio_* fields
 
 export interface AssessmentExercise {

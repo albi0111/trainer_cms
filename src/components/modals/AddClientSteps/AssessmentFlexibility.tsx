@@ -34,11 +34,11 @@ export const AssessmentFlexibility: React.FC<AssessmentFlexibilityProps> = ({ co
       </View>
       
       {FLEXIBILITY_TESTS.map((test) => {
-        const noteOpen = !!openNotes[test.label];
-        const hasNote = (flexNotes[test.label] || '').length > 0;
+        const noteOpen = !!openNotes[test.key];
+        const hasNote = (flexNotes[test.key] || '').length > 0;
         
         return (
-          <View key={test.label} style={styles.flexRowWrapper}>
+          <View key={test.key} style={styles.flexRowWrapper}>
             <View style={[styles.flexTableRow, noteOpen && styles.flexTableRowOpen]}>
               <View style={styles.flexTableExerciseCell}>
                 <Ionicons name="fitness-outline" size={22} color={colors.textLabel} style={{ marginRight: 12 }} />
@@ -77,7 +77,7 @@ export const AssessmentFlexibility: React.FC<AssessmentFlexibilityProps> = ({ co
               
               <TouchableOpacity
                 style={[styles.notesBtn, (noteOpen || hasNote) && styles.notesBtnActive]}
-                onPress={() => toggleNotes(test.label)}
+                onPress={() => toggleNotes(test.key)}
                 activeOpacity={0.7}
               >
                 <Ionicons
@@ -92,8 +92,8 @@ export const AssessmentFlexibility: React.FC<AssessmentFlexibilityProps> = ({ co
               <View style={styles.flexNoteRow}>
                 <TextInput
                   style={styles.flexNoteInput}
-                  value={flexNotes[test.label] || ''}
-                  onChangeText={(val) => setNote(test.label, val)}
+                  value={flexNotes[test.key] || ''}
+                  onChangeText={(val) => setNote(test.key, val)}
                   placeholder="Add remarks..."
                   placeholderTextColor={colors.textPlaceholder}
                   multiline
