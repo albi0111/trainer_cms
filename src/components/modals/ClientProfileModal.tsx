@@ -49,7 +49,7 @@ export default function ClientProfileModal({ visible, onClose, data, onEditSecti
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.modalContainer}>
           {/* Header */}
@@ -132,14 +132,19 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
   },
   modalContainer: {
-    height: '92%',
+    width: '100%',
+    maxWidth: 600,
+    height: '80%',
     backgroundColor: '#121212',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderRadius: 32,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333',
   },
   header: {
     padding: 24,

@@ -85,7 +85,7 @@ export default function ManageSessionModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           
@@ -187,8 +187,8 @@ export default function ManageSessionModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
-  container: { backgroundColor: '#161616', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { backgroundColor: '#161616', borderRadius: 24, padding: 32, width: '100%', maxWidth: 500, borderWidth: 1, borderColor: '#333' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFF' },
   closeBtn: { padding: 4 },

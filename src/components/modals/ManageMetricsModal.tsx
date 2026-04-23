@@ -112,7 +112,7 @@ export default function ManageMetricsModal({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal visible={visible} animationType="fade" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
@@ -239,8 +239,8 @@ export default function ManageMetricsModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 },
-  container: { backgroundColor: '#1A1A1A', borderRadius: 24, padding: 24, maxHeight: '80%', borderWidth: 1, borderColor: '#333' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { backgroundColor: '#1A1A1A', borderRadius: 24, padding: 32, width: '100%', maxWidth: 500, maxHeight: '80%', borderWidth: 1, borderColor: '#333' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFF' },
   list: { flexGrow: 0 },

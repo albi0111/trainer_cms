@@ -17,6 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
+import { Ionicons } from '@expo/vector-icons';
 import { createSession } from '../../services/session/sessionService';
 import { SessionType } from '../../types';
 
@@ -79,12 +80,14 @@ export default function AddSessionModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Plan Session</Text>
-            <TouchableOpacity onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <Ionicons name="close" size={20} color="#888" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.form}>
@@ -139,11 +142,11 @@ export default function AddSessionModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  container: { backgroundColor: '#161616', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { backgroundColor: '#161616', borderRadius: 24, padding: 32, width: '100%', maxWidth: 500, borderWidth: 1, borderColor: '#333' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFD700' },
-  cancelText: { color: '#888', fontSize: 15 },
+  closeBtn: { padding: 4 },
   form: { gap: 16 },
   label: { color: '#AAA', fontSize: 13, fontWeight: '600', marginBottom: 4 },
   input: { backgroundColor: '#222', color: '#FFF', borderRadius: 12, padding: 14, fontSize: 16, borderWidth: 1, borderColor: '#333' },

@@ -133,7 +133,7 @@ export default function AddMeasurementModal({
   const filteredConfigs = configs.filter(c => c.category === activeTab);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
@@ -221,8 +221,8 @@ export default function AddMeasurementModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  container: { backgroundColor: '#161616', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, maxHeight: '90%' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { backgroundColor: '#161616', borderRadius: 24, padding: 32, width: '100%', maxWidth: 600, maxHeight: '90%', borderWidth: 1, borderColor: '#333' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFD700' },
   closeBtn: { padding: 4 },
