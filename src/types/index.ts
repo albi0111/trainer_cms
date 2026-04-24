@@ -133,6 +133,7 @@ export interface Session {
   postponed_note?: string;
   original_date?: string;
   notes?: string;
+  measure_reminder?: boolean;
   created_at: string;
   updated_at: string;
 }

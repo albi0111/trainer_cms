@@ -29,8 +29,8 @@ export async function createSession(
 
     await db.runAsync(
       `INSERT INTO sessions (
-        id, plan_id, client_id, date, start_time, end_time, duration_minutes, day_name, focus, type, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, plan_id, client_id, date, start_time, end_time, duration_minutes, day_name, focus, type, status, created_at, updated_at, measure_reminder
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.plan_id ?? null,
@@ -44,7 +44,8 @@ export async function createSession(
         data.type,
         'planned',
         now,
-        now
+        now,
+        data.measure_reminder ? 1 : 0
       ]
     );
 
@@ -221,6 +222,7 @@ export async function updateSession(
   if (data.postponed_note !== undefined) { fields.push('postponed_note = ?'); values.push(data.postponed_note); }
   if (data.original_date !== undefined) { fields.push('original_date = ?'); values.push(data.original_date); }
   if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes); }
+  if (data.measure_reminder !== undefined) { fields.push('measure_reminder = ?'); values.push(data.measure_reminder ? 1 : 0); }
 
   if (fields.length === 0) return;
 

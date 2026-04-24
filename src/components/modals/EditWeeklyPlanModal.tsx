@@ -21,6 +21,7 @@ import { getGlobalScheduleForDateRange, checkSessionOverlap, ScheduledSession } 
 import ScheduleCalendarGrid from '../schedule/ScheduleCalendarGrid';
 import AppTimePicker from '../shared/AppTimePicker';
 import ConfirmationModal from './ConfirmationModal';
+import { scheduleMeasurementReminders, cancelMeasurementReminders } from '../../services/notification/notificationService';
 
 interface EditWeeklyPlanModalProps {
   visible: boolean;
@@ -45,6 +46,7 @@ export default function EditWeeklyPlanModal({
   const [saving, setSaving] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [allSessions, setAllSessions] = useState<ScheduledSession[]>([]);
+  const [clientName, setClientName] = useState('');
   
   // Slot Editor State
   const [isEditorVisible, setIsEditorVisible] = useState(false);
@@ -85,6 +87,9 @@ export default function EditWeeklyPlanModal({
       
       const sessions = await getGlobalScheduleForDateRange(start, end);
       setAllSessions(sessions);
+
+      const client = await db.getFirstAsync<{ name: string }>('SELECT name FROM clients WHERE id = ?', [clientId]);
+      setClientName(client?.name || 'Client');
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -151,6 +156,7 @@ export default function EditWeeklyPlanModal({
       focus: '',
       type: 'strength',
       status: 'planned',
+      measure_reminder: false,
       exercises: []
     });
     setIsEditorVisible(true);
@@ -173,6 +179,7 @@ export default function EditWeeklyPlanModal({
     const exercises = await getExercisesBySession(session.id);
     setEditingSession({
       ...session,
+      measure_reminder: !!session.measure_reminder,
       exercises: exercises.map(e => ({ ...e, _isNew: false, _isDeleted: false }))
     });
     setConflict(null); // Clear conflict on load
@@ -226,8 +233,21 @@ export default function EditWeeklyPlanModal({
           end_time: editingSession.end_time,
           duration_minutes: duration,
           focus: editingSession.focus,
-          type: editingSession.type
+          type: editingSession.type,
+          measure_reminder: editingSession.measure_reminder
         });
+      }
+
+      // Notifications logic
+      if (editingSession.measure_reminder) {
+          // Re-fetch or use current data to schedule
+          const sessionForNotif: Session = {
+              ...editingSession,
+              id: sessionId!,
+          } as Session;
+          await scheduleMeasurementReminders(sessionForNotif, clientName);
+      } else {
+          await cancelMeasurementReminders(sessionId!);
       }
 
       // Sync Exercises — Refactored to handle order_index and missing fields
@@ -290,6 +310,7 @@ export default function EditWeeklyPlanModal({
   const handleConfirmDeleteSession = async () => {
     if (!editingSession?.id) return;
     await deleteSession(editingSession.id!, clientId);
+    await cancelMeasurementReminders(editingSession.id!);
     setIsDeleteSessionConfirmVisible(false);
     setIsEditorVisible(false);
     setIsModified(true);
@@ -437,11 +458,23 @@ export default function EditWeeklyPlanModal({
                                  const next = [...editingSession.exercises];
                                  next[idx]._isDeleted = true;
                                  setEditingSession(prev => ({ ...prev!, exercises: next }));
-                            }}>
+                             }}>
                                 <Ionicons name="trash-outline" size={18} color="#FF4444" />
                             </TouchableOpacity>
                         </View>
                     ))}
+
+                    <View style={styles.divider} />
+
+                    <TouchableOpacity 
+                        style={styles.reminderToggle}
+                        onPress={() => setEditingSession(prev => ({ ...prev!, measure_reminder: !prev?.measure_reminder }))}
+                    >
+                        <View style={[styles.checkbox, editingSession?.measure_reminder && styles.checkboxActive]}>
+                            {editingSession?.measure_reminder && <Ionicons name="checkmark" size={14} color="#000" />}
+                        </View>
+                        <Text style={styles.reminderText}>📏 Remind me to take progress measurements</Text>
+                    </TouchableOpacity>
                 </ScrollView>
 
                 <View style={[styles.row, { gap: 10, marginTop: 20 }]}>
@@ -527,4 +560,10 @@ const styles = StyleSheet.create({
   deleteBtn: { flex: 1, backgroundColor: '#220000', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#441111' },
   deleteBtnText: { color: '#FF4444', fontWeight: '700' },
   disabledBtn: { opacity: 0.4 },
+
+  divider: { height: 1, backgroundColor: '#222', marginVertical: 20 },
+  reminderToggle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#333', alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  reminderText: { color: '#AAA', fontSize: 14, fontWeight: '600' },
 });

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { initDatabase } from './src/services/db/database';
 import RootNavigator from './src/app/RootNavigator';
+import { requestNotificationPermissions } from './src/services/notification/notificationService';
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
@@ -15,6 +16,7 @@ export default function App() {
     try {
       setDbError(null);
       await initDatabase();
+      await requestNotificationPermissions();
       setDbReady(true);
     } catch (err) {
       console.error('[App] Database init failed:', err);

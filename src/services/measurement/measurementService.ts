@@ -129,6 +129,10 @@ export async function updateClientMeasurementConfig(
 }
 
 export async function deleteClientMeasurementConfig(clientId: string, key: string): Promise<void> {
+  // Guard: weight_kg is locked and cannot be removed from any client
+  if (key === 'weight_kg') {
+    throw new Error('Weight is a required metric and cannot be removed.');
+  }
   const db = getDB();
   await db.runAsync(
     `DELETE FROM client_measurement_configs WHERE client_id = ? AND key = ?`,
@@ -148,6 +152,11 @@ const DEFAULT_METRICS = [
   { key: 'lower_body_strength_kg', label: 'Lower Body', unit: 'kg', category: 'performance' },
   { key: 'cardio_endurance_min', label: 'Cardio', unit: 'min', category: 'performance' },
 ];
+
+/** Returns the full list of default metrics (for the manage modal's available section). */
+export function getDefaultMetrics() {
+  return [...DEFAULT_METRICS];
+}
 
 export async function prepopulateDefaultConfigs(clientId: string): Promise<void> {
   const db = getDB();
