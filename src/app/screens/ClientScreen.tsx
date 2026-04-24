@@ -15,7 +15,7 @@ import { RootStackParamList, RootStackNavigationProp } from '../RootNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
 import { getClientById, updateClientOverview, getDetailedClient, deleteClient } from '../../services/client/clientService';
-import { getSessionsByClient } from '../../services/session/sessionService';
+import { getSessionsByClient, getRecentActivity, revertSession } from '../../services/session/sessionService';
 import { getExercisesByClient } from '../../services/session/exerciseService';
 import { getMeasurements, getClientMeasurementConfigs } from '../../services/measurement/measurementService';
 import { getPlansByClient, deletePlan } from '../../services/plan/planService';
@@ -30,7 +30,7 @@ import AddPlanModal from '../../components/modals/AddPlanModal';
 import AddClientModal from '../../components/modals/AddClientModal';
 import ManageSessionModal from '../../components/modals/ManageSessionModal';
 import EditWeeklyPlanModal from '../../components/modals/EditWeeklyPlanModal';
-import ConfirmDeleteModal from '../../components/modals/ConfirmDeleteModal';
+import ConfirmationModal from '../../components/modals/ConfirmationModal';
 
 // Shared components
 import TopNavBar from '../../components/shared/TopNavBar';
@@ -45,6 +45,7 @@ import WorkoutPlanSection from '../../components/client/WorkoutPlanSection';
 import MedicationSection from '../../components/client/MedicationSection';
 import DietPlanSection from '../../components/client/DietPlanSection';
 import ProfileSection from '../../components/client/ProfileSection';
+import RecentActivitySection from '../../components/client/RecentActivitySection';
 
 type ClientScreenRouteProp = RouteProp<RootStackParamList, 'Client'>;
 
@@ -70,6 +71,7 @@ export default function ClientScreen() {
   const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
   const [status, setStatus] = useState<ClientStatus>('active');
   const [stats, setStats] = useState<{ total: number, completed: number, percentage: number } | null>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState<any[]>([]);
   const [measurementConfigs, setMeasurementConfigs] = useState<MeasurementConfig[]>([]);
@@ -95,6 +97,7 @@ export default function ClientScreen() {
   const [isManageSessionVisible, setIsManageSessionVisible] = useState(false);
   const [isEditWeeklyVisible, setIsEditWeeklyVisible] = useState(false);
   const [editWeeklyPlanId, setEditWeeklyPlanId] = useState<string | null>(null);
+  const [sessionToPostpone, setSessionToPostpone] = useState<Session | null>(null);
 
   // ── Profile Tab State ──
   const [detailedClientData, setDetailedClientData] = useState<any>(null);
@@ -103,11 +106,12 @@ export default function ClientScreen() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isDeletePlanModalVisible, setIsDeletePlanModalVisible] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<{ id: string, title: string } | null>(null);
+  const [sessionToRevert, setSessionToRevert] = useState<string | null>(null);
 
   // ── Data Fetching ──
   const fetchData = useCallback(async () => {
     try {
-      const [c, s, m, p, ph, st, an, dp, ex, mc] = await Promise.all([
+      const [c, s, m, p, ph, st, an, dp, ex, mc, ra] = await Promise.all([
         getClientById(clientId),
         getSessionsByClient(clientId),
         getMeasurements(clientId),
@@ -118,6 +122,7 @@ export default function ClientScreen() {
         getDietPlansByClient(clientId),
         getExercisesByClient(clientId),
         getClientMeasurementConfigs(clientId),
+        getRecentActivity(clientId),
       ]);
       setClientData(c);
       setSessions(s);
@@ -129,6 +134,7 @@ export default function ClientScreen() {
       setDietPlans(dp);
       setExercises(ex);
       setMeasurementConfigs(mc);
+      setRecentActivity(ra);
     } catch (error) {
       console.error('[ClientScreen] Fetch error:', error);
     } finally {
@@ -197,7 +203,6 @@ export default function ClientScreen() {
   }, [plans]);
 
   const upcomingSessionsRaw = useMemo(() => sessions.filter(s => s.status === 'planned'), [sessions]);
-  const completedSessions = useMemo(() => sessions.filter(s => s.status !== 'planned'), [sessions]);
 
   useEffect(() => {
     if (plans.length > 0 && expandedWeeks.length === 0) {
@@ -255,6 +260,22 @@ export default function ClientScreen() {
     }
   };
 
+  const handleRevertSession = useCallback(async () => {
+    if (!sessionToRevert) return;
+    try {
+      await revertSession(sessionToRevert, clientId);
+      setSessionToRevert(null);
+      fetchData();
+    } catch (err: any) {
+      console.error('[ClientScreen] revertSession failed:', err);
+      Alert.alert('Error', 'Failed to revert session: ' + err.message);
+    }
+  }, [clientId, fetchData, sessionToRevert]);
+
+  const confirmRevertSession = useCallback((sessionId: string) => {
+    setSessionToRevert(sessionId);
+  }, []);
+
   const confirmDeleteClient = () => {
     setIsDeleteModalVisible(true);
   };
@@ -280,10 +301,10 @@ export default function ClientScreen() {
                 onSave={handleSaveOverview}
               />
             )}
+            <RecentActivitySection activities={recentActivity} onRevertSession={confirmRevertSession} />
             <SessionsSection
               upcoming={upcoming}
               pendingData={pendingData}
-              completedSessions={completedSessions}
               onManageSession={(s) => { setActiveSessionToManage(s); setIsManageSessionVisible(true); }}
             />
           </>
@@ -370,17 +391,42 @@ export default function ClientScreen() {
       {/* ── Modals ── */}
       <CompleteSessionModal visible={!!activeSessionToComplete} sessionId={activeSessionToComplete || ''} clientId={clientId} onClose={() => setActiveSessionToComplete(null)} onSuccess={() => { setActiveSessionToComplete(null); fetchData(); }} />
       <AddPlanModal visible={isPlanModalVisible} clientId={clientId} parentPlanId={parentForNewWeekly} mode={planModalMode} initialData={planModalInitialData} onClose={() => setIsPlanModalVisible(false)} onSuccess={() => { setIsPlanModalVisible(false); fetchData(); }} />
-      <ManageSessionModal visible={isManageSessionVisible} session={activeSessionToManage} clientId={clientId} onClose={() => setIsManageSessionVisible(false)} onSuccess={() => { setIsManageSessionVisible(false); fetchData(); }} onOpenComplete={() => setActiveSessionToComplete(activeSessionToManage?.id || '')} />
-      {editWeeklyPlanId && <EditWeeklyPlanModal visible={isEditWeeklyVisible} planId={editWeeklyPlanId} clientId={clientId} onClose={() => setIsEditWeeklyVisible(false)} onSuccess={() => { setIsEditWeeklyVisible(false); fetchData(); }} />}
+      <ManageSessionModal 
+        visible={isManageSessionVisible} 
+        session={activeSessionToManage} 
+        clientId={clientId} 
+        onClose={() => setIsManageSessionVisible(false)} 
+        onSuccess={() => { setIsManageSessionVisible(false); fetchData(); }} 
+        onOpenComplete={() => setActiveSessionToComplete(activeSessionToManage?.id || '')} 
+        onOpenPostponePick={(s) => { 
+          setSessionToPostpone(s); 
+          setEditWeeklyPlanId(s.plan_id || 'manual'); // Fallback if no plan_id
+          setIsEditWeeklyVisible(true); 
+        }} 
+      />
+      {isEditWeeklyVisible && editWeeklyPlanId && (
+        <EditWeeklyPlanModal 
+          visible={isEditWeeklyVisible} 
+          planId={editWeeklyPlanId === 'manual' ? '' : editWeeklyPlanId} 
+          clientId={clientId} 
+          onClose={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); }} 
+          onSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); fetchData(); }}
+          postponeSession={sessionToPostpone}
+          onPostponeSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); fetchData(); }}
+        />
+      )}
       <AddClientModal visible={isEditModalVisible} mode="edit" clientId={clientId} initialData={detailedClientData} initialStep={editStep} onClose={() => setIsEditModalVisible(false)} onSuccess={() => { setIsEditModalVisible(false); setDetailedClientData(null); fetchData(); }} />
-      <ConfirmDeleteModal
+      <ConfirmationModal
         visible={isDeleteModalVisible}
         onClose={() => setIsDeleteModalVisible(false)}
         onConfirm={() => { setIsDeleteModalVisible(false); handleDeleteClient(); }}
         title="Delete Client"
         message={`Are you sure you want to delete ${clientData?.name || 'this client'}? This will permanently remove all their data and history.`}
+        confirmText="Delete"
+        type="danger"
+        icon="trash"
       />
-      <ConfirmDeleteModal
+      <ConfirmationModal
         visible={isDeletePlanModalVisible}
         onClose={() => { setIsDeletePlanModalVisible(false); setPlanToDelete(null); }}
         onConfirm={() => {
@@ -392,6 +438,19 @@ export default function ClientScreen() {
         }}
         title="Delete Plan"
         message={`Are you sure you want to delete "${planToDelete?.title}"? This will remove the plan and its associated schedule.`}
+        confirmText="Delete"
+        type="danger"
+        icon="trash"
+      />
+      <ConfirmationModal
+        visible={!!sessionToRevert}
+        onClose={() => setSessionToRevert(null)}
+        onConfirm={handleRevertSession}
+        title="Revert Session"
+        message="Are you sure you want to revert this session back to planned? This will remove the completion data."
+        confirmText="Revert"
+        type="warning"
+        icon="refresh-outline"
       />
     </SafeAreaView>
   );

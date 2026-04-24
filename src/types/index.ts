@@ -131,6 +131,7 @@ export interface Session {
   /** Free-text only when missed_reason = 'other' */
   missed_note?: string;
   postponed_note?: string;
+  original_date?: string;
   notes?: string;
   created_at: string;
   updated_at: string;

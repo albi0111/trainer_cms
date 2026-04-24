@@ -15,6 +15,10 @@ interface ScheduleCalendarGridProps {
   activeClientId?: string;
   onSlotPress: (date: string, hour: number) => void;
   onSessionPress: (session: ScheduledSession) => void;
+  /** When set, only this session is shown with full color; all others are grayed out */
+  highlightSessionId?: string | null;
+  /** When set, auto-scrolls to the week containing this date (ISO string) */
+  scrollToDate?: string | null;
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 5); // 5 AM to 11 PM
@@ -28,12 +32,15 @@ export default function ScheduleCalendarGrid({
   activeClientId,
   onSlotPress,
   onSessionPress,
+  highlightSessionId,
+  scrollToDate,
 }: ScheduleCalendarGridProps) {
   const [weekRange, setWeekRange] = useState<string[][]>([]);
   const [initialIndex, setInitialIndex] = useState<number | null>(null);
 
   const bodyListRef = useRef<FlatList>(null);
   const sideListRef = useRef<FlatList>(null);
+  const horizontalScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     // Generate 52 weeks (Sunday to Saturday)
@@ -46,6 +53,7 @@ export default function ScheduleCalendarGrid({
     const _now = new Date();
     const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
     let currentIndex = 0;
+    let targetIndex: number | null = null;
 
     for (let w = 0; w < 52; w++) {
       const weekDays = [];
@@ -64,13 +72,18 @@ export default function ScheduleCalendarGrid({
         if (formatted === todayStr) {
           currentIndex = w;
         }
+        // Check if this week contains the scrollToDate
+        if (scrollToDate && formatted === scrollToDate) {
+          targetIndex = w;
+        }
       }
       weeks.push(weekDays);
     }
 
     setWeekRange(weeks);
-    setInitialIndex(currentIndex);
-  }, []);
+    // If scrollToDate is set, scroll to that week instead of today's week
+    setInitialIndex(targetIndex !== null ? targetIndex : currentIndex);
+  }, [scrollToDate]);
 
   const sessionsByDate = useMemo(() => {
     const map: Record<string, ScheduledSession[]> = {};
@@ -80,6 +93,23 @@ export default function ScheduleCalendarGrid({
     });
     return map;
   }, [sessions]);
+
+  // Auto-scroll horizontally to the highlighted session's time
+  useEffect(() => {
+    if (highlightSessionId && sessions.length > 0) {
+      const target = sessions.find(s => s.id === highlightSessionId);
+      if (target?.start_time) {
+        const [sh] = target.start_time.split(':').map(Number);
+        if (sh >= 5) {
+          // Scroll so session is roughly centered (offset by ~2 cells for context)
+          const scrollX = Math.max(0, ((sh - 5) - 2) * CELL_WIDTH);
+          setTimeout(() => {
+            horizontalScrollRef.current?.scrollTo({ x: scrollX, animated: true });
+          }, 300);
+        }
+      }
+    }
+  }, [highlightSessionId, sessions]);
 
   // Sync Vertical Scrolling
   const onScrollBody = (event: any) => {
@@ -139,6 +169,8 @@ export default function ScheduleCalendarGrid({
                 const itemWidth = Math.max((duration / 60) * CELL_WIDTH, 40);
 
                 const isActive = session.client_id === activeClientId;
+                const isHighlighted = highlightSessionId ? session.id === highlightSessionId : false;
+                const isDimmed = highlightSessionId ? session.id !== highlightSessionId : false;
 
                 return (
                   <TouchableOpacity
@@ -146,15 +178,27 @@ export default function ScheduleCalendarGrid({
                     style={[
                       styles.sessionBadge,
                       { left: leftOffset, width: itemWidth },
-                      isActive ? styles.activeBadge : styles.otherBadge
+                      isActive ? styles.activeBadge : styles.otherBadge,
+                      isDimmed && styles.dimmedBadge,
+                      isHighlighted && styles.highlightedBadge,
                     ]}
                     onPress={() => onSessionPress(session)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.badgeText, isActive && styles.activeBadgeText]} numberOfLines={1}>
+                    <Text style={[
+                      styles.badgeText,
+                      isActive && !isDimmed && styles.activeBadgeText,
+                      isDimmed && styles.dimmedText,
+                      isHighlighted && styles.highlightedText,
+                    ]} numberOfLines={1}>
                       {isActive ? 'OWN' : session.client_name.substring(0, 8)}
                     </Text>
-                    <Text style={[styles.badgeFocus, isActive && styles.activeBadgeText]} numberOfLines={1}>
+                    <Text style={[
+                      styles.badgeFocus,
+                      isActive && !isDimmed && styles.activeBadgeText,
+                      isDimmed && styles.dimmedText,
+                      isHighlighted && styles.highlightedFocusText,
+                    ]} numberOfLines={1}>
                       {session.focus || 'Workout'}
                     </Text>
                   </TouchableOpacity>
@@ -192,7 +236,7 @@ export default function ScheduleCalendarGrid({
       </View>
 
       {/* 2. Main Content */}
-      <ScrollView horizontal directionalLockEnabled={false} showsHorizontalScrollIndicator={true}>
+      <ScrollView ref={horizontalScrollRef} horizontal directionalLockEnabled={false} showsHorizontalScrollIndicator={true}>
         <View>
           {/* Hour Header */}
           <View style={styles.headerRow}>
@@ -213,7 +257,7 @@ export default function ScheduleCalendarGrid({
             data={weekRange}
             renderItem={renderGridWeek}
             keyExtractor={(item, index) => 'grid-week-' + index}
-            extraData={sessions}
+            extraData={[sessions, highlightSessionId]}
             onScroll={onScrollBody}
             scrollEventThrottle={16}
             pagingEnabled={true} // ENABLES NATIVE WEEK SNAPPING
@@ -266,8 +310,13 @@ const styles = StyleSheet.create({
   },
   otherBadge: { backgroundColor: '#222', borderWidth: 1, borderColor: '#333' },
   activeBadge: { backgroundColor: '#FFD700' },
+  dimmedBadge: { backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', opacity: 0.4 },
+  highlightedBadge: { backgroundColor: '#FFD700', borderWidth: 2, borderColor: '#FFF', shadowColor: '#FFD700', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   badgeText: { fontSize: 11, fontWeight: '800', color: '#888' },
   activeBadgeText: { color: '#000' },
+  dimmedText: { color: '#555' },
+  highlightedText: { color: '#000', fontWeight: '900' },
+  highlightedFocusText: { color: '#333', fontWeight: '700' },
   badgeFocus: { fontSize: 9, color: '#666', marginTop: 4, fontWeight: '600' },
 });
 

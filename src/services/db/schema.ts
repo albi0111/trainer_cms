@@ -178,6 +178,7 @@ export const CREATE_TABLES: string[] = [
     missed_note   TEXT,
     postponed_note TEXT,
     notes         TEXT,
+    original_date TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
   )`,

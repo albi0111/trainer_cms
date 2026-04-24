@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Session } from '../../types';
-import { postponeSession, markSessionMissed } from '../../services/session/sessionService';
+import { markSessionMissed } from '../../services/session/sessionService';
 
 interface ManageSessionModalProps {
   visible: boolean;
@@ -22,6 +22,7 @@ interface ManageSessionModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onOpenComplete: () => void;
+  onOpenPostponePick: (session: Session) => void;
 }
 
 export default function ManageSessionModal({
@@ -30,16 +31,11 @@ export default function ManageSessionModal({
   clientId,
   onClose,
   onSuccess,
-  onOpenComplete
+  onOpenComplete,
+  onOpenPostponePick
 }: ManageSessionModalProps) {
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'menu' | 'postpone' | 'missed'>('menu');
-
-  // Postpone State
-  const [newDate, setNewDate] = useState(session?.date || '');
-  const [newTime, setNewTime] = useState(session?.start_time || '');
-  const [newEndTime, setNewEndTime] = useState(session?.end_time || '');
-  const [postponeNote, setPostponeNote] = useState('');
+  const [view, setView] = useState<'menu' | 'missed'>('menu');
 
   // Missed State
   const [missedReason, setMissedReason] = useState<'sick' | 'travel' | 'busy' | 'no_show' | 'other'>('busy');
@@ -49,28 +45,12 @@ export default function ManageSessionModal({
   React.useEffect(() => {
     if (visible && session) {
       setView('menu');
-      setNewDate(session.date);
-      setNewTime(session.start_time || '');
-      setNewEndTime(session.end_time || '');
-      setPostponeNote('');
       setMissedReason('busy');
       setMissedNote('');
     }
   }, [visible, session]);
 
   if (!session) return null;
-
-  const handlePostpone = async () => {
-    setLoading(true);
-    try {
-      await postponeSession(session.id, clientId, newDate, newTime || null, newEndTime || null, postponeNote || null);
-      onSuccess();
-    } catch (e: any) {
-      Alert.alert('Error', e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleMissed = async () => {
     setLoading(true);
@@ -91,7 +71,7 @@ export default function ManageSessionModal({
           
           <View style={styles.header}>
             <Text style={styles.title}>
-              {view === 'menu' ? 'Manage Session' : view === 'postpone' ? 'Postpone Session' : 'Mark Missed'}
+              {view === 'menu' ? 'Manage Session' : 'Mark Missed'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={24} color="#888" />
@@ -110,13 +90,13 @@ export default function ManageSessionModal({
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuBtn} onPress={() => setView('postpone')}>
+              <TouchableOpacity style={styles.menuBtn} onPress={() => { onClose(); onOpenPostponePick(session); }}>
                 <View style={[styles.iconBox, { backgroundColor: '#333' }]}>
                   <Ionicons name="time" size={20} color="#FFD700" />
                 </View>
                 <View>
                   <Text style={styles.menuBtnTitle}>Postpone Session</Text>
-                  <Text style={styles.menuBtnDesc}>Change date or time</Text>
+                  <Text style={styles.menuBtnDesc}>Pick a new slot from calendar</Text>
                 </View>
               </TouchableOpacity>
 
@@ -132,32 +112,7 @@ export default function ManageSessionModal({
             </View>
           )}
 
-          {view === 'postpone' && (
-            <View style={styles.form}>
-              <View style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>New Date</Text>
-                  <TextInput style={styles.input} value={newDate} onChangeText={setNewDate} placeholder="YYYY-MM-DD" placeholderTextColor="#555" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Start Time</Text>
-                  <TextInput style={styles.input} value={newTime} onChangeText={setNewTime} placeholder="HH:MM" placeholderTextColor="#555" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>End Time</Text>
-                  <TextInput style={styles.input} value={newEndTime} onChangeText={setNewEndTime} placeholder="HH:MM" placeholderTextColor="#555" />
-                </View>
-              </View>
 
-              <Text style={styles.label}>Reason / Note</Text>
-              <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} value={postponeNote} onChangeText={setPostponeNote} multiline placeholder="Feeling sick..." placeholderTextColor="#555" />
-
-              <TouchableOpacity style={styles.submitBtn} onPress={handlePostpone} disabled={loading}>
-                {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.submitBtnText}>Postpone</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setView('menu')}><Text style={styles.backBtnText}>Back</Text></TouchableOpacity>
-            </View>
-          )}
 
           {view === 'missed' && (
             <View style={styles.form}>

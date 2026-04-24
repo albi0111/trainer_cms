@@ -24,7 +24,9 @@ export default function TodaySchedule({ sessions }: TodayScheduleProps) {
             <AvatarCircle name={s.client_name} size={40} />
             <View style={styles.scheduleInfo}>
               <Text style={styles.clientName}>{s.client_name}</Text>
-              <Text style={styles.time}>09:00 · {s.focus} · 60min</Text>
+              <Text style={styles.time}>
+                {s.start_time || '--:--'} · {s.focus} · {s.duration_minutes || 60}min
+              </Text>
             </View>
           </View>
         ))

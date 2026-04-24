@@ -7,32 +7,83 @@ import {
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius } from '../../theme/theme';
+import { colors } from '../../theme/theme';
 
-interface ConfirmDeleteModalProps {
+export type ConfirmationType = 'danger' | 'warning' | 'info' | 'success';
+
+interface ConfirmationModalProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
   message: string;
   confirmText?: string;
+  cancelText?: string;
+  type?: ConfirmationType;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
-export default function ConfirmDeleteModal({
+export default function ConfirmationModal({
   visible,
   onClose,
   onConfirm,
   title,
   message,
-  confirmText = 'Delete',
-}: ConfirmDeleteModalProps) {
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  type = 'danger',
+  icon,
+}: ConfirmationModalProps) {
+  const getTypeConfig = () => {
+    switch (type) {
+      case 'danger':
+        return {
+          color: colors.error,
+          bg: 'rgba(255, 82, 82, 0.1)',
+          border: 'rgba(255, 82, 82, 0.2)',
+          defaultIcon: 'trash' as const,
+        };
+      case 'warning':
+        return {
+          color: colors.primary,
+          bg: 'rgba(255, 215, 0, 0.1)',
+          border: 'rgba(255, 215, 0, 0.2)',
+          defaultIcon: 'alert-circle' as const,
+        };
+      case 'info':
+        return {
+          color: '#3498db',
+          bg: 'rgba(52, 152, 219, 0.1)',
+          border: 'rgba(52, 152, 219, 0.2)',
+          defaultIcon: 'information-circle' as const,
+        };
+      case 'success':
+        return {
+          color: '#3DCC88',
+          bg: 'rgba(61, 204, 136, 0.1)',
+          border: 'rgba(61, 204, 136, 0.2)',
+          defaultIcon: 'checkmark-circle' as const,
+        };
+      default:
+        return {
+          color: colors.primary,
+          bg: 'rgba(255, 215, 0, 0.1)',
+          border: 'rgba(255, 215, 0, 0.2)',
+          defaultIcon: 'help-circle' as const,
+        };
+    }
+  };
+
+  const config = getTypeConfig();
+  const activeIcon = icon || config.defaultIcon;
+
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.iconContainer}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="trash" size={32} color={colors.error} />
+            <View style={[styles.iconCircle, { backgroundColor: config.bg, borderColor: config.border }]}>
+              <Ionicons name={activeIcon} size={32} color={config.color} />
             </View>
           </View>
           
@@ -41,10 +92,13 @@ export default function ConfirmDeleteModal({
           
           <View style={styles.footer}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={styles.cancelBtnText}>{cancelText}</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm}>
+            <TouchableOpacity 
+              style={[styles.confirmBtn, { backgroundColor: config.color }]} 
+              onPress={onConfirm}
+            >
               <Text style={styles.confirmBtnText}>{confirmText}</Text>
             </TouchableOpacity>
           </View>
@@ -79,11 +133,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(255, 82, 82, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.2)',
   },
   title: {
     color: colors.textPrimary,
@@ -120,7 +172,6 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     flex: 1,
-    backgroundColor: colors.error,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

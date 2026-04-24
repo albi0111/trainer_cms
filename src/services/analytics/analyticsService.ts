@@ -115,12 +115,12 @@ export async function getDashboardStats() {
   // Use local date string (YYYY-MM-DD) to ensure schedule matches trainer's local day
   const today = new Date().toLocaleDateString('en-CA'); 
 
-  // 1. Today's Sessions with Client Name
+  // 1. Today's Sessions with Client Name (only planned sessions should show in the dashboard count/list)
   const todaySchedule = await db.getAllAsync<any>(
     `SELECT s.*, c.name as client_name 
      FROM sessions s
      JOIN clients c ON s.client_id = c.id
-     WHERE s.date = ?
+     WHERE s.date = ? AND s.status = 'planned'
      ORDER BY s.date ASC, s.created_at ASC`,
     [today]
   );

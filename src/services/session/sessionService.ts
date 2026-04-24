@@ -72,6 +72,20 @@ export async function completeSession(
   const db = getDB();
   const now = nowISO();
 
+  // Fetch session to check for postponement info
+  const session = await db.getFirstAsync<Session>(
+    'SELECT * FROM sessions WHERE id = ?',
+    [sessionId]
+  );
+
+  let finalPerformanceNotes = result.performance_notes;
+  if (session?.original_date) {
+    const postponeInfo = `session postponded from ${session.original_date}, ressoin - ${session.postponed_note || 'N/A'}`;
+    finalPerformanceNotes = result.performance_notes 
+      ? `${postponeInfo}\nsession notes:\n${result.performance_notes}`
+      : postponeInfo;
+  }
+
   await db.withTransactionAsync(async () => {
     // Audit Fix: Guard against double completion/duplicate SessionResult
     const existing = await db.getFirstAsync<{ session_id: string }>(
@@ -82,7 +96,7 @@ export async function completeSession(
       throw new Error('This session is already completed.');
     }
 
-    // 1. Update session status (strictly whitelisted fields only)
+    // 1. Update session status
     await db.runAsync(
       `UPDATE sessions SET status = 'completed', updated_at = ? WHERE id = ?`,
       [now, sessionId]
@@ -97,7 +111,7 @@ export async function completeSession(
         sessionId,
         result.perceived_difficulty,
         result.energy_level,
-        result.performance_notes ?? null,
+        finalPerformanceNotes ?? null,
         result.trainer_notes ?? null,
         now
       ]
@@ -109,7 +123,7 @@ export async function completeSession(
       [now, clientId]
     );
 
-    // 4. Enqueue sync for BOTH domains (§5.3 rule: affected_domains collected)
+    // 4. Enqueue sync
     await enqueueClientUpdate(clientId, ['sessions', 'session_results'], db);
   });
 }
@@ -167,6 +181,21 @@ export async function getSessionsByClient(clientId: string): Promise<any[]> {
 }
 
 /**
+ * Fetches recent sessions with results for activity tracking.
+ */
+export async function getRecentActivity(clientId: string): Promise<any[]> {
+  const db = getDB();
+  return await db.getAllAsync<any>(
+    `SELECT s.*, r.perceived_difficulty, r.energy_level, r.performance_notes, r.trainer_notes, r.completed_at
+     FROM sessions s 
+     LEFT JOIN session_results r ON s.id = r.session_id
+     WHERE s.client_id = ? AND s.status != 'planned'
+     ORDER BY s.date DESC, s.created_at DESC`,
+    [clientId]
+  );
+}
+
+/**
  * Updates an existing session's details.
  * §Rule: Always updates client version and enqueues sync.
  */
@@ -190,6 +219,7 @@ export async function updateSession(
   if (data.type !== undefined) { fields.push('type = ?'); values.push(data.type); }
   if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status); }
   if (data.postponed_note !== undefined) { fields.push('postponed_note = ?'); values.push(data.postponed_note); }
+  if (data.original_date !== undefined) { fields.push('original_date = ?'); values.push(data.original_date); }
   if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes); }
 
   if (fields.length === 0) return;
@@ -222,13 +252,15 @@ export async function postponeSession(
   newDate: string,
   newTime: string | null,
   newEndTime: string | null,
-  note: string | null
+  note: string | null,
+  originalDate: string
 ): Promise<void> {
   return updateSession(sessionId, clientId, {
     date: newDate,
     start_time: newTime ?? undefined,
     end_time: newEndTime ?? undefined,
-    postponed_note: note ?? undefined
+    postponed_note: note ?? undefined,
+    original_date: originalDate
   });
 }
 
@@ -249,6 +281,40 @@ export async function deleteSession(sessionId: string, clientId: string): Promis
     );
 
     await enqueueClientUpdate(clientId, ['sessions', 'exercises'], db);
+  });
+}
+
+/**
+ * Reverts a completed/missed session back to 'planned'.
+ * Deletes session_results if they exist.
+ */
+export async function revertSession(sessionId: string, clientId: string): Promise<void> {
+  const db = getDB();
+  const now = nowISO();
+
+  await db.withTransactionAsync(async () => {
+    // 1. Update session status
+    await db.runAsync(
+      `UPDATE sessions SET 
+        status = 'planned', 
+        missed_reason = NULL, 
+        missed_note = NULL, 
+        postponed_note = NULL,
+        updated_at = ? 
+       WHERE id = ?`,
+      [now, sessionId]
+    );
+
+    // 2. Delete session results
+    await db.runAsync(`DELETE FROM session_results WHERE session_id = ?`, [sessionId]);
+
+    // 3. Update client version
+    await db.runAsync(
+      `UPDATE clients SET version = version + 1, updated_at = ? WHERE id = ?`,
+      [now, clientId]
+    );
+
+    await enqueueClientUpdate(clientId, ['sessions', 'session_results'], db);
   });
 }
 

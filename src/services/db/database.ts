@@ -74,6 +74,7 @@ export async function initDatabase(): Promise<void> {
     'ALTER TABLE sessions ADD COLUMN type TEXT;',
     'ALTER TABLE sessions ADD COLUMN status TEXT;',
     'ALTER TABLE sessions ADD COLUMN postponed_note TEXT;',
+    'ALTER TABLE sessions ADD COLUMN original_date TEXT;',
     'ALTER TABLE sessions ADD COLUMN notes TEXT;',
     'ALTER TABLE exercises ADD COLUMN order_index INTEGER;',
     'ALTER TABLE exercises ADD COLUMN target_sets INTEGER;',

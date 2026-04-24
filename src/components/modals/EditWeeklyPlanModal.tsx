@@ -15,11 +15,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { getDB } from '../../services/db/database';
 import { Plan, Session, Exercise } from '../../types';
-import { createSession, deleteSession, updateSession } from '../../services/session/sessionService';
+import { createSession, deleteSession, updateSession, postponeSession as postponeSessionService } from '../../services/session/sessionService';
 import { addExercise, deleteExercise, updateExercise, getExercisesBySession } from '../../services/session/exerciseService';
 import { getGlobalScheduleForDateRange, checkSessionOverlap, ScheduledSession } from '../../services/schedule/scheduleService';
 import ScheduleCalendarGrid from '../schedule/ScheduleCalendarGrid';
 import AppTimePicker from '../shared/AppTimePicker';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EditWeeklyPlanModalProps {
   visible: boolean;
@@ -27,6 +28,8 @@ interface EditWeeklyPlanModalProps {
   clientId: string;
   onClose: () => void;
   onSuccess: () => void;
+  postponeSession?: Session | null;
+  onPostponeSuccess?: () => void;
 }
 
 export default function EditWeeklyPlanModal({
@@ -34,7 +37,9 @@ export default function EditWeeklyPlanModal({
   planId,
   clientId,
   onClose,
-  onSuccess
+  onSuccess,
+  postponeSession,
+  onPostponeSuccess
 }: EditWeeklyPlanModalProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,23 +52,33 @@ export default function EditWeeklyPlanModal({
   const [conflict, setConflict] = useState<ScheduledSession | null>(null);
 
   const [isModified, setIsModified] = useState(false);
+  const [postponeReason, setPostponeReason] = useState('');
+
+  // Confirmation States
+  const [postponeConfirmData, setPostponeConfirmData] = useState<{ date: string, startTime: string, doPostpone: () => void } | null>(null);
+  const [isDeleteSessionConfirmVisible, setIsDeleteSessionConfirmVisible] = useState(false);
 
   useEffect(() => {
-    if (visible && planId) {
+    if (visible && (planId || postponeSession)) {
       loadData();
       setIsModified(false);
+      setPostponeReason('');
     }
-  }, [visible, planId]);
+  }, [visible, planId, postponeSession]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const db = getDB();
-      const p = await db.getFirstAsync<Plan>('SELECT * FROM plans WHERE id = ?', [planId]);
-      if (!p) throw new Error('Plan not found');
-      setPlan(p);
 
-      // Fetch global schedule for a broad range (+/- 30 days) to populate grid
+      // In postpone mode, skip plan loading — we only need the global schedule
+      if (!postponeSession && planId) {
+        const p = await db.getFirstAsync<Plan>('SELECT * FROM plans WHERE id = ?', [planId]);
+        if (!p) throw new Error('Plan not found');
+        setPlan(p);
+      }
+
+      // Fetch global schedule for a broad range to populate grid
       const today = new Date();
       const start = new Date(today.getTime() - 14 * 24 * 3600 * 1000).toISOString().split('T')[0];
       const end = new Date(today.getTime() + 60 * 24 * 3600 * 1000).toISOString().split('T')[0];
@@ -89,6 +104,39 @@ export default function EditWeeklyPlanModal({
     const startTime = hour.toString().padStart(2, '0') + ':00';
     const endTime = (hour + 1).toString().padStart(2, '0') + ':00';
     
+    if (postponeSession) {
+      console.log('[Postpone] Slot selected:', date, startTime);
+      const doPostpone = async () => {
+        setSaving(true);
+        try {
+          const duration = postponeSession.duration_minutes || 60;
+          const [h, m] = startTime.split(':').map(Number);
+          const endH = h + Math.floor(duration / 60);
+          const endM = m + (duration % 60);
+          const calcEndTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+
+          await postponeSessionService(
+            postponeSession.id, 
+            clientId, 
+            date, 
+            startTime, 
+            calcEndTime, 
+            postponeReason || null,
+            postponeSession.date
+          );
+          onPostponeSuccess?.();
+        } catch (e: any) {
+          if (Platform.OS === 'web') window.alert('Error: ' + e.message);
+          else Alert.alert('Error', e.message);
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      setPostponeConfirmData({ date, startTime, doPostpone });
+      return;
+    }
+
     // Check initial overlap
     const existingConflict = await checkSessionOverlap(date, startTime, endTime);
     setConflict(existingConflict);
@@ -109,6 +157,13 @@ export default function EditWeeklyPlanModal({
   };
 
   const handleSessionPress = async (session: ScheduledSession) => {
+    // If in postpone mode, session badges shouldn't be interactive 
+    // (we want to click the slots underneath, even if it's the same session)
+    if (postponeSession) {
+      console.log('[Postpone] Session pressed, ignoring:', session.id);
+      return;
+    }
+
     if (session.client_id !== clientId) {
       Alert.alert('Other Client', `${session.client_name}'s session: ${session.focus}`);
       return;
@@ -229,15 +284,16 @@ export default function EditWeeklyPlanModal({
 
   const deleteActiveSession = async () => {
     if (!editingSession?.id) return;
-    Alert.alert('Delete Session', 'Are you sure?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: async () => {
-            await deleteSession(editingSession.id!, clientId);
-            setIsEditorVisible(false);
-            setIsModified(true); // Fixed: Mark as modified
-            loadData();
-        }}
-    ]);
+    setIsDeleteSessionConfirmVisible(true);
+  };
+
+  const handleConfirmDeleteSession = async () => {
+    if (!editingSession?.id) return;
+    await deleteSession(editingSession.id!, clientId);
+    setIsDeleteSessionConfirmVisible(false);
+    setIsEditorVisible(false);
+    setIsModified(true);
+    loadData();
   };
 
   if (loading) return null;
@@ -248,22 +304,26 @@ export default function EditWeeklyPlanModal({
         <View style={styles.container}>
           <View style={[styles.header, { alignItems: 'center' }]}>
             <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{plan?.title || 'Weekly Planner'}</Text>
-                <Text style={styles.subTitle}>Select a slot to schedule a workout</Text>
+                <Text style={styles.title}>{postponeSession ? 'Postpone Session' : (plan?.title || 'Weekly Planner')}</Text>
+                <Text style={styles.subTitle}>{postponeSession ? 'Select a new slot for the session' : 'Select a slot to schedule a workout'}</Text>
             </View>
 
             <View style={{ flex: 2, marginHorizontal: 20 }}>
                 <TextInput 
                    style={styles.noteInput}
-                   placeholder="Note - what this week focus on..."
+                   placeholder={postponeSession ? "Reason for postpone..." : "Note - what this week focus on..."}
                    placeholderTextColor="#666"
-                   value={plan?.goal || ''}
+                   value={postponeSession ? postponeReason : (plan?.goal || '')}
                    onChangeText={(val) => {
-                       setPlan(p => p ? { ...p, goal: val } : null);
-                       setIsModified(true); // Fixed: Mark as modified
+                       if (postponeSession) {
+                           setPostponeReason(val);
+                       } else {
+                           setPlan(p => p ? { ...p, goal: val } : null);
+                           setIsModified(true);
+                       }
                    }}
                    onBlur={async () => {
-                       if (plan) {
+                       if (!postponeSession && plan) {
                            const db = getDB();
                            await db.runAsync('UPDATE plans SET goal = ?, updated_at = ? WHERE id = ?', [plan.goal, new Date().toISOString(), planId]);
                        }
@@ -271,8 +331,8 @@ export default function EditWeeklyPlanModal({
                 />
             </View>
 
-            <TouchableOpacity onPress={handleClose} style={[styles.closeBtn, isModified && { backgroundColor: '#FFD700' }]}>
-              <Ionicons name={isModified ? "checkmark" : "close"} size={24} color={isModified ? "#000" : "#888"} />
+            <TouchableOpacity onPress={handleClose} style={[styles.closeBtn, isModified && !postponeSession && { backgroundColor: '#FFD700' }]}>
+              <Ionicons name={(isModified && !postponeSession) ? "checkmark" : "close"} size={24} color={(isModified && !postponeSession) ? "#000" : "#888"} />
             </TouchableOpacity>
           </View>
 
@@ -282,6 +342,8 @@ export default function EditWeeklyPlanModal({
               activeClientId={clientId}
               onSlotPress={handleSlotPress}
               onSessionPress={handleSessionPress}
+              highlightSessionId={postponeSession?.id || null}
+              scrollToDate={postponeSession?.date || null}
             />
           </View>
         </View>
@@ -400,6 +462,31 @@ export default function EditWeeklyPlanModal({
           </KeyboardAvoidingView>
         </Modal>
       </View>
+
+      <ConfirmationModal
+        visible={!!postponeConfirmData}
+        onClose={() => setPostponeConfirmData(null)}
+        onConfirm={() => {
+          postponeConfirmData?.doPostpone();
+          setPostponeConfirmData(null);
+        }}
+        title="Confirm Postpone"
+        message={`Are you sure you want to postpone this session to ${postponeConfirmData?.date} at ${postponeConfirmData?.startTime}?`}
+        confirmText="Postpone"
+        type="warning"
+        icon="time-outline"
+      />
+
+      <ConfirmationModal
+        visible={isDeleteSessionConfirmVisible}
+        onClose={() => setIsDeleteSessionConfirmVisible(false)}
+        onConfirm={handleConfirmDeleteSession}
+        title="Delete Session"
+        message="Are you sure you want to delete this session? This action cannot be undone."
+        confirmText="Delete"
+        type="danger"
+        icon="trash"
+      />
     </Modal>
   );
 }

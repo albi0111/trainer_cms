@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Session } from '../../types';
 import CardContainer from '../shared/CardContainer';
@@ -8,16 +8,18 @@ import EmptyState from '../shared/EmptyState';
 interface SessionsSectionProps {
   upcoming: any[];
   pendingData: any[];
-  completedSessions: Session[];
   onManageSession: (session: Session) => void;
 }
 
-export default function SessionsSection({
+export default React.memo(function SessionsSection({
   upcoming,
   pendingData,
-  completedSessions,
   onManageSession,
 }: SessionsSectionProps) {
+  const [showAllUpcoming, setShowAllUpcoming] = React.useState(false);
+
+  const displayedUpcoming = showAllUpcoming ? upcoming : upcoming.slice(0, 2);
+
   return (
     <CardContainer
       headerIcon="calendar-outline"
@@ -25,33 +27,49 @@ export default function SessionsSection({
       headerTitle="Sessions"
     >
       {/* Upcoming */}
-      <Text style={styles.subHeading}>UPCOMING</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.subHeading}>UPCOMING</Text>
+      </View>
+      
       {upcoming.length === 0 ? (
         <EmptyState message="No upcoming sessions." />
       ) : (
-        upcoming.map((s: any) => (
-          <TouchableOpacity
-            key={s.id}
-            style={styles.listItem}
-            onPress={() => onManageSession(s)}
-          >
-            <View style={styles.flex1}>
-              <View style={styles.row}>
-                <Text style={styles.listItemTitle}>{s.date}</Text>
-                <View style={[styles.badge, { backgroundColor: '#1A2A50' }]}>
-                  <Text style={[styles.badgeText, { color: '#6699FF' }]}>
-                    {(s.plan_title || s.type).toUpperCase()}
-                    {s.plan_goal ? ` - ${s.plan_goal.toLowerCase()}` : ''}
-                  </Text>
+        <>
+          {displayedUpcoming.map((s: any) => (
+            <TouchableOpacity
+              key={s.id}
+              style={styles.listItem}
+              onPress={() => onManageSession(s)}
+            >
+              <View style={styles.flex1}>
+                <View style={styles.row}>
+                  <Text style={styles.listItemTitle}>{s.date}</Text>
+                  <View style={[styles.badge, { backgroundColor: '#1A2A50' }]}>
+                    <Text style={[styles.badgeText, { color: '#6699FF' }]}>
+                      {(s.plan_title || s.focus || s.type).toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
+                <Text style={styles.listItemSub}>
+                  {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
+                </Text>
               </View>
-              <Text style={styles.listItemSub}>
-                {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus}
+              <Ionicons name="ellipsis-vertical" size={20} color="#AAA" />
+            </TouchableOpacity>
+          ))}
+          
+          {upcoming.length > 2 && (
+            <TouchableOpacity 
+              style={styles.showMoreInline} 
+              onPress={() => setShowAllUpcoming(!showAllUpcoming)}
+            >
+              <Text style={styles.showMoreText}>
+                {showAllUpcoming ? 'Show Less' : `Show All Upcoming (${upcoming.length})`}
               </Text>
-            </View>
-            <Ionicons name="ellipsis-vertical" size={20} color="#AAA" />
-          </TouchableOpacity>
-        ))
+              <Ionicons name={showAllUpcoming ? 'chevron-up' : 'chevron-down'} size={14} color="#6699FF" />
+            </TouchableOpacity>
+          )}
+        </>
       )}
 
       {/* Pending Data */}
@@ -70,12 +88,11 @@ export default function SessionsSection({
                   <View style={[styles.badge, { backgroundColor: '#FFD700' }]}>
                     <Text style={[styles.badgeText, { color: '#000' }]}>
                       {(s.plan_title || 'PENDING').toUpperCase()}
-                      {s.plan_goal ? ` - ${s.plan_goal.toLowerCase()}` : ''}
                     </Text>
                   </View>
                 </View>
                 <Text style={[styles.listItemSub, { color: '#FFD700' }]}>
-                  {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus}
+                  {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
                 </Text>
               </View>
               <Ionicons name="ellipsis-vertical" size={20} color="#FFD700" />
@@ -83,29 +100,9 @@ export default function SessionsSection({
           ))}
         </>
       )}
-
-      {/* Completed */}
-      <Text style={[styles.subHeading, { marginTop: 16 }]}>COMPLETED</Text>
-      {completedSessions.length === 0 ? (
-        <EmptyState message="No completed sessions." />
-      ) : (
-        completedSessions.map((s) => (
-          <View key={s.id} style={styles.listItem}>
-            <Ionicons name="checkmark" size={16} color="#3DCC88" />
-            <View style={styles.flex1}>
-              <Text style={[styles.listItemTitle, { color: '#AAA', marginLeft: 8 }]}>
-                {s.date} - 09:00 - {s.type} - 60min
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => Alert.alert('Delete Session', 'Feature coming soon')}>
-              <Ionicons name="close" size={18} color="#FF5252" />
-            </TouchableOpacity>
-          </View>
-        ))
-      )}
     </CardContainer>
   );
-}
+});
 
 const styles = StyleSheet.create({
   subHeading: {
@@ -113,6 +110,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   listItem: {
@@ -152,4 +155,21 @@ const styles = StyleSheet.create({
   flex1: {
     flex: 1,
   },
+  showMoreInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 4,
+    backgroundColor: '#161616',
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+  },
+  showMoreText: {
+    color: '#6699FF',
+    fontSize: 11,
+    fontWeight: '700',
+  }
 });
