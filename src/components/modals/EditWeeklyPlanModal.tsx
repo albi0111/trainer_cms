@@ -261,8 +261,8 @@ export default function EditWeeklyPlanModal({
           }
 
           const currentIdx = exerciseCount++;
-          const setsVal = parseInt(ex.target_sets) || 0;
-          const repsVal = ex.target_reps?.toString() || '0';
+          const repsVal = ex.target_reps || '';
+          const setsVal = 0; // Use target_reps for plain text format
 
           if (ex._isNew) {
               await addExercise(clientId, {
@@ -423,7 +423,7 @@ export default function EditWeeklyPlanModal({
                         <TouchableOpacity style={styles.addExBtn} onPress={() => {
                             setEditingSession(prev => ({
                                 ...prev!,
-                                exercises: [...prev!.exercises, { id: Math.random().toString(), name: '', target_sets: '3', target_reps: '10', _isNew: true }]
+                                exercises: [...prev!.exercises, { id: Math.random().toString(), name: '', target_sets: 0, target_reps: '', _isNew: true }]
                             }));
                         }}>
                              <Ionicons name="add" size={16} color="#FFD700" />
@@ -444,13 +444,14 @@ export default function EditWeeklyPlanModal({
                                 placeholder="Exercise"
                                 placeholderTextColor="#444"
                             />
-                            <TextInput 
+                             <TextInput 
                                 style={[styles.input, { flex: 0.8, textAlign: 'center' }]} 
-                                value={ex.target_sets?.toString()} 
-                                keyboardType="numeric"
+                                value={ex.target_reps} 
+                                placeholder="Sets/Reps"
+                                placeholderTextColor="#444"
                                 onChangeText={(v) => {
                                     const next = [...editingSession.exercises];
-                                    next[idx].target_sets = v;
+                                    next[idx].target_reps = v;
                                     setEditingSession(prev => ({ ...prev!, exercises: next }));
                                 }}
                             />

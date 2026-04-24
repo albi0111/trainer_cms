@@ -48,7 +48,11 @@ export default function WorkoutPlanSection(props: WorkoutPlanSectionProps) {
               return sEx.map((ex: any) => (
                 <View key={ex.id} style={st.exRow}>
                   <Text style={st.exName}>{ex.name || 'Unnamed Exercise'}</Text>
-                  <Text style={st.exSets}>{ex.target_sets||0}x{ex.target_reps||0}</Text>
+                  <Text style={st.exSets}>
+                    {ex.target_sets > 0 && ex.target_reps && !isNaN(Number(ex.target_reps))
+                      ? `${ex.target_sets}x${ex.target_reps}`
+                      : (ex.target_reps || ex.target_sets || '—')}
+                  </Text>
                   <Text style={st.exNotes} numberOfLines={1}>{ex.notes||''}</Text>
                 </View>
               ));

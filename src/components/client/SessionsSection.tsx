@@ -16,9 +16,7 @@ export default React.memo(function SessionsSection({
   pendingData,
   onManageSession,
 }: SessionsSectionProps) {
-  const [showAllUpcoming, setShowAllUpcoming] = React.useState(false);
-
-  const displayedUpcoming = showAllUpcoming ? upcoming : upcoming.slice(0, 2);
+  const displayedUpcoming = upcoming.slice(0, 3);
 
   return (
     <CardContainer
@@ -26,8 +24,37 @@ export default React.memo(function SessionsSection({
       headerIconColor="#6699FF"
       headerTitle="Sessions"
     >
+      {/* Pending Data */}
+      {pendingData.length > 0 && (
+        <>
+          <Text style={styles.subHeading}>NEEDS LOGGING</Text>
+          {pendingData.map((s: any) => (
+            <TouchableOpacity
+              key={s.id}
+              style={[styles.listItem, { borderColor: '#FFD700', borderWidth: 1 }]}
+              onPress={() => onManageSession(s)}
+            >
+              <View style={styles.flex1}>
+                <View style={styles.row}>
+                  <Text style={styles.listItemTitle}>{s.date}</Text>
+                  <View style={[styles.badge, { backgroundColor: '#FFD700' }]}>
+                    <Text style={[styles.badgeText, { color: '#000' }]}>
+                      {(s.plan_title || 'PENDING').toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.listItemSub, { color: '#FFD700' }]}>
+                  {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
+                </Text>
+              </View>
+              <Ionicons name="ellipsis-vertical" size={20} color="#FFD700" />
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
       {/* Upcoming */}
-      <View style={styles.sectionHeader}>
+      <View style={[styles.sectionHeader, pendingData.length > 0 && { marginTop: 16 }]}>
         <Text style={styles.subHeading}>UPCOMING</Text>
       </View>
       
@@ -55,47 +82,6 @@ export default React.memo(function SessionsSection({
                 </Text>
               </View>
               <Ionicons name="ellipsis-vertical" size={20} color="#AAA" />
-            </TouchableOpacity>
-          ))}
-          
-          {upcoming.length > 2 && (
-            <TouchableOpacity 
-              style={styles.showMoreInline} 
-              onPress={() => setShowAllUpcoming(!showAllUpcoming)}
-            >
-              <Text style={styles.showMoreText}>
-                {showAllUpcoming ? 'Show Less' : `Show All Upcoming (${upcoming.length})`}
-              </Text>
-              <Ionicons name={showAllUpcoming ? 'chevron-up' : 'chevron-down'} size={14} color="#6699FF" />
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-
-      {/* Pending Data */}
-      {pendingData.length > 0 && (
-        <>
-          <Text style={[styles.subHeading, { marginTop: 16 }]}>PENDING DATA</Text>
-          {pendingData.map((s: any) => (
-            <TouchableOpacity
-              key={s.id}
-              style={[styles.listItem, { borderColor: '#FFD700', borderWidth: 1 }]}
-              onPress={() => onManageSession(s)}
-            >
-              <View style={styles.flex1}>
-                <View style={styles.row}>
-                  <Text style={styles.listItemTitle}>{s.date}</Text>
-                  <View style={[styles.badge, { backgroundColor: '#FFD700' }]}>
-                    <Text style={[styles.badgeText, { color: '#000' }]}>
-                      {(s.plan_title || 'PENDING').toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.listItemSub, { color: '#FFD700' }]}>
-                  {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
-                </Text>
-              </View>
-              <Ionicons name="ellipsis-vertical" size={20} color="#FFD700" />
             </TouchableOpacity>
           ))}
         </>

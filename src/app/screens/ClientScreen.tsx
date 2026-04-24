@@ -231,7 +231,10 @@ export default function ClientScreen() {
       if (isPending) pen.push({ ...s, isPending });
       else up.push({ ...s, isPending });
     });
-    return { upcoming: up, pendingData: pen };
+    return { 
+      upcoming: up.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
+      pendingData: pen.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
+    };
   }, [upcomingSessionsRaw]);
 
   // ── Plan Handlers ──
