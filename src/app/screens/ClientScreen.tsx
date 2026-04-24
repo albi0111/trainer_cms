@@ -19,7 +19,8 @@ import { getSessionsByClient, getRecentActivity, revertSession } from '../../ser
 import { getExercisesByClient } from '../../services/session/exerciseService';
 import { getMeasurements, getClientMeasurementConfigs } from '../../services/measurement/measurementService';
 import { getPlansByClient, deletePlan } from '../../services/plan/planService';
-import { getDietPlansByClient } from '../../services/plan/dietPlanService';
+import { getDietPlansByClient, saveDietPlan } from '../../services/plan/dietPlanService';
+import { generateId } from '../../utils/id';
 import { getPhotos } from '../../services/photo/photoService';
 import { getCompletionStats, getClientStatus } from '../../services/analytics/analyticsService';
 import { Client, ClientProfile, Session, Measurement, Plan, ClientStatus, ProgressPhoto, DietPlan, MeasurementConfig } from '../../types';
@@ -161,7 +162,7 @@ export default function ClientScreen() {
       notes = notes.replace(/\[h2\](.*?)\[\/h2\]/gi, '<h2>$1</h2>');
       setOverviewDraft(notes);
 
-      let medNotes = clientData.profile?.medical_notes || '';
+      let medNotes = clientData.profile?.medications || '';
       medNotes = medNotes.replace(/\[b\](.*?)\[\/b\]/gi, '<b>$1</b>');
       medNotes = medNotes.replace(/\[i\](.*?)\[\/i\]/gi, '<i>$1</i>');
       medNotes = medNotes.replace(/\[u\](.*?)\[\/u\]/gi, '<u>$1</u>');
@@ -184,12 +185,29 @@ export default function ClientScreen() {
 
   const handleSaveMedication = async () => {
     try {
-      await updateClientProfile(clientId, { medical_notes: medicationDraft });
+      await updateClientProfile(clientId, { medications: medicationDraft });
       setIsEditingMedication(false);
       fetchData();
     } catch (err) {
       console.error('[ClientScreen] Save medication failed:', err);
       Alert.alert('Error', 'Failed to update medication notes.');
+    }
+  };
+
+  const handleSaveDietPlan = async (planData: Partial<DietPlan>) => {
+    try {
+      const activePlan = dietPlans[0];
+      const planId = activePlan ? activePlan.id : generateId();
+      await saveDietPlan(clientId, {
+        id: planId,
+        title: activePlan?.title || 'Weekly Diet Plan',
+        goal: activePlan?.goal || 'General Health',
+        ...planData,
+      });
+      fetchData();
+    } catch (err) {
+      console.error('[ClientScreen] Save diet plan failed:', err);
+      Alert.alert('Error', 'Failed to save diet plan.');
     }
   };
 
@@ -375,7 +393,7 @@ export default function ClientScreen() {
                 onSave={handleSaveMedication}
               />
             )}
-            <DietPlanSection dietPlans={dietPlans} />
+            <DietPlanSection dietPlans={dietPlans} onSavePlan={handleSaveDietPlan} />
           </>
         );
       case 'profile':

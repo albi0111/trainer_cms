@@ -109,6 +109,7 @@ export async function createClient(params: {
   phone?: string;
   email?: string;
   medicalNotes?: string;
+  medications?: string;
   height?: number;
   initialWeight?: number;
   primaryGoal?: string;
@@ -137,9 +138,9 @@ export async function createClient(params: {
     );
 
     await db.runAsync(
-      `INSERT INTO client_profiles (client_id, age, gender, height_cm, initial_weight_kg, medical_notes, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, params.age || 0, params.gender || 'other', params.height || 0, params.initialWeight || 0, params.medicalNotes || '', now]
+      `INSERT INTO client_profiles (client_id, age, gender, height_cm, initial_weight_kg, medical_notes, medications, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, params.age || 0, params.gender || 'other', params.height || 0, params.initialWeight || 0, params.medicalNotes || '', params.medications || '', now]
     );
 
     await db.runAsync(
@@ -228,7 +229,7 @@ export async function batchUpdateClient(
   clientId: string,
   data: {
     core?: { name?: string; phone?: string; email?: string; goal?: string };
-    profile?: { age?: number; gender?: Gender; height_cm?: number; initial_weight_kg?: number; medical_notes?: string };
+    profile?: { age?: number; gender?: Gender; height_cm?: number; initial_weight_kg?: number; medical_notes?: string; medications?: string };
     lifestyle?: { notes?: string };
     assessment?: {
       bp_systolic?: number | null;

@@ -32,6 +32,7 @@ export const CREATE_TABLES: string[] = [
     height_cm           REAL NOT NULL,
     initial_weight_kg   REAL NOT NULL,
     medical_notes       TEXT,
+    medications         TEXT,
     photo_uri           TEXT,
     updated_at          TEXT NOT NULL
   )`,

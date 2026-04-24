@@ -37,6 +37,7 @@ export interface ClientProfile {
   height_cm: number;
   initial_weight_kg: number;
   medical_notes?: string;
+  medications?: string;
   photo_uri?: string;       // local path, NOT a Drive URL
   updated_at: string;
 }

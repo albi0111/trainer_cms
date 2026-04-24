@@ -10,6 +10,8 @@ interface CardContainerProps {
   headerIconColor?: string;
   /** Optional title text displayed next to the icon */
   headerTitle?: string;
+  /** Optional element to render to the right of the header title */
+  headerAddon?: React.ReactNode;
   /** Optional action button label */
   actionLabel?: string;
   /** Optional action button icon */
@@ -27,13 +29,14 @@ export default function CardContainer({
   headerIcon,
   headerIconColor = '#FFD700',
   headerTitle,
+  headerAddon,
   actionLabel,
   actionIcon,
   actionIconColor = '#AAA',
   onAction,
   style,
 }: CardContainerProps) {
-  const showHeader = headerIcon || headerTitle || actionLabel;
+  const showHeader = headerIcon || headerTitle || actionLabel || headerAddon;
 
   return (
     <View style={[styles.container, style]}>
@@ -42,6 +45,7 @@ export default function CardContainer({
           <View style={styles.row}>
             {headerIcon && <Ionicons name={headerIcon} size={16} color={headerIconColor} />}
             {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+            {headerAddon}
           </View>
           {(actionLabel || actionIcon) && onAction && (
             <TouchableOpacity style={styles.actionBtn} onPress={onAction}>

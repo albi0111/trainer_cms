@@ -41,9 +41,9 @@ export default function MedicationSection({
 
   const renderWebViewer = () => (
     <View>
-      {clientData.profile?.medical_notes ? (
+      {clientData.profile?.medications ? (
         <Text style={styles.overviewText}>
-          {clientData.profile.medical_notes.replace(/<[^>]*>/g, '')}
+          {clientData.profile.medications.replace(/<[^>]*>/g, '')}
         </Text>
       ) : (
         <Text style={styles.overviewText}>
@@ -98,10 +98,10 @@ export default function MedicationSection({
 
   const renderNativeViewer = () => (
     <View>
-      {clientData.profile?.medical_notes ? (
+      {clientData.profile?.medications ? (
         <View style={{ flex: 1, backgroundColor: 'transparent', minHeight: 40 }}>
           <RichEditor
-            initialContentHTML={clientData.profile.medical_notes}
+            initialContentHTML={clientData.profile.medications}
             disabled={true}
             editorStyle={{ backgroundColor: 'transparent', color: '#AAA' }}
             scrollEnabled={false}

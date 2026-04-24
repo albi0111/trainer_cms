@@ -96,7 +96,8 @@ export async function initDatabase(): Promise<void> {
     'ALTER TABLE measurements ADD COLUMN lower_body_strength_kg REAL;',
     'ALTER TABLE measurements ADD COLUMN cardio_endurance_min REAL;',
     "ALTER TABLE measurements ADD COLUMN custom_values_json TEXT NOT NULL DEFAULT '{}';",
-    'ALTER TABLE sessions ADD COLUMN measure_reminder INTEGER DEFAULT 0;'
+    'ALTER TABLE sessions ADD COLUMN measure_reminder INTEGER DEFAULT 0;',
+    'ALTER TABLE client_profiles ADD COLUMN medications TEXT;'
   ];
 
   for (const m of migrations) {
