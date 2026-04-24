@@ -39,6 +39,11 @@ const ActivityNote = ({ note }: { note: string }) => {
 export default React.memo(function RecentActivitySection({ activities, onRevertSession }: RecentActivitySectionProps) {
   const [showAll, setShowAll] = useState(false);
 
+  // ⚠️ All hooks MUST be before any conditional returns (React Rules of Hooks)
+  const handleRevert = useCallback((sessionId: string) => {
+    onRevertSession(sessionId);
+  }, [onRevertSession]);
+
   if (!activities || activities.length === 0) return null;
 
   const displayedActivities = showAll ? activities : activities.slice(0, 2);
@@ -72,10 +77,6 @@ export default React.memo(function RecentActivitySection({ activities, onRevertS
     }
     return null;
   };
-
-  const handleRevert = useCallback((sessionId: string) => {
-    onRevertSession(sessionId);
-  }, [onRevertSession]);
 
   const formatTimeDuration = (activity: any) => {
     const time = activity.start_time || '--:--';
