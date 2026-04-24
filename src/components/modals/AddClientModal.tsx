@@ -90,7 +90,7 @@ export default function AddClientModal({
           phone: client.phone || '',
           email: client.email || '',
           training_experience: lifestyle.job_type === 'Beginner' ? 'Beginner' : 'Experienced',
-          injuries: profile.medical_notes || '',
+          injuries: profile.medical_notes?.replace(/<[^>]*>/g, '') || '',
           lifestyle_notes: lifestyle.notes || '',
           weight_kg: profile.initial_weight_kg.toString(),
           height_cm: profile.height_cm.toString(),

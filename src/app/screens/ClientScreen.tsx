@@ -14,7 +14,7 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList, RootStackNavigationProp } from '../RootNavigator';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getClientById, updateClientOverview, getDetailedClient, deleteClient } from '../../services/client/clientService';
+import { getClientById, updateClientOverview, updateClientProfile, getDetailedClient, deleteClient } from '../../services/client/clientService';
 import { getSessionsByClient, getRecentActivity, revertSession } from '../../services/session/sessionService';
 import { getExercisesByClient } from '../../services/session/exerciseService';
 import { getMeasurements, getClientMeasurementConfigs } from '../../services/measurement/measurementService';
@@ -79,10 +79,14 @@ export default function ClientScreen() {
   // ── Tab State ──
   const [activeTab, setActiveTab] = useState('overview');
 
-  // ── Overview Editing State ──
+  // ── Overview & Medication Editing State ──
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [overviewDraft, setOverviewDraft] = useState('');
   const richText = React.useRef<any>(null);
+
+  const [isEditingMedication, setIsEditingMedication] = useState(false);
+  const [medicationDraft, setMedicationDraft] = useState('');
+  const richTextMedication = React.useRef<any>(null);
 
   // ── Plan Expansion State ──
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
@@ -146,7 +150,7 @@ export default function ClientScreen() {
     fetchData();
   }, [fetchData]);
 
-  // ── Overview Editor Setup ──
+  // ── Overview & Medication Editor Setup ──
   useEffect(() => {
     if (clientData) {
       let notes = clientData.overview_notes || '';
@@ -156,6 +160,14 @@ export default function ClientScreen() {
       notes = notes.replace(/\[h1\](.*?)\[\/h1\]/gi, '<h1>$1</h1>');
       notes = notes.replace(/\[h2\](.*?)\[\/h2\]/gi, '<h2>$1</h2>');
       setOverviewDraft(notes);
+
+      let medNotes = clientData.profile?.medical_notes || '';
+      medNotes = medNotes.replace(/\[b\](.*?)\[\/b\]/gi, '<b>$1</b>');
+      medNotes = medNotes.replace(/\[i\](.*?)\[\/i\]/gi, '<i>$1</i>');
+      medNotes = medNotes.replace(/\[u\](.*?)\[\/u\]/gi, '<u>$1</u>');
+      medNotes = medNotes.replace(/\[h1\](.*?)\[\/h1\]/gi, '<h1>$1</h1>');
+      medNotes = medNotes.replace(/\[h2\](.*?)\[\/h2\]/gi, '<h2>$1</h2>');
+      setMedicationDraft(medNotes);
     }
   }, [clientData]);
 
@@ -167,6 +179,17 @@ export default function ClientScreen() {
     } catch (err) {
       console.error('[ClientScreen] Save overview failed:', err);
       Alert.alert('Error', 'Failed to update overview.');
+    }
+  };
+
+  const handleSaveMedication = async () => {
+    try {
+      await updateClientProfile(clientId, { medical_notes: medicationDraft });
+      setIsEditingMedication(false);
+      fetchData();
+    } catch (err) {
+      console.error('[ClientScreen] Save medication failed:', err);
+      Alert.alert('Error', 'Failed to update medication notes.');
     }
   };
 
@@ -341,7 +364,17 @@ export default function ClientScreen() {
       case 'health':
         return (
           <>
-            <MedicationSection />
+            {clientData && (
+              <MedicationSection
+                clientData={clientData}
+                isEditing={isEditingMedication}
+                medicationDraft={medicationDraft}
+                richTextRef={richTextMedication}
+                onDraftChange={setMedicationDraft}
+                onToggleEdit={() => setIsEditingMedication(true)}
+                onSave={handleSaveMedication}
+              />
+            )}
             <DietPlanSection dietPlans={dietPlans} />
           </>
         );

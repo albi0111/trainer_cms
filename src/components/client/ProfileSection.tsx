@@ -90,7 +90,7 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
       <View style={styles.section}>
         {renderSectionHeader('INTERVIEW', 'chatbubble-outline', 'interview')}
         {renderInfoRow('EXPERIENCE', lifestyle.job_type || 'Beginner')}
-        {renderInfoRow('INJURIES / CONDITIONS', profile.medical_notes || 'None reported')}
+        {renderInfoRow('INJURIES / CONDITIONS', profile.medical_notes?.replace(/<[^>]*>/g, '') || 'None reported')}
         {renderInfoRow('LIFESTYLE', lifestyle.notes || 'No lifestyle notes.')}
       </View>
 
