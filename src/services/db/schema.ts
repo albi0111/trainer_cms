@@ -180,7 +180,8 @@ export const CREATE_TABLES: string[] = [
     notes         TEXT,
     original_date TEXT,
     created_at    TEXT NOT NULL,
-    updated_at    TEXT NOT NULL
+    updated_at    TEXT NOT NULL,
+    measure_reminder INTEGER DEFAULT 0
   )`,
 
   // ── session_results (1:1, only for completed sessions) ────────────────────

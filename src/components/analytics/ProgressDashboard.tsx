@@ -79,12 +79,12 @@ export default function ProgressDashboard({
     const deltaSign = delta > 0 ? '+' : '';
 
     return (
-      <TouchableOpacity 
-        key={config.key} 
+      <TouchableOpacity
+        key={config.key}
         style={[
-          styles.card, 
+          styles.card,
           config.key === (activeTab === 'body' ? selectedBodyMetric : null) && styles.cardActive
-        ]} 
+        ]}
         activeOpacity={0.7}
         onPress={() => {
           if (activeTab === 'body') setSelectedBodyMetric(config.key);
@@ -107,7 +107,7 @@ export default function ProgressDashboard({
   };
 
   const renderLineChart = () => {
-    if (sortedMs.length < 2) return <View style={styles.chartPlaceholder}><Text style={{color: '#666'}}>Not enough data for trend chart</Text></View>;
+    if (sortedMs.length < 2) return <View style={styles.chartPlaceholder}><Text style={{ color: '#666' }}>Not enough data for trend chart</Text></View>;
 
     const data = {
       labels: sortedMs.map(m => m.date.slice(5)), // MM-DD
@@ -128,14 +128,17 @@ export default function ProgressDashboard({
           width={SCREEN_WIDTH - 80}
           height={220}
           chartConfig={{
-            backgroundColor: '#1A1A1A',
+            backgroundColor: 'transparent',
             backgroundGradientFrom: '#1A1A1A',
             backgroundGradientTo: '#1A1A1A',
+            backgroundGradientFromOpacity: 0,
+            backgroundGradientToOpacity: 0,
             decimalPlaces: 1,
             color: (opacity = 1) => `rgba(255, 215, 0, ${opacity})`,
             labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity * 0.5})`,
             style: { borderRadius: 16 },
-            propsForDots: { r: "4", strokeWidth: "2", stroke: "#FFD700" }
+            propsForDots: { r: "4", strokeWidth: "2", stroke: "#FFD700" },
+            paddingRight: 0,
           }}
           bezier
           style={{ marginVertical: 8, borderRadius: 16 }}
@@ -166,21 +169,24 @@ export default function ProgressDashboard({
           <Text style={styles.chartTitle}>Session Comparison</Text>
           <BarChart
             data={{
-               labels: perfConfigs.map(c => c.label.split(' ')[0]),
-               datasets: [{
-                 data: perfConfigs.map(c => (latestM?.values?.[c.key] ?? latestM?.[c.key as keyof Measurement] as number) || 0)
-               }]
+              labels: perfConfigs.map(c => c.label.split(' ')[0]),
+              datasets: [{
+                data: perfConfigs.map(c => (latestM?.values?.[c.key] ?? latestM?.[c.key as keyof Measurement] as number) || 0)
+              }]
             }}
             width={SCREEN_WIDTH - 80}
             height={220}
             yAxisLabel=""
             yAxisSuffix=""
             chartConfig={{
-              backgroundColor: '#1A1A1A',
+              backgroundColor: 'transparent',
               backgroundGradientFrom: '#1A1A1A',
               backgroundGradientTo: '#1A1A1A',
+              backgroundGradientFromOpacity: 0,
+              backgroundGradientToOpacity: 0,
               color: (opacity = 1) => `rgba(255, 215, 0, ${opacity})`,
               labelColor: (opacity = 1) => `rgba(255, 255, 255, 0.5)`,
+              paddingRight: 0,
             }}
             verticalLabelRotation={30}
             style={{ borderRadius: 16 }}
@@ -247,17 +253,17 @@ export default function ProgressDashboard({
       {/* Tab Switcher */}
       <View style={styles.header}>
         <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'body' && styles.tabActive]} 
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'body' && styles.tabActive]}
             onPress={() => setActiveTab('body')}
           >
-            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]}>Body measurements</Text>
+            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]} numberOfLines={1}>Body measurements</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'performance' && styles.tabActive]} 
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'performance' && styles.tabActive]}
             onPress={() => setActiveTab('performance')}
           >
-            <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]}>Performance</Text>
+            <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]} numberOfLines={1}>Performance</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.manageBtn} onPress={onManageMetrics}>
@@ -266,9 +272,9 @@ export default function ProgressDashboard({
       </View>
 
       {/* Metric Cards */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
         style={styles.cardsScroll}
         contentContainerStyle={styles.cardsContent}
       >
@@ -278,24 +284,24 @@ export default function ProgressDashboard({
       {/* Analytics Switcher for Performance */}
       {activeTab === 'performance' && (
         <View style={styles.viewToggleContainer}>
-           <TouchableOpacity 
-             style={[styles.viewToggle, performanceView === 'bar' && styles.viewToggleActive]} 
-             onPress={() => setPerformanceView('bar')}
-           >
-             <Text style={[styles.viewToggleText, performanceView === 'bar' && styles.viewToggleTextActive]}>Bar (Compare)</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-             style={[styles.viewToggle, performanceView === 'radar' && styles.viewToggleActive]} 
-             onPress={() => setPerformanceView('radar')}
-           >
-             <Text style={[styles.viewToggleText, performanceView === 'radar' && styles.viewToggleTextActive]}>Radar (Overview)</Text>
-           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggle, performanceView === 'bar' && styles.viewToggleActive]}
+            onPress={() => setPerformanceView('bar')}
+          >
+            <Text style={[styles.viewToggleText, performanceView === 'bar' && styles.viewToggleTextActive]}>Bar (Compare)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggle, performanceView === 'radar' && styles.viewToggleActive]}
+            onPress={() => setPerformanceView('radar')}
+          >
+            <Text style={[styles.viewToggleText, performanceView === 'radar' && styles.viewToggleTextActive]}>Radar (Overview)</Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {/* Charts Area */}
       <View style={styles.chartArea}>
-         {activeTab === 'body' ? renderLineChart() : renderPerformanceCharts()}
+        {activeTab === 'body' ? renderLineChart() : renderPerformanceCharts()}
       </View>
 
       <TouchableOpacity style={styles.addBtn} onPress={onLogPress}>
@@ -309,13 +315,13 @@ export default function ProgressDashboard({
 const styles = StyleSheet.create({
   container: { marginTop: 16, marginBottom: 24 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3, width: '50%' },
+  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: '#333', borderWidth: 1, borderColor: '#444' },
   tabText: { color: '#888', fontSize: 13, fontWeight: '700' },
   tabTextActive: { color: '#FFF' },
   manageBtn: { padding: 8 },
-  
+
   cardsScroll: { marginHorizontal: -20 },
   cardsContent: { paddingHorizontal: 20, gap: 12 },
   card: { backgroundColor: '#1A1A1A', padding: 16, borderRadius: 16, minWidth: 120, borderWidth: 1, borderColor: '#333' },
@@ -327,7 +333,18 @@ const styles = StyleSheet.create({
   deltaModeLabel: { fontSize: 10, fontWeight: '400', color: '#555' },
   cardActive: { borderColor: '#FFD700', backgroundColor: '#222' },
 
-  chartArea: { minHeight: 300, backgroundColor: '#161616', borderRadius: 20, marginTop: 20, padding: 12, borderWidth: 1, borderColor: '#222', overflow: 'hidden' },
+  chartArea: {
+    minHeight: 300,
+    backgroundColor: '#161616',
+    borderRadius: 20,
+    marginTop: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#222',
+    overflow: 'hidden',
+    alignItems: 'center'
+  },
   chartBox: { flex: 1 },
   chartTitle: { color: '#AAA', fontSize: 13, fontWeight: '700', marginBottom: 12, textAlign: 'center' },
   chartPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -339,7 +356,7 @@ const styles = StyleSheet.create({
   viewToggleTextActive: { color: '#FFD700' },
 
   emptyText: { color: '#444', marginVertical: 20, marginLeft: 10, width: 200 },
-  
+
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderStyle: 'dashed', borderWidth: 1, borderColor: '#333', borderRadius: 12, marginTop: 16 },
   addBtnText: { color: '#AAA', fontSize: 14, fontWeight: '600', marginLeft: 8 },
 });
