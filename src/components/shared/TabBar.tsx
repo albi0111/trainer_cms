@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export interface TabDefinition {
@@ -15,6 +15,9 @@ interface TabBarProps {
 }
 
 export default function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -33,13 +36,15 @@ export default function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
             >
               <Ionicons
                 name={tab.icon}
-                size={16}
+                size={isMobile ? 20 : 16}
                 color={isActive ? '#FFD700' : '#666'}
-                style={styles.tabIcon}
+                style={!isMobile && { marginRight: 6 }}
               />
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                {tab.label}
-              </Text>
+              {!isMobile && (
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                  {tab.label}
+                </Text>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -76,9 +81,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F1F1F',
     borderWidth: 1,
     borderColor: '#FFD70040',
-  },
-  tabIcon: {
-    marginRight: 6,
   },
   tabLabel: {
     color: '#666',

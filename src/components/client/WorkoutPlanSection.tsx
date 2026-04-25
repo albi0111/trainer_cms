@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Plan, Session } from '../../types';
 import EmptyState from '../shared/EmptyState';
+import { commonStyles } from '../../theme/theme';
 
 interface WorkoutPlanSectionProps {
   monthlyPlans: Plan[];
@@ -287,24 +288,12 @@ const st = StyleSheet.create({
     gap: 8,
   },
   circleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    ...commonStyles.circularButton,
     backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   smallCircleBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    ...commonStyles.circularButton,
     backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   planningPill: {
     flexDirection: 'row',

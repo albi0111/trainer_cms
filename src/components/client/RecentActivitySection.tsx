@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import CardContainer from '../shared/CardContainer';
+import { commonStyles } from '../../theme/theme';
 
 interface RecentActivitySectionProps {
   activities: any[];
@@ -231,14 +232,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   revertBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    ...commonStyles.circularButton,
     backgroundColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
   },
   highlightNoteBox: {
     flexDirection: 'row',

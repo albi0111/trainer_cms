@@ -66,3 +66,16 @@ export const typography = {
     black: '900' as const,
   }
 };
+
+export const commonStyles = {
+  circularButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  } as const,
+};
