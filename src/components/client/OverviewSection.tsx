@@ -1,8 +1,6 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Platform } from 'react-native';
-import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
+import React from 'react';
 import { Client, ClientProfile } from '../../types';
-import CardContainer from '../shared/CardContainer';
+import RichTextSection from '../shared/RichTextSection';
 
 interface OverviewSectionProps {
   clientData: Client & { profile: ClientProfile };
@@ -23,163 +21,22 @@ export default function OverviewSection({
   onToggleEdit,
   onSave,
 }: OverviewSectionProps) {
-
-  const [inputHeight, setInputHeight] = useState(100);
-
-  // ── Web fallback: simple textarea (web is not the target platform) ──
-  const renderWebEditor = () => (
-    <View style={styles.editorContainer}>
-      <TextInput
-        style={[styles.webTextInput, { height: Math.max(100, inputHeight) }]}
-        value={overviewDraft.replace(/<[^>]*>/g, '')}
-        onChangeText={onDraftChange}
-        multiline
-        placeholder="Start typing notes..."
-        placeholderTextColor="#555"
-        textAlignVertical="top"
-        scrollEnabled={false}
-        onContentSizeChange={(e) => {
-          setInputHeight(e.nativeEvent.contentSize.height);
-        }}
-      />
-    </View>
-  );
-
-  const renderWebViewer = () => (
-    <View>
-      {clientData.overview_notes ? (
-        <Text style={styles.overviewText}>
-          {clientData.overview_notes.replace(/<[^>]*>/g, '')}
-        </Text>
-      ) : (
-        <Text style={styles.overviewText}>
-          No overview notes yet. Tap Edit to add profile context.
-        </Text>
-      )}
-    </View>
-  );
-
-  // ── Native: Full RichEditor with toolbar ──
-  const renderNativeEditor = () => (
-    <View style={styles.nativeEditorContainer}>
-      <RichToolbar
-        editor={richTextRef}
-        actions={[
-          actions.heading1,
-          actions.heading2,
-          actions.setBold,
-          actions.setItalic,
-          actions.setUnderline,
-          actions.setStrikethrough,
-          actions.insertBulletsList,
-          actions.insertOrderedList,
-          actions.checkboxList,
-          actions.insertLink,
-          actions.undo,
-          actions.redo,
-        ]}
-        iconTint="#AAA"
-        selectedIconTint="#FFD700"
-        style={styles.toolbar}
-      />
-      <RichEditor
-        ref={richTextRef}
-        initialContentHTML={overviewDraft}
-        onChange={onDraftChange}
-        editorStyle={{
-          backgroundColor: '#1A1A1A',
-          color: '#CCC',
-          placeholderColor: '#555',
-          caretColor: '#FFD700',
-          contentCSSText: `
-            font-size: 14px;
-            line-height: 22px;
-            padding: 12px;
-          `,
-        }}
-        placeholder="Tap to start typing notes..."
-      />
-    </View>
-  );
-
-  const renderNativeViewer = () => (
-    <View>
-      {clientData.overview_notes ? (
-        <View style={{ flex: 1, backgroundColor: 'transparent', minHeight: 40 }}>
-          <RichEditor
-            initialContentHTML={clientData.overview_notes}
-            disabled={true}
-            editorStyle={{ backgroundColor: 'transparent', color: '#AAA' }}
-            scrollEnabled={false}
-          />
-        </View>
-      ) : (
-        <Text style={styles.overviewText}>
-          No overview notes yet. Tap Edit to add profile context.
-        </Text>
-      )}
-    </View>
-  );
-
   return (
-    <CardContainer
+    <RichTextSection
+      isEditing={isEditing}
+      draftHtml={overviewDraft}
+      richTextRef={richTextRef}
+      onDraftChange={onDraftChange}
+      onToggleEdit={onToggleEdit}
+      onSave={onSave}
       headerIcon="document-text-outline"
       headerIconColor="#FFD700"
       headerTitle="Overview"
-      actionIcon={isEditing ? 'checkmark' : 'pencil'}
-      onAction={isEditing ? onSave : onToggleEdit}
-    >
-      {isEditing ? (
-        <View style={{ minHeight: 100 }}>
-          {Platform.OS === 'web' ? renderWebEditor() : renderNativeEditor()}
-        </View>
-      ) : (
-        <View style={styles.overviewContainer}>
-          {Platform.OS === 'web' ? renderWebViewer() : renderNativeViewer()}
-        </View>
-      )}
-    </CardContainer>
+      placeholder="Start typing notes..."
+      emptyViewerText="No overview notes yet. Tap Edit to add profile context."
+      viewerHtml={clientData.overview_notes}
+      editorSelectedIconTint="#FFD700"
+      editorCaretColor="#FFD700"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  // ── Web fallback ──
-  editorContainer: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  webTextInput: {
-    color: '#CCC',
-    fontSize: 14,
-    lineHeight: 22,
-    minHeight: 100,
-    textAlignVertical: 'top',
-    ...(Platform.OS === 'web' && { outlineWidth: 0 }),
-  },
-  // ── Native RichEditor ──
-  nativeEditorContainer: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  toolbar: {
-    backgroundColor: '#222',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  // ── Viewer ──
-  overviewContainer: {
-    flexDirection: 'column',
-  },
-  overviewText: {
-    color: '#AAA',
-    fontSize: 14,
-    lineHeight: 22,
-  },
-});
