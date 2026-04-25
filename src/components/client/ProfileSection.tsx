@@ -56,8 +56,7 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       <TouchableOpacity style={styles.editBtn} onPress={() => onEditSection(sectionKey)}>
-        <Ionicons name="pencil" size={12} color="#AAA" style={{ marginRight: 4 }} />
-        <Text style={styles.editBtnText}>Edit</Text>
+        <Ionicons name="pencil" size={16} color="#AAA" />
       </TouchableOpacity>
     </View>
   );
@@ -245,16 +244,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   sectionTitle: { fontSize: 12, fontWeight: '800', color: '#FFD700', letterSpacing: 1 },
   editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#1F1F1F',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333',
   },
-  editBtnText: { color: '#AAA', fontSize: 12, fontWeight: '600' },
   grid: { flexDirection: 'row', gap: 16, marginBottom: 20 },
   gridCol: { flex: 1 },
   infoRow: { marginBottom: 20 },

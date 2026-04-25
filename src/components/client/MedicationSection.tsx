@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, Platform } from 'react-native';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import { Client, ClientProfile } from '../../types';
@@ -24,17 +24,23 @@ export default function MedicationSection({
   onSave,
 }: MedicationSectionProps) {
 
+  const [inputHeight, setInputHeight] = useState(100);
+
   // ── Web fallback: simple textarea (web is not the target platform) ──
   const renderWebEditor = () => (
     <View style={styles.editorContainer}>
       <TextInput
-        style={styles.webTextInput}
+        style={[styles.webTextInput, { height: Math.max(100, inputHeight) }]}
         value={medicationDraft.replace(/<[^>]*>/g, '')}
         onChangeText={onDraftChange}
         multiline
         placeholder="Start typing medication notes..."
         placeholderTextColor="#555"
         textAlignVertical="top"
+        scrollEnabled={false}
+        onContentSizeChange={(e) => {
+          setInputHeight(e.nativeEvent.contentSize.height);
+        }}
       />
     </View>
   );
@@ -121,11 +127,10 @@ export default function MedicationSection({
       headerIconColor="#FF5252"
       headerTitle="Medication"
       actionIcon={isEditing ? 'checkmark' : 'pencil'}
-      actionLabel={isEditing ? 'Save' : 'Edit'}
       onAction={isEditing ? onSave : onToggleEdit}
     >
       {isEditing ? (
-        <View style={{ flex: 1, minHeight: 200 }}>
+        <View style={{ minHeight: 100 }}>
           {Platform.OS === 'web' ? renderWebEditor() : renderNativeEditor()}
         </View>
       ) : (
@@ -140,7 +145,6 @@ export default function MedicationSection({
 const styles = StyleSheet.create({
   // ── Web fallback ──
   editorContainer: {
-    flex: 1,
     backgroundColor: '#1A1A1A',
     borderRadius: 12,
     padding: 12,
@@ -151,8 +155,9 @@ const styles = StyleSheet.create({
     color: '#CCC',
     fontSize: 14,
     lineHeight: 22,
-    minHeight: 180,
+    minHeight: 100,
     textAlignVertical: 'top',
+    ...(Platform.OS === 'web' && { outlineWidth: 0 }),
   },
   // ── Native RichEditor ──
   nativeEditorContainer: {

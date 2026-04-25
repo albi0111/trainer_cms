@@ -48,8 +48,14 @@ export default function CardContainer({
             {headerAddon}
           </View>
           {(actionLabel || actionIcon) && onAction && (
-            <TouchableOpacity style={styles.actionBtn} onPress={onAction}>
-              {actionIcon && <Ionicons name={actionIcon} size={12} color={actionIconColor} />}
+            <TouchableOpacity 
+              style={[
+                styles.actionBtn, 
+                !actionLabel && styles.circularActionBtn
+              ]} 
+              onPress={onAction}
+            >
+              {actionIcon && <Ionicons name={actionIcon} size={actionLabel ? 12 : 16} color={actionIconColor} />}
               {actionLabel && (
                 <Text style={[styles.actionBtnText, actionIcon ? { marginLeft: 4 } : null]}>{actionLabel}</Text>
               )}
@@ -82,10 +88,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#FFF',
-    fontSize: 14,
+    color: '#AAA',
+    fontSize: 15,
     fontWeight: '700',
     marginLeft: 8,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   actionBtn: {
     flexDirection: 'row',
@@ -101,5 +109,16 @@ const styles = StyleSheet.create({
     color: '#AAA',
     fontSize: 11,
     fontWeight: '600',
+  },
+  circularActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    backgroundColor: '#111',
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

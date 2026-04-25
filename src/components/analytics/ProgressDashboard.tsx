@@ -257,12 +257,14 @@ export default function ProgressDashboard({
             style={[styles.tab, activeTab === 'body' && styles.tabActive]}
             onPress={() => setActiveTab('body')}
           >
-            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]} numberOfLines={1}>Body measurements</Text>
+            <Ionicons name="body-outline" size={14} color={activeTab === 'body' ? '#FFF' : '#888'} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]} numberOfLines={1}>Body Measurements</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'performance' && styles.tabActive]}
             onPress={() => setActiveTab('performance')}
           >
+            <Ionicons name="walk-outline" size={14} color={activeTab === 'performance' ? '#FFF' : '#888'} style={styles.tabIcon} />
             <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]} numberOfLines={1}>Performance</Text>
           </TouchableOpacity>
         </View>
@@ -316,11 +318,22 @@ const styles = StyleSheet.create({
   container: { marginTop: 16, marginBottom: 24 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 16 },
   tabContainer: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3, width: '50%' },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  // tabContainer: { flex: 1, flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3, marginRight: 16 },
+  tab: { flex: 1, flexDirection: 'row', paddingVertical: 8, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: '#333', borderWidth: 1, borderColor: '#444' },
+  tabIcon: { marginRight: 6 },
   tabText: { color: '#888', fontSize: 13, fontWeight: '700' },
   tabTextActive: { color: '#FFF' },
-  manageBtn: { padding: 8 },
+  manageBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   cardsScroll: { marginHorizontal: -20 },
   cardsContent: { paddingHorizontal: 20, gap: 12 },
