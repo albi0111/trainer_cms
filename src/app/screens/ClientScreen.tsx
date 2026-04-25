@@ -103,6 +103,7 @@ export default function ClientScreen() {
   const [isEditWeeklyVisible, setIsEditWeeklyVisible] = useState(false);
   const [editWeeklyPlanId, setEditWeeklyPlanId] = useState<string | null>(null);
   const [sessionToPostpone, setSessionToPostpone] = useState<Session | null>(null);
+  const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
 
   // ── Profile Tab State ──
   const [detailedClientData, setDetailedClientData] = useState<any>(null);
@@ -377,6 +378,11 @@ export default function ClientScreen() {
             onAddWeeklyToPlan={(parentId) => { setPlanModalMode('create'); setParentForNewWeekly(parentId); setIsPlanModalVisible(true); }}
             onDeletePlan={confirmDeletePlan}
             onEditWeeklyPlan={(weekId) => { setEditWeeklyPlanId(weekId); setIsEditWeeklyVisible(true); }}
+            onEditSession={(session) => {
+              setSessionToEdit(session);
+              setEditWeeklyPlanId(session.plan_id || 'manual');
+              setIsEditWeeklyVisible(true);
+            }}
           />
         );
       case 'health':
@@ -463,10 +469,11 @@ export default function ClientScreen() {
           visible={isEditWeeklyVisible} 
           planId={editWeeklyPlanId === 'manual' ? '' : editWeeklyPlanId} 
           clientId={clientId} 
-          onClose={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); }} 
-          onSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); fetchData(); }}
+          editSessionId={sessionToEdit?.id}
+          onClose={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); setSessionToEdit(null); }} 
+          onSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); setSessionToEdit(null); fetchData(); }}
           postponeSession={sessionToPostpone}
-          onPostponeSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); fetchData(); }}
+          onPostponeSuccess={() => { setIsEditWeeklyVisible(false); setSessionToPostpone(null); setSessionToEdit(null); fetchData(); }}
         />
       )}
       <AddClientModal visible={isEditModalVisible} mode="edit" clientId={clientId} initialData={detailedClientData} initialStep={editStep} onClose={() => setIsEditModalVisible(false)} onSuccess={() => { setIsEditModalVisible(false); setDetailedClientData(null); fetchData(); }} />

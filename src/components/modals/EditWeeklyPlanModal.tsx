@@ -20,6 +20,7 @@ import { addExercise, deleteExercise, updateExercise, getExercisesBySession } fr
 import { getGlobalScheduleForDateRange, checkSessionOverlap, ScheduledSession } from '../../services/schedule/scheduleService';
 import ScheduleCalendarGrid from '../schedule/ScheduleCalendarGrid';
 import AppTimePicker from '../shared/AppTimePicker';
+import AppDatePicker from '../shared/AppDatePicker';
 import ConfirmationModal from './ConfirmationModal';
 import { scheduleMeasurementReminders, cancelMeasurementReminders } from '../../services/notification/notificationService';
 
@@ -31,6 +32,7 @@ interface EditWeeklyPlanModalProps {
   onSuccess: () => void;
   postponeSession?: Session | null;
   onPostponeSuccess?: () => void;
+  editSessionId?: string | null;
 }
 
 export default function EditWeeklyPlanModal({
@@ -40,7 +42,8 @@ export default function EditWeeklyPlanModal({
   onClose,
   onSuccess,
   postponeSession,
-  onPostponeSuccess
+  onPostponeSuccess,
+  editSessionId
 }: EditWeeklyPlanModalProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,12 +64,35 @@ export default function EditWeeklyPlanModal({
   const [isDeleteSessionConfirmVisible, setIsDeleteSessionConfirmVisible] = useState(false);
 
   useEffect(() => {
-    if (visible && (planId || postponeSession)) {
+    if (visible && (planId || postponeSession || editSessionId)) {
       loadData();
       setIsModified(false);
       setPostponeReason('');
+      
+      if (editSessionId) {
+        openSessionEditor(editSessionId);
+      }
     }
-  }, [visible, planId, postponeSession]);
+  }, [visible, planId, postponeSession, editSessionId]);
+
+  const openSessionEditor = async (id: string) => {
+    try {
+      const db = getDB();
+      const session = await db.getFirstAsync<Session>('SELECT * FROM sessions WHERE id = ?', [id]);
+      if (session) {
+        const exercises = await getExercisesBySession(id);
+        setEditingSession({
+          ...session,
+          measure_reminder: !!session.measure_reminder,
+          exercises: exercises.map(e => ({ ...e, _isNew: false, _isDeleted: false }))
+        });
+        setConflict(null);
+        setIsEditorVisible(true);
+      }
+    } catch (e) {
+      console.error('[openSessionEditor] Error:', e);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -381,7 +407,11 @@ export default function EditWeeklyPlanModal({
                 </View>
 
                 <ScrollView style={{ flex: 1 }}>
-                    <Text style={styles.label}>Date: {editingSession?.date}</Text>
+                    <AppDatePicker 
+                        label="Date"
+                        value={editingSession?.date || ''}
+                        onChange={(val) => setEditingSession(prev => ({ ...prev!, date: val }))}
+                    />
                     
                     <View style={styles.row}>
                         <AppTimePicker 
