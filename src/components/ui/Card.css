@@ -1,16 +1,16 @@
 .card {
-  background-color: var(--color-surface);
-  border-radius: var(--radius-xl);
-  border: 1px solid transparent;
+  background-color: var(--color-card);
+  border-radius: var(--radius-3xl);
+  border: 1px solid var(--color-border-container);
 }
 
 .card--pad-none  { padding: 0; }
-.card--pad-sm    { padding: var(--space-md); }
+.card--pad-sm    { padding: var(--space-lg); }
 .card--pad-md    { padding: var(--space-xl); }
 .card--pad-lg    { padding: var(--space-2xl); }
 
 .card--bordered {
-  border-color: var(--color-border-container);
+  border-color: var(--color-border-card);
 }
 
 .card--clickable {
@@ -19,9 +19,37 @@
   -webkit-tap-highlight-color: transparent;
 }
 .card--clickable:hover {
-  background-color: var(--color-surface-light);
+  background-color: var(--color-bg-elevated);
   border-color: var(--color-border);
 }
 .card--clickable:active {
   transform: scale(0.99);
+}
+
+/* ── Card Header Pattern (matches reference CardContainer) ────────────── */
+.card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+}
+
+.card__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.card__header-icon {
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+}
+
+.card__header-title {
+  color: var(--color-text-light);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }

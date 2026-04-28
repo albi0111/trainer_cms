@@ -1,52 +1,70 @@
+/* Reference: bg #161616, border 1px #1F1F1F, padding 24px H / 16px V */
 .top-nav {
   position: sticky;
   top: 0;
   z-index: 100;
   background-color: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border-container);
-  display: grid;
-  grid-template-columns: 48px 1fr 48px;
+  display: flex;
   align-items: center;
-  padding: var(--space-md) var(--space-md);
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-2xl);
   min-height: 56px;
 }
 
-.top-nav__left {
+.top-nav__slot {
+  flex: 1;
   display: flex;
   align-items: center;
 }
 
+.top-nav__slot--right {
+  justify-content: flex-end;
+}
+
+/* ── FIT.PERSONA Logo ─────────────────────────────────────────────────── */
+.top-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Reference: bg #FFD700, paddingH 6, paddingV 4, borderRadius 4 */
+.top-nav__logo-badge {
+  background-color: var(--color-primary);
+  color: var(--color-text-dark);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.5px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+/* Reference: color #FFD700, fontSize 18, fontWeight 900, letterSpacing -0.5 */
+.top-nav__logo-text {
+  color: var(--color-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.5px;
+}
+
+/* ── Back Button ──────────────────────────────────────────────────────── */
 .top-nav__back {
-  width: 36px;
-  height: 36px;
+  width: var(--circular-btn-size);
+  height: var(--circular-btn-size);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition: color var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
+  padding: 0;
 }
 .top-nav__back:hover {
   color: var(--color-text);
-  background-color: var(--color-surface-light);
-}
-
-.top-nav__title {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.top-nav__right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
 }

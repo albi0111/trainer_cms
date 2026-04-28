@@ -1,13 +1,17 @@
 import './Checkbox.css';
 
 interface CheckboxProps {
-  label: string;
+  label?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   id?: string;
   disabled?: boolean;
 }
 
+/**
+ * Checkbox — matches reference AppCheckbox exactly.
+ * 28×28, borderRadius 6, gold when checked, black checkmark icon.
+ */
 export default function Checkbox({
   label,
   checked,
@@ -15,7 +19,7 @@ export default function Checkbox({
   id,
   disabled = false,
 }: CheckboxProps) {
-  const checkId = id ?? `cb-${label.toLowerCase().replace(/\s+/g, '-')}`;
+  const checkId = id ?? `cb-${(label ?? 'check').toLowerCase().replace(/\s+/g, '-')}`;
 
   return (
     <label className={`checkbox ${disabled ? 'checkbox--disabled' : ''}`} htmlFor={checkId}>
@@ -29,12 +33,12 @@ export default function Checkbox({
       />
       <span className="checkbox__box" aria-hidden="true">
         {checked && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path d="M1 4L3.5 6.5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+            <path d="M1 5L5 9L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
-      <span className="checkbox__label">{label}</span>
+      {label && <span className="checkbox__label">{label}</span>}
     </label>
   );
 }

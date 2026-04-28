@@ -1,31 +1,19 @@
 import './EmptyState.css';
-import Button from './Button';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  message: string;
 }
 
-export default function EmptyState({
-  icon,
-  title,
-  subtitle,
-  actionLabel,
-  onAction,
-}: EmptyStateProps) {
+/**
+ * EmptyState — matches reference exactly.
+ * Minimal: just italic text + optional icon. No big titles or action buttons.
+ */
+export default function EmptyState({ icon, message }: EmptyStateProps) {
   return (
     <div className="empty-state">
-      {icon && <div className="empty-state__icon">{icon}</div>}
-      <p className="empty-state__title">{title}</p>
-      {subtitle && <p className="empty-state__subtitle">{subtitle}</p>}
-      {actionLabel && onAction && (
-        <Button variant="secondary" size="sm" onClick={onAction}>
-          {actionLabel}
-        </Button>
-      )}
+      {icon && <span className="empty-state__icon">{icon}</span>}
+      <p className="empty-state__text">{message}</p>
     </div>
   );
 }

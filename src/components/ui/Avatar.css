@@ -1,7 +1,6 @@
 .avatar {
   border-radius: var(--radius-full);
-  background-color: var(--color-surface-accent);
-  border: 1.5px solid var(--color-primary-dim);
+  background-color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,8 +8,9 @@
   flex-shrink: 0;
 }
 
+/* Reference: default size 48, fontSize = size * 0.35 */
 .avatar--sm { width: 32px; height: 32px; }
-.avatar--md { width: 44px; height: 44px; }
+.avatar--md { width: 48px; height: 48px; }
 .avatar--lg { width: 64px; height: 64px; }
 
 .avatar__img {
@@ -20,12 +20,11 @@
 }
 
 .avatar__initials {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.02em;
+  color: var(--color-text-dark);
+  font-weight: var(--font-weight-extrabold);
   user-select: none;
 }
 
-.avatar--sm .avatar__initials { font-size: var(--font-size-xs); }
-.avatar--md .avatar__initials { font-size: var(--font-size-sm); }
-.avatar--lg .avatar__initials { font-size: var(--font-size-xl); }
+.avatar--sm .avatar__initials { font-size: 11px; }  /* 32 * 0.35 */
+.avatar--md .avatar__initials { font-size: 17px; }  /* 48 * 0.35 */
+.avatar--lg .avatar__initials { font-size: 22px; }  /* 64 * 0.35 */

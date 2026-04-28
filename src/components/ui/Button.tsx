@@ -1,6 +1,6 @@
 import './Button.css';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -8,7 +8,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
-  children: React.ReactNode;
+  icon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export default function Button({
@@ -16,6 +17,7 @@ export default function Button({
   size = 'md',
   loading = false,
   fullWidth = false,
+  icon,
   disabled,
   className = '',
   children,
@@ -35,9 +37,12 @@ export default function Button({
   return (
     <button className={classes} disabled={disabled || loading} {...props}>
       {loading && <span className="btn__spinner" aria-hidden="true" />}
-      <span className={loading ? 'btn__label btn__label--hidden' : 'btn__label'}>
-        {children}
-      </span>
+      {icon && <span className="btn__icon">{icon}</span>}
+      {children && (
+        <span className={loading ? 'btn__label btn__label--hidden' : 'btn__label'}>
+          {children}
+        </span>
+      )}
     </button>
   );
 }

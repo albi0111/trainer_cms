@@ -2,9 +2,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-family: var(--font-family);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
@@ -33,22 +33,22 @@
 }
 
 .btn--secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background-color: var(--circular-btn-bg);
+  color: var(--color-text-light);
+  border: 1px solid #222;
 }
 .btn--secondary:hover:not(:disabled) {
   background-color: var(--color-surface-light);
-  border-color: var(--color-border-light);
+  border-color: var(--color-border);
 }
 
 .btn--ghost {
   background-color: transparent;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   border: 1px solid transparent;
 }
 .btn--ghost:hover:not(:disabled) {
-  background-color: var(--color-surface);
+  background-color: var(--color-surface-dark);
   border-color: var(--color-border);
 }
 
@@ -61,24 +61,35 @@
   background-color: rgba(255, 82, 82, 0.1);
 }
 
+/* Outline = gold border, black bg, gold text (reference: "+ Add Plan" button) */
+.btn--outline {
+  background-color: #000;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+.btn--outline:hover:not(:disabled) {
+  background-color: var(--color-primary-bg);
+}
+
 /* ── Sizes ───────────────────────────────────────────────────────────────── */
 .btn--sm {
   font-size: var(--font-size-xs);
-  padding: var(--space-xs) var(--space-md);
-  height: 32px;
-  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  padding: 6px var(--space-md);
+  height: 30px;
 }
 
 .btn--md {
-  font-size: var(--font-size-sm);
-  padding: var(--space-sm) var(--space-xl);
-  height: 42px;
+  font-size: var(--font-size-base);
+  padding: var(--space-sm) var(--space-lg);
+  height: 38px;
 }
 
 .btn--lg {
-  font-size: var(--font-size-lg);
-  padding: var(--space-md) var(--space-2xl);
-  height: 52px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+  padding: var(--space-base) var(--space-2xl);
+  height: 48px;
   border-radius: var(--radius-xl);
 }
 
@@ -90,6 +101,12 @@
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── Icon ────────────────────────────────────────────────────────────────── */
+.btn__icon {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ── Loading ─────────────────────────────────────────────────────────────── */

@@ -1,30 +1,29 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px var(--space-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
 }
 
+/* Reference StatusBadge themes — exact color match */
 .badge--active {
-  background-color: rgba(76, 175, 80, 0.18);
-  color: #4caf50;
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
-.badge--inactive {
-  background-color: rgba(136, 136, 136, 0.18);
-  color: var(--color-text-muted);
+.badge--completed {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
 }
 
-.badge--warning {
-  background-color: rgba(255, 152, 0, 0.18);
-  color: #ff9800;
+.badge--on-hold {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
-.badge--success {
-  background-color: rgba(255, 215, 0, 0.14);
-  color: var(--color-primary);
+.badge--pending {
+  background-color: var(--color-primary);
+  color: var(--color-text-dark);
 }

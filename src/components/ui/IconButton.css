@@ -1,0 +1,50 @@
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--circular-btn-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  color: var(--circular-btn-icon-color);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--color-text-light);
+  border-color: var(--color-border-light);
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Sizes ────────────────────────────────────────────────────────────── */
+.icon-btn--sm {
+  width: 28px;
+  height: 28px;
+}
+
+.icon-btn--md {
+  width: var(--circular-btn-size);
+  height: var(--circular-btn-size);
+}
+
+/* ── Variants ─────────────────────────────────────────────────────────── */
+.icon-btn--default {
+  background-color: var(--circular-btn-bg);
+}
+
+.icon-btn--dark {
+  background-color: var(--circular-btn-bg-dark);
+}

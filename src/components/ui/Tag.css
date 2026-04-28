@@ -1,0 +1,19 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.tag--yellow {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+}
+
+.tag--gray {
+  background-color: var(--color-surface-light);
+  color: var(--color-text-light);
+}
