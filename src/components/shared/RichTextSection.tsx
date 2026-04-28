@@ -39,13 +39,14 @@ export default function RichTextSection({
   editorSelectedIconTint,
   editorCaretColor,
 }: RichTextSectionProps) {
-  const [inputHeight, setInputHeight] = useState(100);
+  const [editorHeight, setEditorHeight] = useState(150);
+  const [viewerHeight, setViewerHeight] = useState(40);
 
-  // ── Web fallback: simple textarea (web is not the target platform) ──
+  // ── Web fallback: simple textarea ──
   const renderWebEditor = () => (
     <View style={styles.editorContainer}>
       <TextInput
-        style={[styles.webTextInput, { height: Math.max(100, inputHeight) }]}
+        style={[styles.webTextInput, { height: Math.max(100, editorHeight) }]}
         value={draftHtml.replace(/<[^>]*>/g, '')}
         onChangeText={onDraftChange}
         multiline
@@ -54,7 +55,7 @@ export default function RichTextSection({
         textAlignVertical="top"
         scrollEnabled={false}
         onContentSizeChange={(e) => {
-          setInputHeight(e.nativeEvent.contentSize.height);
+          setEditorHeight(e.nativeEvent.contentSize.height);
         }}
       />
     </View>
@@ -76,7 +77,7 @@ export default function RichTextSection({
 
   // ── Native: Full RichEditor with toolbar ──
   const renderNativeEditor = () => (
-    <View style={styles.nativeEditorContainer}>
+    <View style={[styles.nativeEditorContainer, { height: Math.max(150, editorHeight + 50) }]}>
       <RichToolbar
         editor={richTextRef}
         actions={[
@@ -101,6 +102,7 @@ export default function RichTextSection({
         ref={richTextRef}
         initialContentHTML={draftHtml}
         onChange={onDraftChange}
+        onHeightChange={(height) => setEditorHeight(height)}
         editorStyle={{
           backgroundColor: '#1A1A1A',
           color: '#CCC',
@@ -113,21 +115,23 @@ export default function RichTextSection({
           `,
         }}
         placeholder={placeholder}
+        scrollEnabled={false}
+        useContainer={false}
       />
     </View>
   );
 
   const renderNativeViewer = () => (
-    <View>
+    <View style={{ height: Math.max(40, viewerHeight) }}>
       {viewerHtml ? (
-        <View style={{ flex: 1, backgroundColor: 'transparent', minHeight: 40 }}>
-          <RichEditor
-            initialContentHTML={viewerHtml}
-            disabled={true}
-            editorStyle={{ backgroundColor: 'transparent', color: '#AAA' }}
-            scrollEnabled={false}
-          />
-        </View>
+        <RichEditor
+          initialContentHTML={viewerHtml}
+          disabled={true}
+          onHeightChange={(height) => setViewerHeight(height)}
+          editorStyle={{ backgroundColor: 'transparent', color: '#AAA' }}
+          scrollEnabled={false}
+          useContainer={false}
+        />
       ) : (
         <Text style={styles.overviewText}>
           {emptyViewerText}

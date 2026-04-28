@@ -6,6 +6,7 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScheduledSession } from '../../services/schedule/scheduleService';
@@ -22,10 +23,6 @@ interface ScheduleCalendarGridProps {
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 5); // 5 AM to 11 PM
-const CELL_WIDTH = 140;
-const DATE_COL_WIDTH = 120;
-const HEADER_HEIGHT = 60;
-const ROW_HEIGHT = 80;
 
 export default function ScheduleCalendarGrid({
   sessions,
@@ -35,6 +32,14 @@ export default function ScheduleCalendarGrid({
   highlightSessionId,
   scrollToDate,
 }: ScheduleCalendarGridProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  const CELL_WIDTH = isMobile ? 100 : 140;
+  const DATE_COL_WIDTH = isMobile ? 80 : 120;
+  const HEADER_HEIGHT = isMobile ? 50 : 60;
+  const ROW_HEIGHT = isMobile ? 60 : 80;
+
   const [weekRange, setWeekRange] = useState<string[][]>([]);
   const [initialIndex, setInitialIndex] = useState<number | null>(null);
 
@@ -128,10 +133,10 @@ export default function ScheduleCalendarGrid({
           const monthYear = dateObj.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).replace(',', "'");
 
           return (
-            <View key={date} style={[styles.sideItem, isToday && styles.todaySideItem]}>
-              <Text style={[styles.sideDayText, isToday && styles.todayText]}>{dayName}</Text>
-              <Text style={[styles.sideNumText, isToday && styles.todayText]}>{dayNum}</Text>
-              <Text style={styles.sideMonthText}>{monthYear}</Text>
+            <View key={date} style={[styles.sideItem, isToday && styles.todaySideItem, { height: ROW_HEIGHT }]}>
+              <Text style={[styles.sideDayText, isToday && styles.todayText, isMobile && { fontSize: 9 }]}>{dayName}</Text>
+              <Text style={[styles.sideNumText, isToday && styles.todayText, isMobile && { fontSize: 16 }]}>{dayNum}</Text>
+              <Text style={[styles.sideMonthText, isMobile && { fontSize: 8 }]}>{monthYear}</Text>
             </View>
           );
         })}
@@ -146,12 +151,12 @@ export default function ScheduleCalendarGrid({
           const daySessions = sessionsByDate[date] || [];
 
           return (
-            <View key={date} style={styles.gridRow}>
+            <View key={date} style={[styles.gridRow, { height: ROW_HEIGHT }]}>
               {/* Background Empty Cells */}
               {HOURS.map(hour => (
                 <TouchableOpacity
                   key={hour}
-                  style={styles.cell}
+                  style={[styles.cell, { width: CELL_WIDTH, height: ROW_HEIGHT }]}
                   onPress={() => onSlotPress(date, hour)}
                   activeOpacity={0.6}
                 />
@@ -166,7 +171,7 @@ export default function ScheduleCalendarGrid({
                 if (sh < 5 || sh >= 24) return null;
 
                 const leftOffset = ((sh - 5) + (sm / 60)) * CELL_WIDTH;
-                const itemWidth = Math.max((duration / 60) * CELL_WIDTH, 40);
+                const itemWidth = Math.max((duration / 60) * CELL_WIDTH, 30);
 
                 const isActive = session.client_id === activeClientId;
                 const isHighlighted = highlightSessionId ? session.id === highlightSessionId : false;
@@ -177,10 +182,11 @@ export default function ScheduleCalendarGrid({
                     key={session.id}
                     style={[
                       styles.sessionBadge,
-                      { left: leftOffset, width: itemWidth },
+                      { left: leftOffset, width: itemWidth, height: ROW_HEIGHT - 8 },
                       isActive ? styles.activeBadge : styles.otherBadge,
                       isDimmed && styles.dimmedBadge,
                       isHighlighted && styles.highlightedBadge,
+                      isMobile && { padding: 4 }
                     ]}
                     onPress={() => onSessionPress(session)}
                     activeOpacity={0.8}
@@ -190,6 +196,7 @@ export default function ScheduleCalendarGrid({
                       isActive && !isDimmed && styles.activeBadgeText,
                       isDimmed && styles.dimmedText,
                       isHighlighted && styles.highlightedText,
+                      isMobile && { fontSize: 9 }
                     ]} numberOfLines={1}>
                       {isActive ? 'OWN' : session.client_name.substring(0, 8)}
                     </Text>
@@ -198,6 +205,7 @@ export default function ScheduleCalendarGrid({
                       isActive && !isDimmed && styles.activeBadgeText,
                       isDimmed && styles.dimmedText,
                       isHighlighted && styles.highlightedFocusText,
+                      isMobile && { fontSize: 8, marginTop: 2 }
                     ]} numberOfLines={1}>
                       {session.focus || 'Workout'}
                     </Text>
@@ -216,11 +224,14 @@ export default function ScheduleCalendarGrid({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { height: HEADER_HEIGHT + (ROW_HEIGHT * 7) }
+    ]}>
       {/* 1. Static Sidebar (Vertical) */}
-      <View style={styles.sidebarContainer}>
-        <View style={styles.sidebarHeader}>
-          <Ionicons name="calendar-outline" size={20} color="#444" />
+      <View style={[styles.sidebarContainer, { width: DATE_COL_WIDTH }]}>
+        <View style={[styles.sidebarHeader, { height: HEADER_HEIGHT }]}>
+          <Ionicons name="calendar-outline" size={isMobile ? 16 : 20} color="#444" />
         </View>
         <FlatList
           ref={sideListRef}
@@ -231,21 +242,21 @@ export default function ScheduleCalendarGrid({
           scrollEnabled={false}
           getItemLayout={(data, index) => ({ length: ROW_HEIGHT * 7, offset: ROW_HEIGHT * 7 * index, index })}
           initialScrollIndex={initialIndex}
-          style={{ height: ROW_HEIGHT * 7 }} // Locks exactly to 7 days
+          style={{ height: ROW_HEIGHT * 7 }}
         />
       </View>
 
       {/* 2. Main Content */}
       <ScrollView ref={horizontalScrollRef} horizontal directionalLockEnabled={false} showsHorizontalScrollIndicator={true}>
-        <View>
+        <View style={{ height: HEADER_HEIGHT + (ROW_HEIGHT * 7) }}>
           {/* Hour Header */}
-          <View style={styles.headerRow}>
+          <View style={[styles.headerRow, { height: HEADER_HEIGHT }]}>
             {HOURS.map(hour => {
               const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
               const ampm = hour >= 12 ? 'PM' : 'AM';
               return (
-                <View key={hour} style={styles.headerCell}>
-                  <Text style={styles.headerHourText}>{displayHour} {ampm}</Text>
+                <View key={hour} style={[styles.headerCell, { width: CELL_WIDTH }]}>
+                  <Text style={[styles.headerHourText, isMobile && { fontSize: 9 }]}>{displayHour} {ampm}</Text>
                 </View>
               );
             })}
@@ -265,7 +276,7 @@ export default function ScheduleCalendarGrid({
             initialScrollIndex={initialIndex}
             getItemLayout={(data, index) => ({ length: ROW_HEIGHT * 7, offset: ROW_HEIGHT * 7 * index, index })}
             removeClippedSubviews={true}
-            style={{ height: ROW_HEIGHT * 7 }} // Locks exactly to 7 days
+            style={{ height: ROW_HEIGHT * 7 }}
           />
         </View>
       </ScrollView>
@@ -274,12 +285,12 @@ export default function ScheduleCalendarGrid({
 }
 
 const styles = StyleSheet.create({
-  container: { height: HEADER_HEIGHT + (ROW_HEIGHT * 7), backgroundColor: '#000', flexDirection: 'row' },
+  container: { backgroundColor: '#000', flexDirection: 'row' },
 
   // Sidebar
-  sidebarContainer: { width: DATE_COL_WIDTH, borderRightWidth: 1, borderRightColor: '#222', backgroundColor: '#0A0A0A' },
-  sidebarHeader: { height: HEADER_HEIGHT, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#222' },
-  sideItem: { height: ROW_HEIGHT, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
+  sidebarContainer: { borderRightWidth: 1, borderRightColor: '#222', backgroundColor: '#0A0A0A' },
+  sidebarHeader: { justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#222' },
+  sideItem: { justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
   todaySideItem: { backgroundColor: '#332200' },
   sideDayText: { color: '#666', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   sideNumText: { color: '#FFF', fontSize: 18, fontWeight: '800', marginVertical: 2 },
@@ -287,31 +298,31 @@ const styles = StyleSheet.create({
   todayText: { color: '#FFD700' },
 
   // Header
-  headerRow: { flexDirection: 'row', height: HEADER_HEIGHT, backgroundColor: '#111', borderBottomWidth: 1, borderBottomColor: '#222' },
-  headerCell: { width: CELL_WIDTH, justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderRightColor: '#222' },
+  headerRow: { flexDirection: 'row', backgroundColor: '#111', borderBottomWidth: 1, borderBottomColor: '#222' },
+  headerCell: { justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderRightColor: '#222' },
   headerHourText: { color: '#AAA', fontSize: 11, fontWeight: '700' },
 
   // Grid
-  gridRow: { flexDirection: 'row', height: ROW_HEIGHT },
-  cell: { width: CELL_WIDTH, height: ROW_HEIGHT, borderRightWidth: 1, borderRightColor: '#1A1A1A', padding: 6, borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
+  gridRow: { flexDirection: 'row' },
+  cell: { borderRightWidth: 1, borderRightColor: '#1A1A1A', padding: 6, borderBottomWidth: 1, borderBottomColor: '#1A1A1A' },
 
   // Badge overlay
   sessionBadge: {
     position: 'absolute',
     top: 4,
-    height: ROW_HEIGHT - 8,
     borderRadius: 8,
     padding: 8,
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3
+    shadowRadius: 3,
+    elevation: 4,
   },
   otherBadge: { backgroundColor: '#222', borderWidth: 1, borderColor: '#333' },
   activeBadge: { backgroundColor: '#FFD700' },
   dimmedBadge: { backgroundColor: '#1A1A1A', borderColor: '#2A2A2A', opacity: 0.4 },
-  highlightedBadge: { backgroundColor: '#FFD700', borderWidth: 2, borderColor: '#FFF', shadowColor: '#FFD700', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  highlightedBadge: { backgroundColor: '#FFD700', borderWidth: 2, borderColor: '#FFF', shadowColor: '#FFD700', shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
   badgeText: { fontSize: 11, fontWeight: '800', color: '#888' },
   activeBadgeText: { color: '#000' },
   dimmedText: { color: '#555' },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { commonStyles } from '../../theme/theme';
 
 interface CardContainerProps {
   children: React.ReactNode;
@@ -111,14 +112,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   circularActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    ...commonStyles.circularButton,
     paddingHorizontal: 0,
     paddingVertical: 0,
-    backgroundColor: '#111',
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

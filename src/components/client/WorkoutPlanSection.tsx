@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Plan, Session } from '../../types';
 import EmptyState from '../shared/EmptyState';
+import { commonStyles } from '../../theme/theme';
 
 interface WorkoutPlanSectionProps {
   monthlyPlans: Plan[];
@@ -236,7 +237,7 @@ const st = StyleSheet.create({
   planCard: {
     backgroundColor: '#161616',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#2A2A2A',
@@ -245,41 +246,42 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 12,
   },
   planTitle: {
     color: '#FFF',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   tagsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   tagYellow: {
     backgroundColor: '#2A2400',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#4A4000',
   },
   tagYellowText: {
     color: '#FFD700',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   tagGray: {
     backgroundColor: '#2A2A2A',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   tagGrayText: {
     color: '#AAA',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   planActions: {
@@ -287,24 +289,12 @@ const st = StyleSheet.create({
     gap: 8,
   },
   circleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    ...commonStyles.circularButton,
     backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   smallCircleBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    ...commonStyles.circularButton,
     backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   planningPill: {
     flexDirection: 'row',
@@ -367,15 +357,15 @@ const st = StyleSheet.create({
   dayBlock: {
     backgroundColor: '#1A1A1A',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    padding: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
   dayHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   dayDot: {
     width: 8,
@@ -386,13 +376,13 @@ const st = StyleSheet.create({
   },
   dayHeaderText: {
     color: '#FF7D00',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1,
   },
   dayFocusText: {
     color: '#888',
-    fontSize: 13,
+    fontSize: 12,
     marginLeft: 8,
   },
   
@@ -401,9 +391,9 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
   },
   exerciseInfo: {
     flex: 1,
@@ -411,25 +401,25 @@ const st = StyleSheet.create({
   },
   exerciseName: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   exerciseNotes: {
     color: '#888',
-    fontSize: 13,
+    fontSize: 12,
   },
   exerciseValuePill: {
     backgroundColor: '#111',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
   exerciseValueText: {
     color: '#FFD700',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
   },
   

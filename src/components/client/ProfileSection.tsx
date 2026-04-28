@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Client, ClientProfile, ClientLifestyle, ClientAssessment, AssessmentExerciseKey, FlexibilityKey } from '../../types';
 import AvatarCircle from '../shared/AvatarCircle';
+import { commonStyles } from '../../theme/theme';
 
 // ── Exercise & Flexibility label maps ────────────────────────────────────────
 
@@ -244,14 +245,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   sectionTitle: { fontSize: 12, fontWeight: '800', color: '#FFD700', letterSpacing: 1 },
   editBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    ...commonStyles.circularButton,
     backgroundColor: '#1F1F1F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
   },
   grid: { flexDirection: 'row', gap: 16, marginBottom: 20 },
   gridCol: { flex: 1 },

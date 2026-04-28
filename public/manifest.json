@@ -1,0 +1,22 @@
+{
+  "short_name": "FitPersona",
+  "name": "FIT.PERSONA",
+  "description": "Premium Trainer CMS and Workout Planner",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#FFEA00",
+  "background_color": "#0A0A0A",
+  "orientation": "portrait"
+}
