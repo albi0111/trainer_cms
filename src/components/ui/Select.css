@@ -1,0 +1,25 @@
+.select__wrapper {
+  position: relative;
+}
+
+.select__input {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 36px;
+}
+
+.select__chevron {
+  position: absolute;
+  right: var(--space-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  font-size: var(--font-size-sm);
+}
+
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}

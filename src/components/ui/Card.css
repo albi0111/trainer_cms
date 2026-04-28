@@ -1,0 +1,27 @@
+.card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid transparent;
+}
+
+.card--pad-none  { padding: 0; }
+.card--pad-sm    { padding: var(--space-md); }
+.card--pad-md    { padding: var(--space-xl); }
+.card--pad-lg    { padding: var(--space-2xl); }
+
+.card--bordered {
+  border-color: var(--color-border-container);
+}
+
+.card--clickable {
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+.card--clickable:hover {
+  background-color: var(--color-surface-light);
+  border-color: var(--color-border);
+}
+.card--clickable:active {
+  transform: scale(0.99);
+}
