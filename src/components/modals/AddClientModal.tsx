@@ -313,7 +313,7 @@ export default function AddClientModal({
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
           <View style={styles.container}>
@@ -368,6 +368,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 900,
     maxHeight: '94%',
+    flex: 1,
   },
   container: {
     backgroundColor: colors.background,

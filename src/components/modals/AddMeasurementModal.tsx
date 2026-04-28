@@ -12,11 +12,14 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { addMeasurement, getClientMeasurementConfigs } from '../../services/measurement/measurementService';
 import { MeasurementConfig } from '../../types';
 import ManageMetricsModal from './ManageMetricsModal';
+import { commonStyles } from '../../theme/theme';
+import AppDatePicker from '../shared/AppDatePicker';
 
 interface AddMeasurementModalProps {
   visible: boolean;
@@ -37,6 +40,9 @@ export default function AddMeasurementModal({
   onClose,
   onSuccess,
 }: AddMeasurementModalProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
   const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(true);
@@ -66,7 +72,6 @@ export default function AddMeasurementModal({
     try {
       const data = await getClientMeasurementConfigs(clientId);
       setConfigs(data);
-      // Reset form with standard date but empty values
       reset({
         date: new Date().toISOString().split('T')[0],
         values: {},
@@ -102,7 +107,7 @@ export default function AddMeasurementModal({
       onSuccess();
     } catch (error: any) {
       if (error.message?.includes('UNIQUE constraint failed')) {
-        Alert.alert('Duplicate Date', 'A measurement for this date already exists. Append-only rule: past entries cannot be modified.');
+        Alert.alert('Duplicate Date', 'A measurement for this date already exists.');
       } else {
         console.error('[AddMeasurementModal] Error:', error);
         Alert.alert('Error', `Failed to add measurement: ${error.message || error}`);
@@ -110,9 +115,8 @@ export default function AddMeasurementModal({
     }
   };
 
-  const renderInput = (key: string, label: string, unit?: string, placeholder?: string) => (
-    <View key={key} style={styles.inputWrapper}>
-      <Text style={styles.label}>{label.toUpperCase()} {unit ? `(${unit.toUpperCase()})` : ''}</Text>
+  const renderInput = (key: string, label: string, unit?: string) => (
+    <View key={key} style={[styles.inputWrapper, isMobile && styles.inputWrapperMobile]}>
       <Controller
         control={control}
         name={`values.${key}`}
@@ -122,7 +126,7 @@ export default function AddMeasurementModal({
             onChangeText={onChange} 
             value={value || ''} 
             keyboardType="numeric" 
-            placeholder={placeholder || '0.0'} 
+            placeholder={`${label}${unit ? ` (${unit})` : ''}`} 
             placeholderTextColor="#555" 
           />
         )}
@@ -135,31 +139,41 @@ export default function AddMeasurementModal({
   return (
     <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
-        <View style={styles.container}>
+        <View style={[styles.container, isMobile && styles.containerMobile]}>
           <View style={styles.header}>
             <Text style={styles.title}>Log Progress</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}><Ionicons name="close" size={20} color="#AAA" /></TouchableOpacity>
           </View>
           
-          <View style={styles.tabContainer}>
-            <TouchableOpacity style={[styles.tab, activeTab === 'body' && styles.tabActive]} onPress={() => setActiveTab('body')}>
-              <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]}>Body Measurements</Text>
+          <View style={[styles.tabContainer, isMobile && styles.tabContainerMobile]}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'body' && styles.tabActive]} 
+              onPress={() => setActiveTab('body')}
+            >
+              <Ionicons name="body-outline" size={18} color={activeTab === 'body' ? '#000' : '#888'} style={!isMobile && { marginRight: 6 }} />
+              {!isMobile && <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]}>Body Measurements</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.tab, activeTab === 'performance' && styles.tabActive]} onPress={() => setActiveTab('performance')}>
-              <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]}>Performance</Text>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'performance' && styles.tabActive]} 
+              onPress={() => setActiveTab('performance')}
+            >
+              <Ionicons name="walk-outline" size={18} color={activeTab === 'performance' ? '#000' : '#888'} style={!isMobile && { marginRight: 6 }} />
+              {!isMobile && <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]}>Performance</Text>}
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={styles.label}>DATE (YYYY-MM-DD)</Text>
                 <Controller
                   control={control}
-                  rules={{ required: 'Required', pattern: { value: /^\d{4}-\d{2}-\d{2}$/, message: 'Invalid format' } }}
+                  rules={{ required: 'Required' }}
                   name="date"
                   render={({ field: { onChange, value } }) => (
-                    <TextInput style={styles.input} onChangeText={onChange} value={value} placeholder="2024-04-14" placeholderTextColor="#555" />
+                    <AppDatePicker 
+                      value={value} 
+                      onChange={onChange} 
+                    />
                   )}
                 />
               </View>
@@ -172,7 +186,7 @@ export default function AddMeasurementModal({
                 {filteredConfigs.map(c => renderInput(c.key, c.label, c.unit))}
                 
                 <TouchableOpacity 
-                  style={styles.addMetricInlineBtn} 
+                  style={[styles.addMetricInlineBtn, isMobile && styles.inputWrapperMobile]} 
                   onPress={() => setIsManageMetricsVisible(true)}
                 >
                   <Ionicons name="add-circle-outline" size={20} color="#FFD700" />
@@ -186,12 +200,19 @@ export default function AddMeasurementModal({
             )}
 
             <View style={{ marginTop: 12 }}>
-              <Text style={styles.label}>NOTES</Text>
               <Controller
                 control={control}
                 name="notes"
                 render={({ field: { onChange, value } }) => (
-                  <TextInput style={[styles.input, styles.textArea]} onChangeText={onChange} value={value as string} multiline numberOfLines={3} placeholder="Observations, how client felt..." placeholderTextColor="#555" />
+                  <TextInput 
+                    style={[styles.input, styles.textArea]} 
+                    onChangeText={onChange} 
+                    value={value as string} 
+                    multiline 
+                    numberOfLines={3} 
+                    placeholder="Observations, notes..." 
+                    placeholderTextColor="#555" 
+                  />
                 )}
               />
             </View>
@@ -223,12 +244,17 @@ export default function AddMeasurementModal({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   container: { backgroundColor: '#161616', borderRadius: 24, padding: 32, width: '100%', maxWidth: 600, maxHeight: '90%', borderWidth: 1, borderColor: '#333' },
+  containerMobile: { padding: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#FFD700' },
-  closeBtn: { padding: 4 },
+  closeBtn: { 
+    ...commonStyles.circularButton,
+    backgroundColor: '#222',
+  },
   
   tabContainer: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 4, marginBottom: 20 },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  tabContainerMobile: { width: 'auto', alignSelf: 'center' },
+  tab: { flex: 1, flexDirection: 'row', paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderRadius: 8, paddingHorizontal: 16 },
   tabActive: { backgroundColor: '#FFD700' },
   tabText: { color: '#888', fontSize: 13, fontWeight: '700' },
   tabTextActive: { color: '#000' },
@@ -239,6 +265,7 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   formGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   inputWrapper: { width: '48%' },
+  inputWrapperMobile: { width: '100%' },
   label: { color: '#AAA', fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
   input: { backgroundColor: '#222', color: '#FFF', borderRadius: 12, padding: 14, fontSize: 16, borderWidth: 1, borderColor: '#333' },
   textArea: { height: 80, textAlignVertical: 'top' },

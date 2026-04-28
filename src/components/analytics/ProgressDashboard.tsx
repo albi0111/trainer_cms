@@ -5,14 +5,13 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart } from 'react-native-chart-kit';
 import { Svg, Polygon, Line as SvgLine, Circle, Text as SvgText } from 'react-native-svg';
 import { Measurement, MeasurementConfig } from '../../types';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
+import { commonStyles } from '../../theme/theme';
 
 interface ProgressDashboardProps {
   measurements: Measurement[];
@@ -29,6 +28,10 @@ export default function ProgressDashboard({
   onLogPress,
   onManageMetrics,
 }: ProgressDashboardProps) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+  const chartWidth = isMobile ? width - 100 : width - 120;
+
   const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
   const [deltaMode, setDeltaMode] = useState<DeltaMode>('previous');
   const [performanceView, setPerformanceView] = useState<'bar' | 'radar'>('bar');
@@ -83,6 +86,7 @@ export default function ProgressDashboard({
         key={config.key}
         style={[
           styles.card,
+          isMobile && styles.cardMobile,
           config.key === (activeTab === 'body' ? selectedBodyMetric : null) && styles.cardActive
         ]}
         activeOpacity={0.7}
@@ -91,16 +95,16 @@ export default function ProgressDashboard({
           else toggleDeltaMode();
         }}
       >
-        <Text style={styles.cardLabel}>{config.label}</Text>
+        <Text style={[styles.cardLabel, isMobile && styles.cardLabelMobile]}>{config.label}</Text>
         <View style={styles.cardValueRow}>
-          <Text style={styles.cardValue}>
+          <Text style={[styles.cardValue, isMobile && styles.cardValueMobile]}>
             {current ?? '—'}
-            <Text style={styles.cardUnit}>{config.unit}</Text>
+            <Text style={[styles.cardUnit, isMobile && styles.cardUnitMobile]}>{config.unit}</Text>
           </Text>
         </View>
-        <Text style={[styles.cardDelta, { color: deltaColor }]}>
+        <Text style={[styles.cardDelta, isMobile && styles.cardDeltaMobile, { color: deltaColor }]}>
           {deltaSign}{delta.toFixed(1)}{config.unit}
-          <Text style={styles.deltaModeLabel}> vs {deltaMode}</Text>
+          {!isMobile && <Text style={styles.deltaModeLabel}> vs {deltaMode}</Text>}
         </Text>
       </TouchableOpacity>
     );
@@ -125,7 +129,7 @@ export default function ProgressDashboard({
         <Text style={styles.chartTitle}>{configs.find(c => c.key === selectedBodyMetric)?.label} Trend</Text>
         <LineChart
           data={data}
-          width={SCREEN_WIDTH - 80}
+          width={chartWidth}
           height={220}
           chartConfig={{
             backgroundColor: 'transparent',
@@ -152,29 +156,17 @@ export default function ProgressDashboard({
     if (perfConfigs.length === 0 || sortedMs.length === 0) return null;
 
     if (performanceView === 'bar') {
-      const data = {
-        labels: latestM ? ['Previous', 'Current'] : [],
-        datasets: perfConfigs.map((c, i) => ({
-          data: [
-            (previousM?.values?.[c.key] ?? previousM?.[c.key as keyof Measurement] as number) || 0,
-            (latestM?.values?.[c.key] ?? latestM?.[c.key as keyof Measurement] as number) || 0
-          ],
-          // Map colors
-          color: (opacity = 1) => i === 0 ? `rgba(255, 215, 0, ${opacity})` : `rgba(61, 204, 136, ${opacity})`
-        }))
-      };
-
       return (
         <View style={styles.chartBox}>
           <Text style={styles.chartTitle}>Session Comparison</Text>
           <BarChart
             data={{
-              labels: perfConfigs.map(c => c.label.split(' ')[0]),
+              labels: perfConfigs.map(c => isMobile ? c.label.charAt(0) : c.label.split(' ')[0]),
               datasets: [{
                 data: perfConfigs.map(c => (latestM?.values?.[c.key] ?? latestM?.[c.key as keyof Measurement] as number) || 0)
               }]
             }}
-            width={SCREEN_WIDTH - 80}
+            width={chartWidth}
             height={220}
             yAxisLabel=""
             yAxisSuffix=""
@@ -188,7 +180,7 @@ export default function ProgressDashboard({
               labelColor: (opacity = 1) => `rgba(255, 255, 255, 0.5)`,
               paddingRight: 0,
             }}
-            verticalLabelRotation={30}
+            verticalLabelRotation={isMobile ? 0 : 30}
             style={{ borderRadius: 16 }}
           />
         </View>
@@ -199,9 +191,9 @@ export default function ProgressDashboard({
   };
 
   const renderRadarChart = (perfConfigs: MeasurementConfig[]) => {
-    const size = 240;
+    const size = isMobile ? 200 : 240;
     const center = size / 2;
-    const radius = 85;
+    const radius = isMobile ? 65 : 85;
     const angleStep = (Math.PI * 2) / perfConfigs.length;
 
     // Normalization: (val / target_max) * radius
@@ -231,7 +223,7 @@ export default function ProgressDashboard({
             return (
               <React.Fragment key={i}>
                 <SvgLine x1={center} y1={center} x2={end.x} y2={end.y} stroke="#333" strokeWidth="1" />
-                <SvgText x={end.x} y={end.y} fill="#666" fontSize="10" textAnchor="middle">{c.label}</SvgText>
+                <SvgText x={end.x} y={end.y} fill="#666" fontSize={isMobile ? "8" : "10"} textAnchor="middle">{isMobile ? c.label.charAt(0) : c.label}</SvgText>
               </React.Fragment>
             );
           })}
@@ -251,25 +243,39 @@ export default function ProgressDashboard({
   return (
     <View style={styles.container}>
       {/* Tab Switcher */}
-      <View style={styles.header}>
+    <View style={styles.header}>
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'body' && styles.tabActive]}
             onPress={() => setActiveTab('body')}
           >
-            <Ionicons name="body-outline" size={14} color={activeTab === 'body' ? '#FFF' : '#888'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]} numberOfLines={1}>Body Measurements</Text>
+            <View style={[styles.tabIconCircle, activeTab === 'body' && styles.tabIconCircleActive]}>
+              <Ionicons 
+                name={activeTab === 'body' ? "body" : "body-outline"} 
+                size={14} 
+                color={activeTab === 'body' ? '#000' : '#888'} 
+              />
+            </View>
+            <Text style={[styles.tabText, activeTab === 'body' && styles.tabTextActive]}>BODY</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.tab, activeTab === 'performance' && styles.tabActive]}
             onPress={() => setActiveTab('performance')}
           >
-            <Ionicons name="walk-outline" size={14} color={activeTab === 'performance' ? '#FFF' : '#888'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]} numberOfLines={1}>Performance</Text>
+            <View style={[styles.tabIconCircle, activeTab === 'performance' && styles.tabIconCircleActive]}>
+              <Ionicons 
+                name={activeTab === 'performance' ? "flash" : "flash-outline"} 
+                size={14} 
+                color={activeTab === 'performance' ? '#000' : '#888'} 
+              />
+            </View>
+            <Text style={[styles.tabText, activeTab === 'performance' && styles.tabTextActive]}>PERFORMANCE</Text>
           </TouchableOpacity>
         </View>
+
         <TouchableOpacity style={styles.manageBtn} onPress={onManageMetrics}>
-          <Ionicons name="settings-outline" size={20} color="#666" />
+          <Ionicons name="options-outline" size={18} color="#AAA" />
         </TouchableOpacity>
       </View>
 
@@ -290,13 +296,13 @@ export default function ProgressDashboard({
             style={[styles.viewToggle, performanceView === 'bar' && styles.viewToggleActive]}
             onPress={() => setPerformanceView('bar')}
           >
-            <Text style={[styles.viewToggleText, performanceView === 'bar' && styles.viewToggleTextActive]}>Bar (Compare)</Text>
+            <Text style={[styles.viewToggleText, performanceView === 'bar' && styles.viewToggleTextActive]}>{isMobile ? 'Bar' : 'Bar (Compare)'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.viewToggle, performanceView === 'radar' && styles.viewToggleActive]}
             onPress={() => setPerformanceView('radar')}
           >
-            <Text style={[styles.viewToggleText, performanceView === 'radar' && styles.viewToggleTextActive]}>Radar (Overview)</Text>
+            <Text style={[styles.viewToggleText, performanceView === 'radar' && styles.viewToggleTextActive]}>{isMobile ? 'Radar' : 'Radar (Overview)'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -316,33 +322,76 @@ export default function ProgressDashboard({
 
 const styles = StyleSheet.create({
   container: { marginTop: 16, marginBottom: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 16 },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3, width: '50%' },
-  // tabContainer: { flex: 1, flexDirection: 'row', backgroundColor: '#222', borderRadius: 12, padding: 3, marginRight: 16 },
-  tab: { flex: 1, flexDirection: 'row', paddingVertical: 8, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: '#333', borderWidth: 1, borderColor: '#444' },
-  tabIcon: { marginRight: 6 },
-  tabText: { color: '#888', fontSize: 13, fontWeight: '700' },
-  tabTextActive: { color: '#FFF' },
-  manageBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1A1A1A',
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginBottom: 24,
+    paddingHorizontal: 4
+  },
+  tabContainer: { 
+    flexDirection: 'row', 
+    backgroundColor: '#111', 
+    borderRadius: 14, 
+    padding: 4, 
+    flex: 1,
+    marginRight: 16,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#222',
+  },
+  tab: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    paddingVertical: 10, 
+    borderRadius: 10, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    gap: 8,
+  },
+  tabActive: { 
+    backgroundColor: '#1A1A1A', 
+  },
+  tabIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#1F1F1F',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  tabIconCircleActive: {
+    backgroundColor: '#FFD700',
+    borderColor: '#FFD700',
+  },
+  tabText: { 
+    color: '#666', 
+    fontSize: 11, 
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tabTextActive: { 
+    color: '#FFF' 
+  },
+  manageBtn: {
+    ...commonStyles.circularButton,
+    backgroundColor: '#111',
   },
 
   cardsScroll: { marginHorizontal: -20 },
   cardsContent: { paddingHorizontal: 20, gap: 12 },
   card: { backgroundColor: '#1A1A1A', padding: 16, borderRadius: 16, minWidth: 120, borderWidth: 1, borderColor: '#333' },
+  cardMobile: { padding: 12, minWidth: 100 },
   cardLabel: { color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 8 },
+  cardLabelMobile: { fontSize: 11, marginBottom: 4 },
   cardValueRow: { flexDirection: 'row', alignItems: 'baseline' },
   cardValue: { color: '#FFF', fontSize: 24, fontWeight: '700' },
+  cardValueMobile: { fontSize: 20 },
   cardUnit: { fontSize: 14, color: '#666', marginLeft: 2 },
+  cardUnitMobile: { fontSize: 12 },
   cardDelta: { fontSize: 12, fontWeight: '700', marginTop: 4 },
+  cardDeltaMobile: { fontSize: 11, marginTop: 2 },
   deltaModeLabel: { fontSize: 10, fontWeight: '400', color: '#555' },
   cardActive: { borderColor: '#FFD700', backgroundColor: '#222' },
 
