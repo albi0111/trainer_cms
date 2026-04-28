@@ -12,6 +12,7 @@ const ClientScreen = lazy(() => import('./screens/ClientScreen'));
 const AddClientScreen = lazy(() => import('./screens/AddClientScreen'));
 const ScheduleScreen = lazy(() => import('./screens/ScheduleScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
+const ComponentPreview = lazy(() => import('./components/ui/ComponentPreview'));
 
 // ── Loading fallback ────────────────────────────────────────────────────────
 function ScreenLoader() {
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
   {
     path: '/settings',
     element: <LazyScreen><SettingsScreen /></LazyScreen>,
+  },
+  {
+    path: '/preview',
+    element: <LazyScreen><ComponentPreview /></LazyScreen>,
   },
 ]);
 
