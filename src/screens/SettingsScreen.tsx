@@ -1,13 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ID utility — wraps nanoid for consistent ID generation
-// Cleaned from reference — no Expo/RN dependencies
+// Settings Screen — placeholder
+// Will be built in Phase 3
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { nanoid } from 'nanoid';
-
-/**
- * Generates a new nanoid for stable unique identifiers.
- */
-export function generateId(): string {
-  return nanoid();
+export default function SettingsScreen() {
+  return (
+    <div className="screen">
+      <h1>Settings</h1>
+      <p>Phase 3 — coming soon</p>
+    </div>
+  );
 }

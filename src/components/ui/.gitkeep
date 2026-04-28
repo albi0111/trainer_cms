@@ -1,0 +1,3 @@
+// src/components/ui — shared UI components (Phase 2)
+// Button, Input, Card, Modal, Badge, etc.
+export {};

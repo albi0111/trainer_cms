@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Date utility — ensures ISO 8601 UTC format correctly
-// Cleaned from reference — no Expo/RN dependencies
+// Source of truth: resrc/system_prompt.md §2.1
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -9,6 +9,8 @@
  */
 export function nowISO(): string {
   const date = new Date();
+  // toISOString() returns YYYY-MM-DDTHH:mm:ss.sssZ
+  // We split by '.' to remove milliseconds.
   return date.toISOString().split('.')[0] + 'Z';
 }
 
@@ -17,11 +19,4 @@ export function nowISO(): string {
  */
 export function isValidDate(dateStr: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
-}
-
-/**
- * Returns today's date as YYYY-MM-DD string.
- */
-export function todayISO(): string {
-  return new Date().toISOString().split('T')[0]!;
 }

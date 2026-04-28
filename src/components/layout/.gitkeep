@@ -1,0 +1,3 @@
+// src/components/layout — layout components (Phase 2)
+// TopNavBar, BottomNav, PageWrapper
+export {};

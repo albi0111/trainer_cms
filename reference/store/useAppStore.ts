@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Zustand App Store — UI-state only, NO data storage
-// Data lives in Dexie (IndexedDB). Zustand = volatile UI state.
+// Source of truth: resrc/system_prompt.md §  Architecture Overview
+// Rule: Zustand = UI state (volatile, never persisted)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { create } from 'zustand';

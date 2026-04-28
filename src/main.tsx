@@ -1,13 +1,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ID utility — wraps nanoid for consistent ID generation
-// Cleaned from reference — no Expo/RN dependencies
+// Entry point — mounts React app to DOM
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { nanoid } from 'nanoid';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './index.css';
 
-/**
- * Generates a new nanoid for stable unique identifiers.
- */
-export function generateId(): string {
-  return nanoid();
-}
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

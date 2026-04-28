@@ -1,13 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ID utility — wraps nanoid for consistent ID generation
-// Cleaned from reference — no Expo/RN dependencies
+// App — Root component
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { nanoid } from 'nanoid';
+import AppRouter from './router';
 
-/**
- * Generates a new nanoid for stable unique identifiers.
- */
-export function generateId(): string {
-  return nanoid();
+export default function App() {
+  return <AppRouter />;
 }
