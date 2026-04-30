@@ -1,0 +1,341 @@
+.analytics-section {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.analytics-tab-container {
+  display: flex;
+  background-color: var(--color-bg-elevated);
+  border-radius: var(--radius-2xl);
+  padding: 4px;
+  border: 1px solid var(--color-border-container);
+  gap: 4px;
+  flex: 1;
+  max-width: 900px;
+}
+
+.analytics-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+.analytics-tab--active {
+  background-color: var(--color-border-container);
+  border-color: var(--color-primary);
+}
+
+.analytics-tab__icon-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.analytics-tab--active .analytics-tab__icon-circle {
+  background-color: #FFD700;
+}
+
+.analytics-tab__text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-label);
+}
+
+.analytics-tab--active .analytics-tab__text {
+  color: var(--color-primary);
+}
+
+.analytics-manage-btn {
+  background: #161616;
+  border: 1px solid #222;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  cursor: pointer;
+  margin-left: 12px;
+}
+
+/* ── Metric Cards ── */
+.analytics-cards-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.analytics-cards-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.analytics-cards-content {
+  display: flex;
+  gap: 12px;
+  min-width: min-content;
+}
+
+.analytics-card {
+  background-color: #161616;
+  border: 1px solid #222;
+  border-radius: 18px;
+  padding: 20px 16px;
+  min-width: 100px;
+  flex: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analytics-card--active {
+  border-color: #FFD700;
+  background-color: #1A1A1A;
+}
+
+.analytics-card__label {
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.analytics-card__value {
+  color: #FFF;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.analytics-card__unit {
+  color: #666;
+  font-size: 12px;
+  margin-left: 2px;
+  font-weight: 500;
+}
+
+.analytics-card__delta {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.analytics-card__delta-mode {
+  color: #444;
+  font-weight: 500;
+}
+
+/* ── Chart Area ── */
+.analytics-chart-area {
+  background-color: #111;
+  border: 1px solid #222;
+  border-radius: 24px;
+  padding: 40px; /* Increased from 32px */
+  margin-top: 10px;
+}
+
+.analytics-chart-title {
+  color: #AAA;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 40px; /* Increased from 24px to prevent overlap */
+  letter-spacing: 1px;
+}
+
+.analytics-line-chart {
+  overflow: visible;
+}
+
+.analytics-chart-placeholder {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  font-size: 14px;
+}
+
+/* ── Bar Chart ── */
+.analytics-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 260px; /* Increased from 220px */
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+.analytics-bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.analytics-bar {
+  width: 32px;
+  border-radius: 8px 8px 4px 4px;
+  transition: height 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.analytics-bar-value {
+  color: #FFF;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.analytics-bar-label {
+  color: #666;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+/* ── Bottom Add Button ── */
+.analytics-add-btn {
+  width: 100%;
+  background-color: transparent;
+  border: 1px dashed #2A2A2A;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.analytics-add-btn:hover {
+  border-color: #444;
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.analytics-add-btn__text {
+  color: #888;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── Performance View Toggles ── */
+.analytics-perf-toggle {
+  display: flex;
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-container);
+  border-radius: var(--radius-2xl);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.perf-toggle-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-label);
+  transition: all 0.2s ease;
+  text-align: center;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.perf-toggle-btn.active {
+  background-color: var(--color-border-container);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ── Chart Modal ── */
+.chart-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.chart-modal-content {
+  background-color: #111;
+  border: 1px solid #333;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 900px;
+  padding: 32px;
+  animation: modalSlideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.chart-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.chart-modal-header h3 {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.chart-modal-close {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.chart-modal-close:hover {
+  color: #FFF;
+}
+
+.chart-modal-body {
+  width: 100%;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

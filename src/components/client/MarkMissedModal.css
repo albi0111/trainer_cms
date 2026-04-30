@@ -1,0 +1,151 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * MarkMissedModal — Reason pills + note + red confirm + Back
+ * Reference: user screenshots
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.missed-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 201;
+  padding: 24px;
+  animation: fadeIn 150ms ease;
+}
+
+.missed-modal__box {
+  background-color: #1C1C1E;
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  animation: slideUp 200ms ease;
+}
+
+.missed-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.missed-modal__title {
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.missed-modal__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  transition: color var(--transition-fast);
+}
+
+.missed-modal__close:hover { color: #FFF; }
+
+/* ── Reason label ─────────────────────────────────────────────────────────── */
+.missed-modal__label {
+  color: #AAA;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* ── Reason pills row ────────────────────────────────────────────────────── */
+.missed-modal__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.missed-modal__pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #444;
+  background-color: #2A2A2E;
+  color: #AAA;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.missed-modal__pill:hover {
+  border-color: #666;
+  color: #FFF;
+}
+
+.missed-modal__pill--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #000;
+}
+
+/* ── Note textarea ───────────────────────────────────────────────────────── */
+.missed-modal__note-label {
+  color: #AAA;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.missed-modal__textarea {
+  width: 100%;
+  background-color: #2A2A2E;
+  border: 1px solid #3A3A3E;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #FFF;
+  font-size: 14px;
+  line-height: 22px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  margin-bottom: 20px;
+}
+
+.missed-modal__textarea:focus { border-color: var(--color-primary); }
+.missed-modal__textarea::placeholder { color: #555; }
+
+/* ── Confirm + Back buttons ──────────────────────────────────────────────── */
+.missed-modal__confirm-btn {
+  width: 100%;
+  padding: 16px;
+  background-color: #FF5252;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  transition: opacity var(--transition-fast);
+}
+
+.missed-modal__confirm-btn:hover { opacity: 0.9; }
+
+.missed-modal__back-btn {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  font-size: 15px;
+  font-weight: 600;
+  transition: color var(--transition-fast);
+}
+
+.missed-modal__back-btn:hover { color: #FFF; }

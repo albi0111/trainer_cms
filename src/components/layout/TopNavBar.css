@@ -65,6 +65,7 @@
   -webkit-tap-highlight-color: transparent;
   padding: 0;
 }
+
 .top-nav__back:hover {
   color: var(--color-text);
 }

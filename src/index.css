@@ -89,6 +89,19 @@ textarea::placeholder {
   color: var(--color-text-placeholder);
 }
 
+/* Hide spin buttons for Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide spin buttons for Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: none;
+}
+
 /* ── Scrollbar (webkit) ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 4px;

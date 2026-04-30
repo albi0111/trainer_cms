@@ -21,7 +21,6 @@ import type { TabDefinition } from './TabBar';
 
 // Layout Components
 import TopNavBar from '../layout/TopNavBar';
-import BottomNav from '../layout/BottomNav';
 import PageWrapper from '../layout/PageWrapper';
 
 // ── Section label ────────────────────────────────────────────────────────
@@ -255,7 +254,6 @@ export default function ComponentPreview() {
         </div>
       </PageWrapper>
 
-      <BottomNav />
     </>
   );
 }

@@ -1,0 +1,347 @@
+.manage-metrics-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.manage-metrics-container {
+  background-color: #111;
+  border: 1px solid #222;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.manage-metrics-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid #1a1a1a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manage-metrics-header h2 {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.manage-metrics-close {
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.manage-metrics-close:hover {
+  color: #FFF;
+}
+
+.metrics-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px;
+}
+
+.metrics-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.metrics-scroll-area::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 4px;
+}
+
+.metric-section {
+  padding-bottom: 12px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-wrap.client { background: rgba(255, 215, 0, 0.1); color: #FFD700; }
+.icon-wrap.available { background: rgba(61, 204, 136, 0.1); color: #3DCC88; }
+
+.section-title h3 {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 800;
+  flex: 1;
+}
+
+.count-pill {
+  background: rgba(255, 215, 0, 0.1);
+  color: #FFD700;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+.count-pill.available {
+  background: rgba(61, 204, 136, 0.1);
+  color: #3DCC88;
+}
+
+.category-group h4 {
+  color: #444;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 16px 0 8px 0;
+}
+
+.metric-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.metric-item-row:last-child {
+  border-bottom: none;
+}
+
+.metric-info {
+  flex: 1;
+}
+
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metric-info .label {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lock-icon { color: #333; }
+
+.key-sub {
+  color: #555;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+  display: block;
+}
+
+.metric-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #161616;
+  border: 1px solid #222;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn.edit:hover { color: #FFD700; border-color: #FFD700; background: rgba(255, 215, 0, 0.05); }
+.action-btn.delete:hover { color: #FF5252; border-color: #FF5252; background: rgba(255, 82, 82, 0.05); }
+.action-btn.add { background: rgba(61, 204, 136, 0.1); color: #3DCC88; border: 1px solid rgba(61, 204, 136, 0.2); }
+.action-btn.add:hover { background: rgba(61, 204, 136, 0.2); }
+
+.confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirm-delete .q {
+  color: #FF5252;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.confirm-delete button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.confirm-delete .yes { background: #FF5252; color: #FFF; }
+.confirm-delete .no { background: #222; color: #888; }
+
+.section-divider {
+  height: 1px;
+  background: #1a1a1a;
+  margin: 12px 0 24px 0;
+}
+
+.create-custom-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  background: transparent;
+  border: 1px dashed #222;
+  border-radius: 14px;
+  color: #FFD700;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.create-custom-btn:hover {
+  background: rgba(255, 215, 0, 0.02);
+  border-color: #444;
+}
+
+/* ── Metric Form ── */
+.metric-form {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  color: #555;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.form-group input {
+  background: #161616;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 14px;
+  color: #FFF;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  border-color: #333;
+  outline: none;
+}
+
+.form-group input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.flex-2 { flex: 2; }
+.flex-1 { flex: 1; }
+
+.category-tabs {
+  display: flex;
+  background: #161616;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.category-tabs button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #555;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-tabs button.active {
+  background: #222;
+  color: #FFD700;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.form-actions button {
+  flex: 1;
+  padding: 16px;
+  border-radius: 14px;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cancel-btn { background: #222; color: #AAA; }
+.save-btn { background: #3DCC88; color: #FFF; }
+
+.empty-hint {
+  color: #333;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.loading-state {
+  color: #555;
+  text-align: center;
+  padding: 40px 0;
+}

@@ -47,9 +47,9 @@
 }
 
 .card__header-title {
-  color: var(--color-text-light);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  color: #888;
+  font-size: 10px;
+  font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
 }

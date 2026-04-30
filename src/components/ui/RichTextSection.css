@@ -1,0 +1,164 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * RichTextSection — Rich text editor/viewer
+ * Reference: /reference/components/shared/RichTextSection.tsx
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.rich-text-section {
+  margin-bottom: 16px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background-color: #1A1A1A;
+  border-radius: 10px;
+  border: 1px solid #2A2A2A;
+  flex-wrap: wrap;
+}
+
+.rich-text-toolbar__btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  transition: all var(--transition-fast);
+}
+
+.rich-text-toolbar__btn:hover {
+  background-color: #2A2A2A;
+  color: #FFF;
+}
+
+.rich-text-toolbar__btn--active {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.rich-text-toolbar__select {
+  background-color: #1A1A1A;
+  color: #CCC;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.rich-text-toolbar__select:hover {
+  border-color: #555;
+}
+
+.rich-text-toolbar__color {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.rich-text-toolbar__color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.rich-text-toolbar__color::-webkit-color-swatch {
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
+.rich-text-toolbar__separator {
+  width: 1px;
+  height: 20px;
+  background-color: #333;
+  margin: 0 4px;
+}
+
+.rich-text-editor {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  background-color: #1A1A1A;
+  border: 1px solid #2A2A2A;
+  border-radius: 10px;
+  color: #FFF;
+  font-size: 14px;
+  line-height: 22px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  overflow-y: auto;
+}
+
+.rich-text-editor:focus {
+  border-color: var(--color-primary);
+}
+
+.rich-text-editor:empty:before {
+  content: attr(data-placeholder);
+  color: #444;
+  pointer-events: none;
+  display: block; /* For Firefox */
+}
+
+/* ── Rendered content ────────────────────────────────────────────────────── */
+.rich-text-content {
+  color: #CCC;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: pre-wrap;
+  min-height: 40px;
+}
+
+.rich-text-content--empty {
+  color: #555;
+  font-style: italic;
+}
+
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  color: #FFF;
+  margin: 16px 0 8px;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.rich-text-content li {
+  margin-bottom: 4px;
+}
+
+.rich-text-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* Ensure editor and content share similar text styling */
+.rich-text-editor b,
+.rich-text-content b {
+  font-weight: bold;
+}
+.rich-text-editor i,
+.rich-text-content i {
+  font-style: italic;
+}
+.rich-text-editor u,
+.rich-text-content u {
+  text-decoration: underline;
+}

@@ -1,0 +1,293 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * WorkoutPlanSection — Plan cards with expandable weeks
+ * Reference: /reference/components/client/WorkoutPlanSection.tsx
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.workout-plan-section {
+  padding: 10px 0;
+}
+
+/* ── Section Header ──────────────────────────────────────────────────────── */
+.workout-plan-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 4px;
+}
+
+.workout-plan-section .section-header__left {
+  display: flex;
+  align-items: center;
+}
+
+.workout-plan-section .section-header__dash {
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.workout-plan-section .section-header__title {
+  color: #AAA;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* ── Plan Card ───────────────────────────────────────────────────────────── */
+.plan-card {
+  background-color: var(--color-bg-elevated) !important;
+  border-radius: var(--radius-3xl) !important;
+  padding: 16px !important;
+  margin-bottom: 20px;
+  border: 1px solid var(--color-border-card) !important;
+}
+
+.plan-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.plan-card__info {
+  flex: 1;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plan-card__title {
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.plan-card__tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.plan-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.plan-card__divider {
+  height: 1px;
+  background-color: var(--color-border-card);
+  margin: 24px 0;
+}
+
+/* ── Week Item ───────────────────────────────────────────────────────────── */
+.week-item {
+  margin-bottom: 8px;
+}
+
+.week-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.week-item__title-row {
+  display: flex;
+  align-items: center;
+}
+
+.week-badge {
+  background-color: var(--color-primary);
+  padding: 4px 12px;
+  border-radius: 6px;
+  margin-right: 10px;
+  color: #000;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.week-goal {
+  color: #AAA;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.week-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.planning-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  background-color: var(--color-card);
+  padding: 0 12px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  gap: 6px;
+  color: #888;
+  transition: all var(--transition-fast);
+}
+
+.planning-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* ── Week Breakdown ──────────────────────────────────────────────────────── */
+.week-breakdown {
+  margin-bottom: 16px;
+}
+
+.week-breakdown__empty {
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+  margin-left: 18px;
+  margin-bottom: 16px;
+}
+
+/* ── Day Block ───────────────────────────────────────────────────────────── */
+.day-block {
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 20px;
+  background-color: #0A0A0A;
+  border: 1px solid #1A1A1A;
+  transition: all 0.2s ease;
+  cursor: default;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.day-block:hover {
+  border-color: #333;
+}
+
+.day-block__header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-left: 4px;
+}
+
+.day-block__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #FF8C00;
+  margin-right: 12px;
+}
+
+.day-block__name {
+  color: #FF8C00;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.day-block__focus {
+  color: #666;
+  font-size: 11px;
+  margin-left: 10px;
+  font-weight: 600;
+}
+
+/* ── Exercise Card ───────────────────────────────────────────────────────── */
+.exercise-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #121212;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 8px;
+  border: 1px solid #1F1F1F;
+}
+
+.exercise-card:last-child {
+  margin-bottom: 0;
+}
+
+.exercise-card__info {
+  flex: 1;
+}
+
+.exercise-card__name {
+  color: #E0E0E0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.exercise-card__value-pill {
+  background-color: rgba(255, 215, 0, 0.1);
+  padding: 6px 14px;
+  border-radius: 80px;
+  flex-shrink: 0;
+}
+
+.exercise-card__value {
+  color: #FFD700;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+/* ── Expand Button ───────────────────────────────────────────────────────── */
+.week-expand-container {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.week-expand-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--color-border-card);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  transition: all var(--transition-fast);
+}
+
+.week-expand-btn:hover {
+  background-color: #333;
+  color: var(--color-primary);
+}
+
+/* ── Add Plan Button (section header action) ─────────────────────────────── */
+.add-plan-btn {
+  display: flex;
+  align-items: center;
+  background-color: #000;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--color-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-plan-btn:hover {
+  background-color: rgba(255, 215, 0, 0.08);
+}
+
+.add-plan-btn__text {
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}

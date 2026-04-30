@@ -1,4 +1,24 @@
-.timepicker__input {
-  color-scheme: dark;
-  cursor: pointer;
+/* Use shared picker styles from DatePicker.css or duplicate here if needed */
+/* For simplicity, I'll duplicate relevant parts but adjust for TimePicker specific layout */
+
+.picker-wheels--time {
+  justify-content: center;
+}
+
+.picker-colon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-label);
+  font-size: 24px;
+  font-weight: 800;
+  padding-top: 24px;
+  margin: 0 10px;
+}
+
+/* Inherit other styles from DatePicker.css (make sure they are in the same scope or global) */
+/* Since I'm using Vanilla CSS, I should probably put common picker styles in a shared file or just repeat them */
+
+.wheel-viewport {
+  width: 80px; /* Specific width for time wheels */
 }

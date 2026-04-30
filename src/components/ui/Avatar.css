@@ -1,11 +1,22 @@
 .avatar {
   border-radius: var(--radius-full);
-  background-color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.avatar--default {
+  background-color: var(--color-primary);
+  color: var(--color-text-dark);
+}
+
+.avatar--dark {
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 /* Reference: default size 48, fontSize = size * 0.35 */
@@ -20,7 +31,7 @@
 }
 
 .avatar__initials {
-  color: var(--color-text-dark);
+  color: inherit;
   font-weight: var(--font-weight-extrabold);
   user-select: none;
 }

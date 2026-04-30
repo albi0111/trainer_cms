@@ -1,0 +1,179 @@
+import { useState, useEffect } from 'react';
+import { db } from '../../db/db';
+import { MeasurementConfig } from '../../types';
+import ManageMetricsModal from './ManageMetricsModal';
+import DatePicker from '../ui/DatePicker';
+import './AddMeasurementModal.css';
+
+interface AddMeasurementModalProps {
+  visible: boolean;
+  clientId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function AddMeasurementModal({
+  visible,
+  clientId,
+  onClose,
+  onSuccess,
+}: AddMeasurementModalProps) {
+  const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
+  const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
+  const [loadingConfigs, setLoadingConfigs] = useState(true);
+  const [isManageMetricsVisible, setIsManageMetricsVisible] = useState(false);
+  
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      loadConfigs();
+    }
+  }, [visible, clientId]);
+
+  const loadConfigs = async () => {
+    setLoadingConfigs(true);
+    try {
+      const data = await db.measurementConfigs.where('client_id').equals(clientId).toArray();
+      setConfigs(data);
+    } catch (error) {
+      console.error('[AddMeasurementModal] Load configs error:', error);
+    } finally {
+      setLoadingConfigs(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSubmitting(true);
+    try {
+      const parsedValues: Record<string, number> = {};
+      Object.keys(values).forEach(key => {
+        const val = parseFloat(values[key] as string);
+        if (!isNaN(val)) parsedValues[key] = val;
+      });
+
+      const mId = 'm' + Date.now();
+      const now = new Date().toISOString();
+      
+      await db.measurements.put({
+        id: mId,
+        client_id: clientId,
+        date: date || '',
+        values: parsedValues,
+        custom_values_json: JSON.stringify(parsedValues),
+        notes: notes || '',
+        created_at: now
+      });
+
+      setValues({});
+      setNotes('');
+      onSuccess();
+    } catch (error) {
+      console.error('[AddMeasurementModal] Save error:', error);
+      alert('Failed to save log entry');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!visible) return null;
+
+  const filteredConfigs = configs.filter(c => c.category === activeTab);
+
+  return (
+    <div className="add-measurement-overlay" onClick={onClose}>
+      <div className="add-measurement-container" onClick={e => e.stopPropagation()}>
+        <div className="add-measurement-header">
+          <h2>LOG PROGRESS</h2>
+          <button className="add-measurement-close" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div className="add-measurement-tabs">
+          <button 
+            className={`tab-btn ${activeTab === 'body' ? 'active' : ''}`}
+            onClick={() => setActiveTab('body')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            BODY
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 'performance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('performance')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12h.01M13 2v2M13 20v2M22 13h-2M4 13H2M14.5 9l-2.5 2.5 2.5 2.5M9.5 15l2.5-2.5-2.5-2.5"/></svg>
+            PERFORMANCE
+          </button>
+        </div>
+
+        <div className="add-measurement-scroll">
+          <div className="form-section">
+            <label className="section-label">ENTRY DATE</label>
+            <DatePicker 
+              value={date}
+              onChange={setDate}
+            />
+          </div>
+
+          <div className="form-section">
+            <label className="section-label">METRICS ({activeTab.toUpperCase()})</label>
+            {loadingConfigs ? (
+              <div className="loading-state">Loading metrics...</div>
+            ) : (
+              <div className="metrics-grid">
+                {filteredConfigs.map(c => (
+                  <div key={c.key} className="metric-input-wrap">
+                    <label>{c.label} {c.unit ? `(${c.unit})` : ''}</label>
+                    <input 
+                      type="number" 
+                      placeholder="0.0"
+                      value={values[c.key] || ''}
+                      onChange={e => setValues({...values, [c.key]: e.target.value})}
+                    />
+                  </div>
+                ))}
+                
+                <button className="add-metric-inline" onClick={() => setIsManageMetricsVisible(true)}>
+                  <span className="icon">+</span>
+                  Add Metric
+                </button>
+              </div>
+            )}
+            
+            {!loadingConfigs && filteredConfigs.length === 0 && (
+              <div className="empty-hint">No {activeTab} metrics tracked for this client yet.</div>
+            )}
+          </div>
+
+          <div className="form-section">
+            <label className="section-label">NOTES</label>
+            <textarea 
+              className="notes-input"
+              placeholder="How was the session? Any physical changes?"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="add-measurement-footer">
+          <button className="cancel-btn" onClick={onClose}>Cancel</button>
+          <button className="save-btn" onClick={handleSave} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Log Entry'}
+          </button>
+        </div>
+      </div>
+
+      <ManageMetricsModal 
+        visible={isManageMetricsVisible}
+        clientId={clientId}
+        onClose={() => setIsManageMetricsVisible(false)}
+        onSuccess={loadConfigs}
+      />
+    </div>
+  );
+}

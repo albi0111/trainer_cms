@@ -7,9 +7,10 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  className?: string;
 }
 
-export default function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export default function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function Modal({ open, onClose, title, children, footer }: ModalP
   };
 
   return (
-    <dialog ref={dialogRef} className="modal" onClick={handleClick}>
+    <dialog ref={dialogRef} className={`modal ${className || ''}`} onClick={handleClick}>
       <div className="modal__content">
         {title && (
           <div className="modal__header">

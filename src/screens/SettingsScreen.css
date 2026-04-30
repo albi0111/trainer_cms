@@ -1,0 +1,114 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SettingsScreen — Settings page layout
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--color-bg);
+}
+
+.settings-content {
+  padding-bottom: 100px;
+}
+
+.settings-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #FFF;
+  margin-bottom: 28px;
+}
+
+/* ── Settings Groups ─────────────────────────────────────────────────────── */
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.settings-group-title {
+  color: #666;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.settings-card {
+  border: 1px solid var(--color-border-container) !important;
+}
+
+/* ── Sync Status ─────────────────────────────────────────────────────────── */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sync-status-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sync-status-icon--active {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.sync-status-text {
+  color: #FFF;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.sync-email {
+  color: #888;
+  font-size: 13px;
+}
+
+.sync-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-container);
+}
+
+.sync-time {
+  color: #666;
+  font-size: 12px;
+}
+
+/* ── Setting Items ───────────────────────────────────────────────────────── */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-container);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item-label {
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.setting-item-value {
+  color: #888;
+  font-size: 14px;
+  font-weight: 500;
+}

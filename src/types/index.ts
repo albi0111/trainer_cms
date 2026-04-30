@@ -217,6 +217,7 @@ export interface FlexibilityResult {
   key: FlexibilityKey;
   right?: boolean;
   left?: boolean;
+  pass?: boolean;
   note?: string;
 }
 

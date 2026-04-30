@@ -1,0 +1,181 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * DietPlanSection — Grid-based weekly meal planner with macros
+ * Reference: /reference/components/client/DietPlanSection.tsx
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.diet-plan-section .header-save-btn {
+  margin-left: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-success-text);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Macros Section ──────────────────────────────────────────────────────── */
+.diet-macros-section {
+  margin-bottom: 16px;
+}
+
+.diet-macros-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: #666;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.diet-macro-row {
+  display: flex;
+  gap: 8px;
+}
+
+.diet-macro-box {
+  flex: 1;
+  background-color: #1A1A1A;
+  padding: 16px 8px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #2A2A2A;
+}
+
+.diet-macro-input {
+  font-size: 24px;
+  font-weight: 800;
+  padding: 0;
+  margin: 0;
+  text-align: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.diet-macro-unit {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.diet-macro-label {
+  font-size: 10px;
+  color: #888;
+  font-weight: 700;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+.diet-grid-scroll {
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.diet-grid-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.diet-grid-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 100%;
+}
+
+.diet-grid-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.diet-day-cell {
+  width: 60px;
+  flex-shrink: 0;
+  background-color: var(--color-bg-elevated);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-container);
+  padding: 12px 0;
+}
+
+.diet-day-text {
+  color: var(--color-success-text);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.diet-input-cell {
+  flex: 1;
+  min-width: 100px;
+  background-color: #1A1A1A;
+  color: #FFF;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  min-height: 50px;
+  resize: vertical;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.diet-input-cell:focus {
+  border-color: var(--color-primary);
+}
+
+.diet-input-cell::placeholder {
+  color: #555;
+}
+
+/* ── Header Cells ────────────────────────────────────────────────────────── */
+.diet-header-cell {
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-bg-elevated);
+  border-radius: 8px;
+  border: 1px solid var(--color-border-container);
+  padding: 0 8px;
+  min-height: 36px;
+}
+
+.diet-header-input {
+  flex: 1;
+  color: var(--color-success-text);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 4px 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.diet-header-delete-btn {
+  padding: 4px;
+  margin-left: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-error);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Empty day cell for header alignment ─────────────────────────────────── */
+.diet-day-cell--empty {
+  background-color: transparent;
+  border-color: transparent;
+  padding: 0;
+}

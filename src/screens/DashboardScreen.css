@@ -1,0 +1,88 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * DashboardScreen — Main dashboard layout
+ * Reference: /reference/app/screens/DashboardScreen.tsx
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--color-bg);
+}
+
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.dashboard-header {
+  margin-bottom: 28px;
+}
+
+.greeting {
+  font-size: 28px;
+  font-weight: 800;
+  color: #FFF;
+  margin-bottom: 4px;
+}
+
+.date-subtitle {
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.dashboard-layout {
+  display: flex;
+  gap: 24px;
+}
+
+.dashboard-layout__sidebar {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-layout__main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Top Nav Right ───────────────────────────────────────────────────────── */
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-date {
+  color: #888;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sync-indicator {
+  width: var(--circular-btn-size);
+  height: var(--circular-btn-size);
+  border-radius: 50%;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .dashboard-layout__sidebar {
+    width: 100%;
+  }
+
+  .greeting {
+    font-size: 24px;
+  }
+}

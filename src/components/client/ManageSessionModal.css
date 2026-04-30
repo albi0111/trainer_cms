@@ -1,0 +1,149 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * ManageSessionModal — 3 action options when tapping a session
+ * Reference: user screenshots
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.manage-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  padding: 24px;
+  animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.manage-modal__box {
+  background-color: #1C1C1E;
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  animation: slideUp 200ms ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.manage-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.manage-modal__title {
+  color: #FFF;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.manage-modal__close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #888;
+  transition: color var(--transition-fast);
+}
+
+.manage-modal__close:hover {
+  color: #FFF;
+}
+
+/* ── Action Items ─────────────────────────────────────────────────────────── */
+.manage-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background-color: #2A2A2E;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: none;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.manage-modal__item:last-child {
+  margin-bottom: 0;
+}
+
+.manage-modal__item:hover {
+  background-color: #333338;
+}
+
+.manage-modal__item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.manage-modal__item-icon--complete {
+  background-color: rgba(255, 215, 0, 0.15);
+}
+
+.manage-modal__item-icon--postpone {
+  background-color: rgba(255, 215, 0, 0.15);
+}
+
+.manage-modal__item-icon--missed {
+  background-color: rgba(255, 82, 82, 0.15);
+}
+
+.manage-modal__item-text {
+  flex: 1;
+}
+
+.manage-modal__item-label {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.manage-modal__item-label--default {
+  color: #FFF;
+}
+
+.manage-modal__item-label--missed {
+  color: #FF5252;
+}
+
+.manage-modal__item-sublabel {
+  color: #888;
+  font-size: 13px;
+}
+
+/* Spinner on loading state */
+.manage-modal__spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #444;
+  border-top-color: #888;
+  animation: spin 600ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

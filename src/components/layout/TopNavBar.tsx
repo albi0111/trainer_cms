@@ -28,7 +28,7 @@ export default function TopNavBar({
   const leftSlot = leftContent ?? (showBack ? (
     <button
       className="top-nav__back"
-      onClick={() => navigate(-1)}
+      onClick={() => navigate('/')}
       aria-label="Go back"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

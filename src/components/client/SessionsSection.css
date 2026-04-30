@@ -1,0 +1,114 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * SessionsSection — Matches reference exactly
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.sessions-section {
+  margin-bottom: 16px;
+}
+
+.sessions-subset {
+  margin-top: 16px;
+}
+
+.sessions-subset__heading {
+  color: #555;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* ── Session List Item ───────────────────────────────────────────────────── */
+.session-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-bg-elevated);
+  padding: 16px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border-container);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.session-list-item:hover {
+  background-color: #1E1E1E;
+}
+
+/* Pending = yellow border, gold meta text */
+.session-list-item--pending {
+  border-color: var(--color-primary);
+  background-color: rgba(255, 215, 0, 0.03);
+}
+
+.session-list-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-list-item__top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.session-list-item__date {
+  color: #FFF;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.session-list-item__date--pending {
+  color: var(--color-primary);
+}
+
+.session-list-item__meta {
+  color: #888;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.session-list-item__meta--pending {
+  color: rgba(255, 215, 0, 0.7);
+}
+
+/* ── Session Badge (blue pill — WEEK 1, WEEK 2) ──────────────────────────── */
+.session-badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  background-color: #1A2A50;
+  color: #6699FF;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.session-badge--pending {
+  background-color: #332B00;
+  color: var(--color-primary);
+}
+
+/* ── Dots button ─────────────────────────────────────────────────────────── */
+.session-dots-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.session-dots-btn:hover {
+  background-color: #2A2A2E;
+  color: #FFF;
+}

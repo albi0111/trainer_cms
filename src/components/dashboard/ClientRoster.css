@@ -1,0 +1,137 @@
+.client-roster {
+  display: flex;
+  flex-direction: column;
+}
+
+.client-roster__search-row {
+  display: flex;
+  gap: var(--space-lg);
+  margin-bottom: 20px;
+}
+
+.roster-search {
+  flex: 1;
+  background-color: var(--color-bg-elevated);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-card);
+}
+
+.roster-search__icon {
+  color: var(--color-text-label);
+}
+
+.roster-search__input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  padding: 12px 10px;
+  font-size: 15px;
+  outline: none;
+}
+
+.roster-search__input::placeholder {
+  color: var(--color-text-label);
+}
+
+.roster-add-btn {
+  border-radius: 12px;
+  padding: 0 20px;
+  height: 48px;
+}
+
+.client-roster__count {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.client-card-item {
+  background-color: var(--color-bg-elevated);
+  border-radius: var(--radius-3xl);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--color-border-card);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.client-card-item:hover {
+  background-color: var(--color-surface);
+}
+
+.client-card-item__info {
+  flex: 1;
+}
+
+.client-card-item__name {
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+}
+
+.client-card-item__goal {
+  color: var(--color-text-stat);
+  font-size: var(--font-size-base);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.client-card-item__next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.client-card-item__next-text {
+  color: var(--color-text-stat);
+  font-size: var(--font-size-sm);
+}
+
+.client-card-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.roster-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-label);
+  font-size: 15px;
+}
+
+.client-roster__loading {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-primary-dim);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
