@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db } from '../../db/db';
 import { MeasurementConfig, MeasurementCategory } from '../../types';
+import { DEFAULT_METRICS } from '../../constants/metrics';
+import {
+  getClientMeasurementConfigs,
+  upsertClientMeasurementConfig,
+  deleteClientMeasurementConfig,
+} from '../../services/measurement/measurementService';
 import './ManageMetricsModal.css';
 
 interface ManageMetricsModalProps {
@@ -17,19 +22,6 @@ interface DefaultMetric {
   category: MeasurementCategory;
 }
 
-const DEFAULT_METRICS: DefaultMetric[] = [
-  { key: 'weight_kg', label: 'Weight', unit: 'kg', category: 'body' },
-  { key: 'chest_cm', label: 'Chest', unit: 'cm', category: 'body' },
-  { key: 'waist_cm', label: 'Waist', unit: 'cm', category: 'body' },
-  { key: 'hips_cm', label: 'Hips', unit: 'cm', category: 'body' },
-  { key: 'arm_cm', label: 'Arm', unit: 'cm', category: 'body' },
-  { key: 'calf_cm', label: 'Calf', unit: 'cm', category: 'body' },
-  { key: 'pull_strength_kg', label: 'Pull Strength', unit: 'kg', category: 'performance' },
-  { key: 'push_strength_kg', label: 'Push Strength', unit: 'kg', category: 'performance' },
-  { key: 'lower_body_strength_kg', label: 'Lower Body Strength', unit: 'kg', category: 'performance' },
-  { key: 'cardio_endurance_min', label: 'Cardio Vascular Endurance', unit: 'min', category: 'performance' },
-];
-
 const LOCKED_KEYS = ['weight_kg'];
 
 export default function ManageMetricsModal({
@@ -43,6 +35,7 @@ export default function ManageMetricsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editingConfig, setEditingConfig] = useState<Partial<MeasurementConfig>>({});
   const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (visible) {
@@ -53,23 +46,11 @@ export default function ManageMetricsModal({
   const fetchConfigs = async () => {
     setLoading(true);
     try {
-      let data = await db.measurementConfigs.where('client_id').equals(clientId).toArray();
-      
-      // Seed defaults if empty
-      if (data.length === 0) {
-        const now = new Date().toISOString();
-        const seedData = DEFAULT_METRICS.map(m => ({
-          ...m,
-          client_id: clientId,
-          updated_at: now
-        }));
-        await db.measurementConfigs.bulkPut(seedData);
-        data = await db.measurementConfigs.where('client_id').equals(clientId).toArray();
-      }
-      
-      setConfigs(data);
+      setConfigs(await getClientMeasurementConfigs(clientId));
+      setErrorMessage('');
     } catch (err) {
       console.error('[ManageMetricsModal] Fetch error:', err);
+      setErrorMessage('Failed to load metrics.');
     } finally {
       setLoading(false);
     }
@@ -82,56 +63,57 @@ export default function ManageMetricsModal({
 
   const handleSave = async () => {
     if (!editingConfig.key || !editingConfig.label || !editingConfig.category) {
-      alert('Key, Label and Category are required');
+      setErrorMessage('Key, label, and category are required.');
       return;
     }
 
     try {
-      const now = new Date().toISOString();
-      await db.measurementConfigs.put({
-        client_id: clientId,
+      await upsertClientMeasurementConfig(clientId, {
         key: editingConfig.key,
         label: editingConfig.label,
         unit: editingConfig.unit || '',
         category: editingConfig.category as MeasurementCategory,
         target_min: editingConfig.target_min,
         target_max: editingConfig.target_max,
-        updated_at: now
       });
       setIsEditing(false);
       setEditingConfig({});
-      fetchConfigs();
+      setErrorMessage('');
+      void fetchConfigs();
       onSuccess();
     } catch (err) {
       console.error('[ManageMetricsModal] Save error:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to save metric.');
     }
   };
 
   const handleRemoveFromClient = async (key: string) => {
     try {
-      await db.measurementConfigs.where({ client_id: clientId, key }).delete();
+      await deleteClientMeasurementConfig(clientId, key);
       setConfirmDeleteKey(null);
-      fetchConfigs();
+      setErrorMessage('');
+      void fetchConfigs();
       onSuccess();
     } catch (err) {
       console.error('[ManageMetricsModal] Remove error:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to remove metric.');
     }
   };
 
   const handleAddToClient = async (metric: DefaultMetric) => {
     try {
-      await db.measurementConfigs.put({
-        client_id: clientId,
+      await upsertClientMeasurementConfig(clientId, {
         key: metric.key,
         label: metric.label,
         unit: metric.unit,
         category: metric.category,
-        updated_at: new Date().toISOString()
       });
-      fetchConfigs();
+      setErrorMessage('');
+      void fetchConfigs();
       onSuccess();
     } catch (err) {
       console.error('[ManageMetricsModal] Add error:', err);
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to add metric.');
     }
   };
 
@@ -155,6 +137,8 @@ export default function ManageMetricsModal({
             )}
           </button>
         </div>
+
+        {errorMessage && <div className="empty-hint">{errorMessage}</div>}
 
         {isEditing ? (
           <div className="metric-form">

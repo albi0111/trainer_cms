@@ -11,6 +11,7 @@ import ManageSessionModal from './ManageSessionModal';
 import CompleteSessionModal, { type CompleteSessionData } from './CompleteSessionModal';
 import MarkMissedModal, { type MarkMissedData } from './MarkMissedModal';
 import { Session } from '../../types';
+import { toDayName } from '../../services/shared/date';
 
 interface SessionsSectionProps {
   upcoming: Session[];
@@ -65,7 +66,7 @@ export default function SessionsSection({
             {s.date}
           </span>
           <span className={`session-badge ${isPending ? 'session-badge--pending' : ''}`}>
-            {(s.day_name || 'PENDING').toUpperCase()}
+            {(s.date ? toDayName(s.date) : s.day_name || 'PENDING').toUpperCase()}
           </span>
         </div>
         <p className={`session-list-item__meta ${isPending ? 'session-list-item__meta--pending' : ''}`}>

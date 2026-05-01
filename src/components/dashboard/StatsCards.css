@@ -42,3 +42,23 @@
   color: var(--color-text-label);
   margin-top: 4px;
 }
+
+@media (max-width: 480px) {
+  .stats-row {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 30px;
+    line-height: 34px;
+  }
+
+  .stat-sub {
+    font-size: 12px;
+  }
+}

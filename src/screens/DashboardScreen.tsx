@@ -11,7 +11,10 @@ import StatsCards from '../components/dashboard/StatsCards';
 import TodaySchedule from '../components/dashboard/TodaySchedule';
 import ClientRoster from '../components/dashboard/ClientRoster';
 import ClientModal from '../components/modals/ClientModal';
-import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
+import DriveConnectAlert from '../components/sync/DriveConnectAlert';
+import SyncIndicator from '../components/sync/SyncIndicator';
+import { type DashboardStats } from '../types';
+import { useAppStore } from '../store/useAppStore';
 
 const EMPTY_STATS: DashboardStats = {
   clients: [],
@@ -22,35 +25,45 @@ const EMPTY_STATS: DashboardStats = {
 
 export default function DashboardScreen() {
   const navigate = useNavigate();
+  const hydrateDashboard = useAppStore((state) => state.hydrateDashboard);
+  const runSync = useAppStore((state) => state.runSync);
+  const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      setStats(await getDashboardStats());
+      setStats(await hydrateDashboard());
     } catch (error) {
       console.error('Failed to load dashboard', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hydrateDashboard]);
 
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    void loadDashboard();
+    void runSync().then(loadDashboard).catch(() => undefined);
+  }, [loadDashboard, runSync]);
 
   useEffect(() => {
-    const handleRefresh = () => {
+    const handleWindowFocus = () => {
       void loadDashboard();
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadDashboard();
+      }
+    };
 
-    window.addEventListener('focus', handleRefresh);
-    document.addEventListener('visibilitychange', handleRefresh);
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      window.removeEventListener('focus', handleRefresh);
-      document.removeEventListener('visibilitychange', handleRefresh);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadDashboard]);
 
@@ -67,18 +80,31 @@ export default function DashboardScreen() {
     day: 'numeric' 
   });
 
+  const handleSyncIndicatorPress = async () => {
+    if (!isConnectedToDrive) {
+      setIsDrivePromptOpen(true);
+      return;
+    }
+
+    try {
+      await runSync();
+      await loadDashboard();
+    } catch (error) {
+      console.error('Failed to sync dashboard data', error);
+    }
+  };
+
   return (
     <div className="dashboard-page">
       <TopNavBar 
         rightContent={
           <div className="top-nav-right">
-            <span className="nav-date">{currentDateStr}</span>
             <div className="sync-indicator">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17.5 19L22 14.5L17.5 10"></path>
-                <path d="M2 14.5C2 14.5 5 9.5 12 9.5C19 9.5 22 14.5 22 14.5"></path>
-                <path d="M22 14.5C22 14.5 19 19.5 12 19.5C5 19.5 2 14.5 2 14.5Z"></path>
-              </svg>
+              <SyncIndicator
+                compact
+                onClick={() => void handleSyncIndicatorPress()}
+                onLongPress={() => navigate('/settings')}
+              />
             </div>
           </div>
         }
@@ -87,7 +113,7 @@ export default function DashboardScreen() {
       <PageWrapper>
         <div className="dashboard-content">
           <header className="dashboard-header">
-            <h1 className="greeting">{getGreeting()}, Trainer 👋</h1>
+            <h1 className="greeting">{getGreeting()}, Ajith 👋</h1>
             <p className="date-subtitle">{currentDateStr}</p>
           </header>
 
@@ -117,6 +143,12 @@ export default function DashboardScreen() {
         open={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={loadDashboard}
+      />
+
+      <DriveConnectAlert
+        visible={isDrivePromptOpen}
+        onClose={() => setIsDrivePromptOpen(false)}
+        onConnected={loadDashboard}
       />
 
     </div>

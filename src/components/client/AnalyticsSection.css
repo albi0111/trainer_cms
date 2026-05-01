@@ -10,17 +10,21 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .analytics-tab-container {
   display: flex;
   background-color: var(--color-bg-elevated);
   border-radius: var(--radius-2xl);
-  padding: 4px;
+  padding: var(--segmented-control-padding);
   border: 1px solid var(--color-border-container);
-  gap: 4px;
+  gap: var(--segmented-control-gap);
   flex: 1;
   max-width: 900px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .analytics-tab {
@@ -29,22 +33,25 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 10px 12px;
+  height: var(--segmented-control-height);
+  padding: 0 12px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   cursor: pointer;
   border-radius: var(--radius-lg);
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .analytics-tab--active {
   background-color: var(--color-border-container);
-  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .analytics-tab__icon-circle {
-  width: 28px;
-  height: 28px;
+  width: var(--segmented-control-icon-size);
+  height: var(--segmented-control-icon-size);
   border-radius: 50%;
   background-color: #111;
   display: flex;
@@ -61,6 +68,7 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-label);
+  line-height: 1;
 }
 
 .analytics-tab--active .analytics-tab__text {
@@ -151,8 +159,9 @@
   background-color: #111;
   border: 1px solid #222;
   border-radius: 24px;
-  padding: 40px; /* Increased from 32px */
+  padding: 40px;
   margin-top: 10px;
+  overflow: hidden;
 }
 
 .analytics-chart-title {
@@ -160,11 +169,14 @@
   font-size: 13px;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 40px; /* Increased from 24px to prevent overlap */
+  margin-bottom: 40px;
   letter-spacing: 1px;
 }
 
 .analytics-line-chart {
+  display: block;
+  width: 100%;
+  height: auto;
   overflow: visible;
 }
 
@@ -182,7 +194,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
-  height: 260px; /* Increased from 220px */
+  height: 260px;
   padding-bottom: 20px;
   padding-top: 20px;
 }
@@ -212,6 +224,8 @@
   font-size: 10px;
   font-weight: 700;
   margin-top: 8px;
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* ── Bottom Add Button ── */
@@ -247,28 +261,32 @@
   background-color: var(--color-bg-elevated);
   border: 1px solid var(--color-border-container);
   border-radius: var(--radius-2xl);
-  padding: 4px;
-  gap: 4px;
+  padding: var(--segmented-control-padding);
+  gap: var(--segmented-control-gap);
   margin-bottom: 4px;
+  box-sizing: border-box;
 }
 
 .perf-toggle-btn {
   flex: 1;
-  padding: 10px 12px;
+  height: var(--segmented-control-height);
+  padding: 0 12px;
   border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-label);
   transition: all 0.2s ease;
   text-align: center;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
 .perf-toggle-btn.active {
   background-color: var(--color-border-container);
   color: var(--color-primary);
-  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 /* ── Chart Modal ── */
@@ -328,6 +346,177 @@
 
 .chart-modal-body {
   width: 100%;
+}
+
+@media (max-width: 900px) {
+  .analytics-section {
+    gap: 16px;
+  }
+
+  .analytics-header {
+    gap: 10px;
+  }
+
+  .analytics-tab {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .analytics-manage-btn {
+    width: 40px;
+    height: 40px;
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+
+  .analytics-card {
+    min-width: 116px;
+    padding: 18px 14px;
+  }
+
+  .analytics-card__value {
+    font-size: 21px;
+  }
+
+  .analytics-chart-area {
+    padding: 24px 18px;
+    border-radius: 20px;
+  }
+
+  .analytics-chart-title {
+    margin-bottom: 24px;
+  }
+
+  .analytics-bar-chart {
+    height: 230px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .chart-modal-content {
+    padding: 24px;
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-section {
+    gap: 14px;
+  }
+
+  .analytics-header {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .analytics-tab-container {
+    padding: 3px;
+  }
+
+  .analytics-tab {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .analytics-tab__text {
+    font-size: 11px;
+  }
+
+  .analytics-manage-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .analytics-cards-scroll {
+    margin: 0 -2px;
+    padding: 2px;
+  }
+
+  .analytics-cards-content {
+    gap: 10px;
+  }
+
+  .analytics-card {
+    min-width: 110px;
+    padding: 16px 12px;
+    border-radius: 16px;
+  }
+
+  .analytics-card__label {
+    margin-bottom: 10px;
+    font-size: 10px;
+  }
+
+  .analytics-card__value {
+    font-size: 18px;
+  }
+
+  .analytics-card__delta {
+    font-size: 10px;
+  }
+
+  .analytics-perf-toggle {
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .perf-toggle-btn {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .analytics-chart-area {
+    padding: 18px 10px 14px;
+    border-radius: 18px;
+  }
+
+  .analytics-chart-title {
+    margin-bottom: 18px;
+    font-size: 12px;
+  }
+
+  .analytics-chart-placeholder {
+    height: 160px;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .analytics-bar-chart {
+    height: 210px;
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .analytics-bar {
+    width: 24px;
+  }
+
+  .analytics-bar-label {
+    font-size: 9px;
+  }
+
+  .analytics-add-btn {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .analytics-add-btn__text {
+    font-size: 12px;
+  }
+
+  .chart-modal-overlay {
+    padding: 12px;
+  }
+
+  .chart-modal-content {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .chart-modal-header {
+    margin-bottom: 18px;
+  }
 }
 
 @keyframes modalFadeIn {

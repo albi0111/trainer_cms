@@ -270,24 +270,3 @@
   color: var(--color-primary);
 }
 
-/* ── Add Plan Button (section header action) ─────────────────────────────── */
-.add-plan-btn {
-  display: flex;
-  align-items: center;
-  background-color: #000;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--color-primary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.add-plan-btn:hover {
-  background-color: rgba(255, 215, 0, 0.08);
-}
-
-.add-plan-btn__text {
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 600;
-}

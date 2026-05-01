@@ -61,3 +61,23 @@
   font-size: var(--font-size-md);
   margin-top: 4px;
 }
+
+@media (max-width: 480px) {
+  .today-schedule {
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+
+  .schedule-item {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .schedule-item__name {
+    font-size: 15px;
+  }
+
+  .schedule-item__meta {
+    font-size: 12px;
+  }
+}

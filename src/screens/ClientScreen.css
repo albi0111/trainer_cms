@@ -18,7 +18,8 @@
 }
 
 .client-content {
-  padding: 0 24px 40px;
+  width: 100%;
+  padding: 0 0 32px;
 }
 
 /* ── Section container ───────────────────────────────────────────────────── */
@@ -119,6 +120,17 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
+.client-inline-error {
+  margin-top: 16px;
+  border: 1px solid rgba(255, 82, 82, 0.24);
+  background: rgba(255, 82, 82, 0.08);
+  color: #ff8d8d;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .health-sub-tab--active {
   background-color: var(--color-primary);
   color: #000;
@@ -128,4 +140,53 @@
 .health-sub-tab--active:hover {
   background-color: var(--color-primary);
   color: #000;
+}
+
+.tab-content,
+.overview-container,
+.plans-container,
+.health-container {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .client-content {
+    padding-bottom: 28px;
+  }
+
+  .health-sub-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .health-sub-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .health-sub-tab {
+    flex: 0 0 auto;
+    min-width: 132px;
+  }
+}
+
+@media (max-width: 480px) {
+  .client-content {
+    padding-bottom: 24px;
+  }
+
+  .card__header {
+    margin-bottom: 14px;
+  }
+
+  .card__header-title {
+    font-size: 13px;
+  }
+
+  .health-sub-tab {
+    min-width: 118px;
+    padding: 10px 14px;
+    gap: 6px;
+    font-size: 12px;
+  }
 }

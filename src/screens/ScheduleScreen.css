@@ -10,8 +10,8 @@
 }
 
 .schedule-content {
-  padding: 24px;
-  padding-bottom: 100px;
+  width: 100%;
+  padding-bottom: 32px;
 }
 
 .schedule-header {
@@ -53,4 +53,34 @@
 .schedule-fab:hover {
   transform: scale(1.08);
   box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
+}
+
+.nav-date {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .schedule-content {
+    padding-bottom: 24px;
+  }
+
+  .schedule-header {
+    margin-bottom: 18px;
+  }
+
+  .schedule-title {
+    font-size: 26px;
+  }
+
+  .schedule-subtitle,
+  .nav-date {
+    font-size: 13px;
+  }
+
+  .nav-date {
+    display: none;
+  }
 }

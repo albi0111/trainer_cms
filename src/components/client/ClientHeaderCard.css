@@ -70,3 +70,52 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
+
+@media (max-width: 900px) {
+  .client-header-card {
+    padding: 18px;
+  }
+
+  .client-header-card__top {
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .client-stats-row {
+    gap: 12px;
+    padding-top: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .client-header-card {
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .client-header-card__top {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .name-badge-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .client-header-name {
+    font-size: 24px;
+  }
+
+  .client-header-goal {
+    font-size: 12px;
+  }
+
+  .client-stats-row {
+    gap: 10px;
+  }
+
+  .client-stat-value {
+    font-size: 14px;
+  }
+}

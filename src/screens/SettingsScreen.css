@@ -10,7 +10,8 @@
 }
 
 .settings-content {
-  padding-bottom: 100px;
+  width: 100%;
+  padding-bottom: 32px;
 }
 
 .settings-title {
@@ -88,6 +89,15 @@
   font-size: 12px;
 }
 
+.sync-time--error {
+  color: #FF5252;
+}
+
+.sync-meta__actions {
+  display: flex;
+  gap: 8px;
+}
+
 /* ── Setting Items ───────────────────────────────────────────────────────── */
 .setting-item {
   display: flex;
@@ -111,4 +121,59 @@
   color: #888;
   font-size: 14px;
   font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .settings-groups {
+    gap: 24px;
+  }
+
+  .sync-meta {
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-content {
+    padding-bottom: 24px;
+  }
+
+  .settings-title {
+    font-size: 26px;
+    margin-bottom: 20px;
+  }
+
+  .sync-status {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .sync-status-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sync-status-text {
+    font-size: 15px;
+  }
+
+  .sync-email,
+  .setting-item-value {
+    font-size: 13px;
+  }
+
+  .sync-meta {
+    flex-direction: column;
+  }
+
+  .sync-meta__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .setting-item {
+    align-items: flex-start;
+    gap: 12px;
+  }
 }

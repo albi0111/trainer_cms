@@ -4,8 +4,10 @@
 }
 
 .client-roster__search-row {
-  display: flex;
-  gap: var(--space-lg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
   margin-bottom: 20px;
 }
 
@@ -38,9 +40,28 @@
 }
 
 .roster-add-btn {
+  flex: none;
+  min-width: 148px;
+  width: auto;
   border-radius: 12px;
-  padding: 0 20px;
   height: 48px;
+  padding: 0 18px;
+}
+
+.roster-add-btn__glyphs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.roster-add-btn__label {
+  font-weight: 700;
+}
+
+.roster-add-btn__plus {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .client-roster__count {
@@ -134,4 +155,65 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .client-roster__search-row {
+    margin-bottom: 16px;
+  }
+
+  .client-card-item {
+    padding: 16px;
+    gap: 14px;
+    border-radius: 14px;
+  }
+
+  .client-card-item__name {
+    font-size: 17px;
+  }
+
+  .client-card-item__goal {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .client-roster__search-row {
+    grid-template-columns: minmax(0, 1fr) 52px;
+    gap: 10px;
+  }
+
+  .roster-search {
+    padding: 0 12px;
+  }
+
+  .roster-search__input {
+    padding: 11px 8px;
+    font-size: 14px;
+  }
+
+  .roster-add-btn {
+    min-width: 52px;
+    width: 52px;
+    height: 46px;
+    padding: 0;
+  }
+
+  .roster-add-btn .btn__label {
+    display: none;
+  }
+
+  .client-roster__count {
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+
+  .client-card-item {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .client-card-item__actions {
+    gap: 8px;
+  }
 }

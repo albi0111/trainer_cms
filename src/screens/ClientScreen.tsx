@@ -1,17 +1,11 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// ClientScreen — Full client view with session completion flow
-// Tabs: Overview | Analytics | Plans | Health | Profile
-// ─────────────────────────────────────────────────────────────────────────────
-
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './ClientScreen.css';
-import { db } from '../db/db';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import TopNavBar from '../components/layout/TopNavBar';
 import PageWrapper from '../components/layout/PageWrapper';
 import TabBar from '../components/ui/TabBar';
-
+import AppAlert from '../components/shared/AppAlert';
 import ClientHeaderCard from '../components/client/ClientHeaderCard';
 import OverviewSection from '../components/client/OverviewSection';
 import MedicationSection from '../components/client/MedicationSection';
@@ -26,242 +20,349 @@ import { type MarkMissedData } from '../components/client/MarkMissedModal';
 import ClientModal, { type ClientModalStep } from '../components/modals/ClientModal';
 import ScheduleCalendarModal from '../components/client/ScheduleCalendarModal';
 import NewSessionModal from '../components/client/NewSessionModal';
-import { type ClientStatus, type Plan, type Exercise, type Session } from '../types';
-import { buildRecentActivities, completeSession, getSessionDurationMinutes, markSessionMissed, partitionPlannedSessions, revertSession } from '../services/sessionService';
-import { deriveClientStatusFromData } from '../utils/clientStatus';
-import { generateId } from '../utils/id';
-import { nowISO } from '../utils/date';
+import { EMPTY_ASSESSMENT, EMPTY_LIFESTYLE, EMPTY_PROFILE } from '../constants/assessment';
+import { deleteClient, getClientDetail, updateClient, updateClientOverview } from '../services/client/clientService';
+import { saveDietPlan, updatePlan } from '../services/plan/planService';
+import { checkSessionOverlap, getPlannerScheduleRange } from '../services/schedule/scheduleService';
+import {
+  completeSession,
+  createSession,
+  deleteSession,
+  duplicateSession,
+  getSessionDurationMinutes,
+  markSessionMissed,
+  partitionPlannedSessions,
+  repairDetachedSessionPlanLinks,
+  revertSession,
+  updateSession,
+  type SessionExerciseDraft,
+} from '../services/sessionService';
+import { toDayName } from '../services/shared/date';
+import { useAppStore } from '../store/useAppStore';
+import type {
+  ClientAssessment,
+  ClientLifestyle,
+  ClientProfile,
+  ClientStatus,
+  DietPlan,
+  Exercise,
+  Plan,
+  ScheduledSession,
+  Session,
+} from '../types';
 
-// ── Initial data (used as default state) ─────────────────────────────────────────
-const INIT_CLIENT = {
-  id: 'c1',
-  name: 'albin',
-  goal: 'goal\ngoal\ngoal\ngoal',
-  status: 'active' as ClientStatus,
-  phone: '0123456789',
-  email: 'test@test.com',
-};
-const INIT_PROFILE = { 
-  age: 26, 
-  gender: 'Male', 
-  initial_weight_kg: 74, 
-  height_cm: 178, 
-  medical_notes: 'line\nline\nline\nline\nline\nline\nline\nline\nline',
-  medications: 'Omega-3 (1g daily)\nMulti-Vitamin (1 daily)\nMagnesium (400mg before sleep)'
-};
-const INIT_LIFESTYLE = { job_type: 'Beginner', notes: 'line\nline\nline\nline\nline\nline\nline\nline\nline' };
-const INIT_ASSESSMENT = {
-  bp_systolic: 120, bp_diastolic: 20, resting_heart_rate: 65, objectives: 'goal\ngoal\ngoal\ngoal',
-  cardio_time_minutes: 3, cardio_distance_km: 3, cardio_mhr: 130,
-  exercises: [
-    { key: 'bench_press', note: 'line\nline\nline\nline' },
-    { key: 'squat', note: 'line\nline\nline' },
-    { key: 'leg_press', note: 'line\nline\nline\nline' },
-    { key: 'lat_pulldown', note: 'line\nline\nline' },
-    { key: 'seated_row', note: 'line\nline\nline\nline' },
-    { key: 'leg_curl', note: 'line\nline\nline' },
-    { key: 'cardio', note: '' },
-    { key: 'other', note: '' },
-  ],
-  flexibility: [
-    { key: 'hamstrings', label: 'Hamstrings', note: 'line\nline\nline\nline', r: true, l: true },
-    { key: 'quadriceps', label: 'Quadriceps', r: true, l: false },
-    { key: 'hip_flexors', label: 'Hip Flexors', r: false, l: true },
-    { key: 'shoulders', label: 'Shoulders', r: true, l: true },
-    { key: 'toe_reach', label: 'Toe Reach', pass: true },
-    { key: 'trunk_rotation', label: 'Trunk Rotation', note: 'line\nline\nline\nline', r: true, l: false },
-  ],
-};
-
-const MOCK_DIET_PLANS = [
-  { id: 'd1', title: 'Mass Gainer Diet', goal: 'Bulking', calories: 2800, protein_g: 180, carbs_g: 320, fats_g: 85,
-    meals: [
-      { name: 'headers', foods: JSON.stringify(['Meal 1', 'Meal 2']) },
-      { name: 'Sun', foods: JSON.stringify(['Oats + Banana + Whey', 'Chicken rice bowl']) },
-      { name: 'Mon', foods: JSON.stringify(['Eggs + Toast', 'Pasta with ground turkey']) },
-      { name: 'Tue', foods: JSON.stringify(['Smoothie bowl', 'Grilled fish + veggies']) },
-      { name: 'Wed', foods: JSON.stringify(['Pancakes + berries', 'Steak + potatoes']) },
-      { name: 'Thu', foods: JSON.stringify(['Yogurt parfait', 'Chicken wrap']) },
-      { name: 'Fri', foods: JSON.stringify(['Eggs benedict', 'Salmon + quinoa']) },
-      { name: 'Sat', foods: JSON.stringify(['French toast', 'Burger + salad']) },
-    ] }
-];
-
-// ── Tab definitions ──────────────────────────────────────────────────────────
 const TABS = [
   { key: 'overview', label: 'Overview',
     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> },
   { key: 'analytics', label: 'Analytics',
     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> },
   { key: 'plans', label: 'Plans',
-    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> },
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 10v4" />
+        <path d="M6 8v8" />
+        <path d="M18 8v8" />
+        <path d="M21 10v4" />
+        <path d="M6 12h12" />
+      </svg>
+    ) },
   { key: 'health', label: 'Health',
     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> },
   { key: 'profile', label: 'Profile',
     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> },
 ];
 
+const EMPTY_CLIENT = {
+  id: '',
+  name: '',
+  goal: '',
+  status: 'active' as ClientStatus,
+  phone: '',
+  email: '',
+  overview_notes: '',
+};
+
+type ClientScreenProfileState = Omit<ClientProfile, 'client_id' | 'updated_at'>;
+type ClientScreenLifestyleState = Omit<ClientLifestyle, 'client_id' | 'updated_at'>;
+type ClientScreenAssessmentState = Omit<ClientAssessment, 'client_id' | 'updated_at'>;
+
 export default function ClientScreen() {
+  const navigate = useNavigate();
   const { id: routeClientId } = useParams<{ id: string }>();
-  const clientId = routeClientId || 'c1';
+  const clientId = routeClientId || '';
+  const hydrateClientDetail = useAppStore((state) => state.hydrateClientDetail);
+  const hydrateSchedule = useAppStore((state) => state.hydrateSchedule);
+  const invalidateClientDetail = useAppStore((state) => state.invalidateClientDetail);
+  const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
+  const setSelectedClientId = useAppStore((state) => state.setSelectedClientId);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingOverview, setIsEditingOverview] = useState(false);
-  const [overviewNotes, setOverviewNotes] = useState('Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10');
+  const [overviewNotes, setOverviewNotes] = useState('');
   const [medicationNotes, setMedicationNotes] = useState('');
   const [isEditingMed, setIsEditingMed] = useState(false);
   const [isEditingDiet, setIsEditingDiet] = useState(false);
   const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
   const [updateModalStep, setUpdateModalStep] = useState<ClientModalStep>('personal');
-  const [dietPlans, setDietPlans] = useState<any[]>(MOCK_DIET_PLANS);
+  const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
   const [workoutPlans, setWorkoutPlans] = useState<Plan[]>([]);
-  // Editable client data — starts from initial values, updated via modal
-  const [clientData, setClientData] = useState<{
-    id: string;
-    name: string;
-    goal: string;
-    status: ClientStatus;
-    phone?: string;
-    email?: string;
-    overview_notes?: string;
-  }>(INIT_CLIENT);
-  const [profileData, setProfileData] = useState<{
-    age: number;
-    gender: string;
-    initial_weight_kg: number;
-    height_cm: number;
-    medical_notes: string;
-    medications?: string;
-  }>(INIT_PROFILE);
-  const [lifestyleData, setLifestyleData] = useState<{
-    job_type?: string;
-    notes?: string;
-  }>(INIT_LIFESTYLE);
-  const [assessmentData, setAssessmentData] = useState<any>(INIT_ASSESSMENT);
-
-  // Session logic — partitioning for the Overview tab
+  const [clientData, setClientData] = useState(EMPTY_CLIENT);
+  const [profileData, setProfileData] = useState<ClientScreenProfileState>(EMPTY_PROFILE);
+  const [lifestyleData, setLifestyleData] = useState<ClientScreenLifestyleState>(EMPTY_LIFESTYLE);
+  const [assessmentData, setAssessmentData] = useState<ClientScreenAssessmentState>(EMPTY_ASSESSMENT);
   const [upcomingSessions, setUpcomingSessions] = useState<Session[]>([]);
   const [pendingSessions, setPendingSessions] = useState<Session[]>([]);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
-
-  // Scheduling state
   const [calendarWeekPlan, setCalendarWeekPlan] = useState<Plan | null>(null);
-  const [newSessionSlot, setNewSessionSlot] = useState<{ date: string, time: string } | null>(null);
+  const calendarWeekPlanIdRef = useRef<string | null>(null);
+  const [calendarSessions, setCalendarSessions] = useState<ScheduledSession[] | null>(null);
+  const [newSessionSlot, setNewSessionSlot] = useState<{ date: string; time: string } | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [postponeMode, setPostponeMode] = useState(false);
+  const [deleteClientVisible, setDeleteClientVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // ── Persistence: Hydrate from Dexie ─────────────────────────────
+  const loadCalendarSessions = useCallback(async (anchorDate?: string) => {
+    const { startDate, endDate } = getPlannerScheduleRange(anchorDate);
+    const sessions = await hydrateSchedule(startDate, endDate);
+    setCalendarSessions(sessions);
+    return sessions;
+  }, [hydrateSchedule]);
+
+  const openCalendar = useCallback((plan: Plan | null) => {
+    calendarWeekPlanIdRef.current = plan?.id ?? null;
+    setCalendarWeekPlan(plan);
+    if (plan) {
+      void loadCalendarSessions();
+    }
+  }, [loadCalendarSessions]);
+
+  const closeCalendar = useCallback(() => {
+    calendarWeekPlanIdRef.current = null;
+    setCalendarWeekPlan(null);
+  }, []);
+
   const loadData = useCallback(async () => {
+    if (!clientId) {
+      return;
+    }
+
     try {
-      // Seed if empty
-      const existingClient = await db.clients.get(clientId);
-      if (!existingClient && clientId === 'c1') {
-        await db.clients.put({ ...INIT_CLIENT, id: clientId, version: 1, sync_status: 'synced', created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any);
-        await db.clientProfiles.put({ ...INIT_PROFILE, client_id: clientId, updated_at: new Date().toISOString() } as any);
-        await db.clientLifestyles.put({ ...INIT_LIFESTYLE, client_id: clientId, updated_at: new Date().toISOString() } as any);
-        await db.clientAssessments.put({ ...INIT_ASSESSMENT, client_id: clientId, updated_at: new Date().toISOString() } as any);
-        for (const plan of MOCK_DIET_PLANS) {
-          await db.dietPlans.put({ ...plan, client_id: clientId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() } as any);
+      await repairDetachedSessionPlanLinks(clientId);
+      const detail = await hydrateClientDetail(clientId) || await getClientDetail(clientId);
+      if (!detail) {
+        navigate('/');
+        return;
+      }
+
+      setClientData({
+        id: detail.client.id,
+        name: detail.client.name,
+        goal: detail.client.goal,
+        status: detail.status,
+        phone: detail.client.phone ?? '',
+        email: detail.client.email ?? '',
+        overview_notes: detail.client.overview_notes ?? '',
+      });
+      setOverviewNotes(detail.client.overview_notes || '');
+      setProfileData({
+        ...EMPTY_PROFILE,
+        ...detail.profile,
+        medications: detail.profile.medications ?? '',
+      });
+      setMedicationNotes(detail.profile.medications || '');
+      setLifestyleData({
+        ...EMPTY_LIFESTYLE,
+        ...detail.lifestyle,
+      });
+      setAssessmentData({
+        ...EMPTY_ASSESSMENT,
+        ...detail.assessment,
+      });
+      setDietPlans(detail.dietPlans);
+      setWorkoutPlans(detail.plans);
+      setAllSessions(detail.sessions);
+      setExercises(detail.exercises);
+      setActivities(detail.activities);
+
+      const { upcoming, pending } = partitionPlannedSessions(detail.sessions);
+      setUpcomingSessions(upcoming);
+      setPendingSessions(pending);
+
+      if (calendarWeekPlanIdRef.current) {
+        const nextWeekPlan = detail.plans.find((plan) => plan.id === calendarWeekPlanIdRef.current) || null;
+        setCalendarWeekPlan(nextWeekPlan);
+        if (!nextWeekPlan) {
+          calendarWeekPlanIdRef.current = null;
+          setCalendarSessions(null);
+        } else {
+          await loadCalendarSessions();
         }
       }
 
-      // Load from DB
-      const client = await db.clients.get(clientId);
-      const profile = await db.clientProfiles.get(clientId);
-      const lifestyle = await db.clientLifestyles.get(clientId);
-      const assessment = await db.clientAssessments.get(clientId);
-      const dPlans = await db.dietPlans.where('client_id').equals(clientId).toArray();
-      const wPlans = await db.plans.where('client_id').equals(clientId).toArray();
-      
-      const dbSessions = await db.sessions.where('client_id').equals(clientId).toArray();
-      const dbExercises = dbSessions.length > 0
-        ? await db.exercises.where('session_id').anyOf(dbSessions.map((session) => session.id)).toArray()
-        : [];
-      const derivedStatus = deriveClientStatusFromData(dbSessions, wPlans);
-
-      if (client) {
-        setClientData({
-          id: client.id,
-          name: client.name,
-          goal: client.goal,
-          status: derivedStatus,
-          phone: client.phone,
-          email: client.email,
-          overview_notes: client.overview_notes,
-        });
-        setOverviewNotes(client.overview_notes || '');
-      }
-      if (profile) {
-        setProfileData(profile as any);
-        setMedicationNotes(profile.medications || '');
-      }
-      if (lifestyle) setLifestyleData(lifestyle as any);
-      if (assessment) setAssessmentData(assessment as any);
-      if (dPlans.length > 0) setDietPlans(dPlans as any);
-      setWorkoutPlans(wPlans);
-      setAllSessions(dbSessions);
-      setExercises(dbExercises);
-
-      const { upcoming, pending } = partitionPlannedSessions(dbSessions);
-      setUpcomingSessions(upcoming);
-      setPendingSessions(pending);
-      setActivities(await buildRecentActivities(dbSessions));
-
-    } catch (e) {
-      console.error('Failed to load from Dexie', e);
+      setErrorMessage('');
+    } catch (error) {
+      console.error('Failed to load client detail', error);
+      setErrorMessage('Failed to load client data.');
     }
-  }, [clientId]);
+  }, [clientId, hydrateClientDetail, loadCalendarSessions, navigate]);
 
-  // Handler: receives updated data from ClientModal
-  const handleUpdateClient = useCallback(async () => {
+  const refreshPageData = useCallback(async () => {
+    invalidateClientDetail(clientId);
+    invalidateDashboard();
     await loadData();
-  }, [loadData]);
+  }, [clientId, invalidateClientDetail, invalidateDashboard, loadData]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    setSelectedClientId(clientId || null);
+    void loadData();
+    return () => {
+      setSelectedClientId(null);
+    };
+  }, [clientId, loadData, setSelectedClientId]);
 
-  // Complete a session
-  const handleCompleteSession = useCallback(async (id: string, data: CompleteSessionData) => {
-    try {
-      await completeSession(id, data);
-      await loadData();
-    } catch (error) {
-      console.error('Failed to complete session', error);
-      window.alert(error instanceof Error ? error.message : 'Failed to complete session.');
+  useEffect(() => {
+    if (!newSessionSlot?.date) {
+      return;
     }
-  }, [loadData]);
 
-  // Miss a session
-  const handleMissSession = useCallback(async (id: string, data: MarkMissedData) => {
-    try {
-      await markSessionMissed(id, data);
-      await loadData();
-    } catch (error) {
-      console.error('Failed to mark session missed', error);
-      window.alert(error instanceof Error ? error.message : 'Failed to mark session missed.');
-    }
-  }, [loadData]);
+    void loadCalendarSessions(newSessionSlot.date);
+  }, [loadCalendarSessions, newSessionSlot?.date]);
 
-  // Revert activity
-  const handleRevert = useCallback(async (id: string) => {
+  const handleCompleteSession = useCallback(async (sessionId: string, data: CompleteSessionData) => {
     try {
-      await revertSession(id);
-      await loadData();
+      await completeSession(sessionId, clientId, {
+        difficulty: data.difficulty,
+        energy: data.energy,
+        performanceNotes: data.performanceNotes,
+      });
+      await refreshPageData();
     } catch (error) {
-      console.error('Failed to revert session', error);
-      window.alert(error instanceof Error ? error.message : 'Failed to revert session.');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to complete session.');
     }
-  }, [loadData]);
+  }, [clientId, refreshPageData]);
+
+  const handleMissSession = useCallback(async (sessionId: string, data: MarkMissedData) => {
+    try {
+      await markSessionMissed(sessionId, clientId, data);
+      await refreshPageData();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to mark session missed.');
+    }
+  }, [clientId, refreshPageData]);
+
+  const handleRevert = useCallback(async (sessionId: string) => {
+    try {
+      await revertSession(sessionId, clientId);
+      await refreshPageData();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to revert session.');
+    }
+  }, [clientId, refreshPageData]);
+
+  const closeSessionEditor = useCallback(() => {
+    setNewSessionSlot(null);
+    setEditingSession(null);
+    setPostponeMode(false);
+  }, []);
+
+  const handleSaveSession = useCallback(async (data: {
+    id?: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    focus: string;
+    postponed_note?: string;
+    exercises: SessionExerciseDraft[];
+    measure_reminder?: boolean;
+  }) => {
+    const planId = calendarWeekPlanIdRef.current ?? editingSession?.plan_id ?? null;
+    const durationMinutes = getSessionDurationMinutes({
+      start_time: data.start_time,
+      end_time: data.end_time,
+      duration_minutes: editingSession?.duration_minutes,
+    });
+
+    const overlap = await checkSessionOverlap(
+      data.date,
+      data.start_time,
+      data.end_time,
+      editingSession?.id,
+    );
+    if (overlap) {
+      throw new Error(
+        overlap.client_id === clientId
+          ? 'This session overlaps with another scheduled session.'
+          : `This time overlaps with ${overlap.client_name}'s session.`,
+      );
+    }
+
+    const isPostponed = Boolean(
+      editingSession &&
+      (
+        editingSession.date !== data.date ||
+        editingSession.start_time !== data.start_time ||
+        editingSession.end_time !== data.end_time
+      ),
+    );
+
+    if (editingSession) {
+      await updateSession(
+        editingSession.id,
+        clientId,
+        {
+          plan_id: planId,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          duration_minutes: durationMinutes,
+          day_name: toDayName(data.date),
+          focus: data.focus || '',
+          type: editingSession.type,
+          status: 'planned',
+          measure_reminder: Boolean(data.measure_reminder),
+          original_date: editingSession.original_date || (isPostponed ? editingSession.date : undefined),
+          postponed_note: isPostponed
+            ? (data.postponed_note || editingSession.postponed_note || 're-scheduled from calendar')
+            : editingSession.postponed_note,
+        },
+        data.exercises,
+      );
+    } else {
+      await createSession({
+        client_id: clientId,
+        plan_id: planId,
+        date: data.date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        duration_minutes: durationMinutes,
+        day_name: toDayName(data.date),
+        focus: data.focus || '',
+        type: 'mixed',
+        measure_reminder: Boolean(data.measure_reminder),
+        exercises: data.exercises,
+      });
+    }
+
+    closeSessionEditor();
+    closeCalendar();
+    await refreshPageData();
+  }, [clientId, closeCalendar, closeSessionEditor, editingSession, refreshPageData]);
+
+  const plannerSessions = calendarSessions || allSessions.map((session) => ({
+    ...session,
+    client_name: clientData.name || 'This client',
+  }));
 
   return (
     <div className="client-page">
-      <TopNavBar showBack={true} />
+      <TopNavBar showBack />
 
       <PageWrapper>
         <div className="client-content">
-          <ClientHeaderCard 
+          <ClientHeaderCard
             name={clientData.name}
             goal={clientData.goal}
             age={profileData.age}
@@ -270,11 +371,9 @@ export default function ClientScreen() {
             status={clientData.status}
           />
 
-          <TabBar 
-            tabs={TABS}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+
+          {errorMessage && <div className="client-inline-error">{errorMessage}</div>}
 
           <div className="tab-content">
             {activeTab === 'overview' && (
@@ -285,55 +384,49 @@ export default function ClientScreen() {
                   onValueChange={setOverviewNotes}
                   onToggleEdit={() => setIsEditingOverview(!isEditingOverview)}
                   onSave={async () => {
-                    await db.clients.update(clientId, { overview_notes: overviewNotes });
+                    await updateClientOverview(clientId, overviewNotes);
                     setIsEditingOverview(false);
+                    await refreshPageData();
                   }}
                 />
 
+                <RecentActivitySection activities={activities} onRevert={handleRevert} />
 
-                <RecentActivitySection 
-                  activities={activities}
-                  onRevert={handleRevert}
-                />
-
-                <SessionsSection 
+                <SessionsSection
                   upcoming={upcomingSessions}
                   pending={pendingSessions}
                   onCompleteSession={handleCompleteSession}
                   onMissSession={handleMissSession}
-                  onPostponeSession={(id) => {
-                    const session = allSessions.find(s => s.id === id);
-                    if (session) {
-                      setEditingSession(session);
-                      setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
-                      setPostponeMode(true);
+                  onPostponeSession={(sessionId) => {
+                    const session = allSessions.find((item) => item.id === sessionId);
+                    if (!session) {
+                      return;
                     }
+                    setEditingSession(session);
+                    setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
+                    setPostponeMode(true);
                   }}
                 />
               </div>
             )}
 
-            {activeTab === 'analytics' && (
-              <AnalyticsSection clientId={clientId} />
-            )}
+            {activeTab === 'analytics' && <AnalyticsSection clientId={clientId} />}
 
             {activeTab === 'plans' && (
               <div className="plans-container">
-                <WorkoutPlanSection 
+                <WorkoutPlanSection
                   clientId={clientId}
-                  plans={workoutPlans} 
+                  plans={workoutPlans}
                   sessions={upcomingSessions.concat(pendingSessions)}
-                  allSessions={allSessions}
                   exercises={exercises}
-                  onOpenCalendar={(plan) => setCalendarWeekPlan(plan)}
+                  onOpenCalendar={openCalendar}
                   onEditSession={(session) => {
                     setEditingSession(session);
                     setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
                     setPostponeMode(false);
                   }}
-                  onPlansChange={loadData}
+                  onPlansChange={refreshPageData}
                 />
-
               </div>
             )}
 
@@ -345,169 +438,138 @@ export default function ClientScreen() {
                   onValueChange={setMedicationNotes}
                   onToggleEdit={() => setIsEditingMed(!isEditingMed)}
                   onSave={async () => {
-                    await db.clientProfiles.update(clientId, { medications: medicationNotes });
+                    await updateClient(clientId, {
+                      profile: {
+                        medications: medicationNotes,
+                      },
+                    });
                     setIsEditingMed(false);
+                    await refreshPageData();
                   }}
                 />
-                <DietPlanSection 
+
+                <DietPlanSection
                   dietPlans={dietPlans}
                   isEditing={isEditingDiet}
                   onToggleEdit={() => setIsEditingDiet(!isEditingDiet)}
                   onSavePlan={async (planData) => {
-                    if (dietPlans.length > 0) {
-                      await db.dietPlans.update(dietPlans[0].id, { ...planData, updated_at: nowISO() });
-                    } else {
-                      await db.dietPlans.add({ 
-                        id: generateId(), 
-                        client_id: clientId, 
-                        ...planData, 
-                        title: 'Daily Diet', 
-                        goal: 'Maintenance',
-                        created_at: nowISO(), 
-                        updated_at: nowISO() 
-                      } as any);
-                    }
+                    await saveDietPlan(clientId, planData, dietPlans[0]?.id);
                     setIsEditingDiet(false);
-                    await loadData();
-                  }} 
+                    await refreshPageData();
+                  }}
                 />
               </div>
             )}
 
             {activeTab === 'profile' && (
               <ProfileSection
-                data={{ client: clientData, profile: profileData, lifestyle: lifestyleData, assessment: assessmentData }}
-                onEditSection={(s: 'personal' | 'interview' | 'assessment') => {
-                  setUpdateModalStep(s);
+                data={{
+                  client: clientData,
+                  profile: profileData,
+                  lifestyle: lifestyleData,
+                  assessment: assessmentData,
+                }}
+                onEditSection={(section) => {
+                  setUpdateModalStep(section);
                   setIsUpdateModalVisible(true);
                 }}
-                onDeleteClient={() => {
-                  if (window.confirm('Are you sure you want to delete this client?')) {
-                    db.clients.delete(clientId).then(() => {
-                      window.location.href = '/';
-                    });
-                  }
-                }}
+                onDeleteClient={() => setDeleteClientVisible(true)}
               />
             )}
           </div>
         </div>
       </PageWrapper>
 
-      <ClientModal 
-        open={isUpdateModalVisible} 
-        onClose={() => setIsUpdateModalVisible(false)} 
-        onSuccess={handleUpdateClient}
+      <ClientModal
+        open={isUpdateModalVisible}
+        onClose={() => setIsUpdateModalVisible(false)}
+        onSuccess={async () => {
+          setIsUpdateModalVisible(false);
+          await refreshPageData();
+        }}
         clientId={clientId}
         initialStep={updateModalStep}
       />
 
-      <ScheduleCalendarModal 
+      <ScheduleCalendarModal
         visible={!!calendarWeekPlan}
-        onClose={() => setCalendarWeekPlan(null)}
+        onClose={closeCalendar}
         weekPlan={calendarWeekPlan}
-        sessions={allSessions}
+        sessions={plannerSessions}
         activeClientId={clientId}
-        onSlotClick={(date: string, time: string) => {
+        onSlotClick={(date, time) => {
           setPostponeMode(false);
           setNewSessionSlot({ date, time });
           setEditingSession(null);
         }}
-        onSessionClick={(session: Session) => {
+        onSessionClick={(session) => {
           setPostponeMode(false);
           setEditingSession(session);
           setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
         }}
-        onGoalChange={async (goal: string) => {
-          if (calendarWeekPlan) {
-            await db.plans.update(calendarWeekPlan.id, { goal });
-            await loadData();
+        onGoalChange={async (goal) => {
+          if (!calendarWeekPlan) {
+            return;
           }
+          await updatePlan(calendarWeekPlan.id, clientId, { goal });
+          await refreshPageData();
         }}
-        onPlansChange={loadData}
+        onDeleteSession={async (sessionId) => {
+          await deleteSession(sessionId, clientId);
+          await refreshPageData();
+        }}
+        onPasteSession={async (date, hour, sourceId) => {
+          const source = allSessions.find((session) => session.id === sourceId);
+          if (!source) {
+            return;
+          }
+
+          const startTime = `${hour.toString().padStart(2, '0')}:00`;
+          const endTime = source.end_time
+            ? `${String((hour + getSessionDurationMinutes(source) / 60) % 24).padStart(2, '0')}:${source.end_time.split(':')[1] || '00'}`
+            : `${String((hour + 1) % 24).padStart(2, '0')}:00`;
+          const overlap = await checkSessionOverlap(date, startTime, endTime);
+
+          if (overlap) {
+            setErrorMessage('This slot is already occupied. Please choose another time.');
+            return;
+          }
+
+          await duplicateSession(sourceId, clientId, date, startTime, endTime);
+          await refreshPageData();
+        }}
       />
 
       <NewSessionModal
         visible={!!newSessionSlot}
-        onClose={() => {
-          setNewSessionSlot(null);
-          setEditingSession(null);
-          setPostponeMode(false);
-        }}
+        onClose={closeSessionEditor}
         initialDate={newSessionSlot?.date || ''}
         initialTime={newSessionSlot?.time || ''}
         editingSession={editingSession}
-        sessions={allSessions}
+        sessions={plannerSessions}
         postponeMode={postponeMode}
-        onDelete={async (sId: string) => {
-          await db.sessions.delete(sId);
-          await db.exercises.where('session_id').equals(sId).delete();
-          setNewSessionSlot(null);
-          setEditingSession(null);
-          setPostponeMode(false);
-          await loadData();
+        onDelete={async (sessionId) => {
+          await deleteSession(sessionId, clientId);
+          closeSessionEditor();
+          await refreshPageData();
         }}
-        onSave={async (data: any) => {
-          if (!calendarWeekPlan && !editingSession) return;
-          const sId = data.id || generateId();
-          const now = nowISO();
-          const planId = calendarWeekPlan?.id ?? editingSession?.plan_id ?? null;
-          const isPostponed = Boolean(
-            editingSession &&
-            (
-              editingSession.date !== data.date ||
-              editingSession.start_time !== data.start_time ||
-              editingSession.end_time !== data.end_time
-            ),
-          );
-          const durationMinutes = getSessionDurationMinutes({
-            start_time: data.start_time,
-            end_time: data.end_time,
-            duration_minutes: editingSession?.duration_minutes,
-          });
+        onSave={handleSaveSession}
+      />
 
-          await db.sessions.put({
-            id: sId,
-            client_id: clientId,
-            plan_id: planId,
-            date: data.date,
-            start_time: data.start_time,
-            end_time: data.end_time,
-            duration_minutes: durationMinutes,
-            day_name: new Date(data.date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(),
-            focus: data.focus || '',
-            type: 'mixed',
-            status: 'planned',
-            measure_reminder: data.measure_reminder,
-            original_date: editingSession
-              ? (editingSession.original_date || (isPostponed ? editingSession.date : undefined))
-              : undefined,
-            postponed_note: editingSession
-              ? (isPostponed ? (data.postponed_note || editingSession.postponed_note || 're-scheduled from calendar') : editingSession.postponed_note)
-              : undefined,
-            created_at: editingSession?.created_at || now,
-            updated_at: now
-          });
-
-          await db.exercises.where('session_id').equals(sId).delete();
-          for (let i = 0; i < data.exercises.length; i++) {
-            const ex = data.exercises[i];
-            await db.exercises.put({
-              id: generateId(),
-              session_id: sId,
-              name: ex.name || '',
-              order_index: i,
-              target_reps: ex.reps,
-              sets: [],
-              created_at: now
-            });
-          }
-          
-          setNewSessionSlot(null);
-          setEditingSession(null);
-          setPostponeMode(false);
-          await loadData();
+      <AppAlert
+        visible={deleteClientVisible}
+        title="Delete Client"
+        message="Deleting this client will remove it locally after cloud sync confirms the delete."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          await deleteClient(clientId);
+          setDeleteClientVisible(false);
+          invalidateClientDetail(clientId);
+          invalidateDashboard();
+          navigate('/');
         }}
+        onCancel={() => setDeleteClientVisible(false)}
       />
     </div>
   );

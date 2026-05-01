@@ -49,7 +49,7 @@ export default function WorkoutPlanSection(props: WorkoutPlanSectionProps) {
                 onEditSession(ds[0]);
               }
             }}
-            delayLongPress={500}
+            delayLongPress={600}
             activeOpacity={0.8}
           >
             <View style={st.dayHeaderRow}>

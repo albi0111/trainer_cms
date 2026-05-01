@@ -71,8 +71,14 @@
   --radius-5xl: 24px;
   --radius-full: 9999px;
 
+  /* ── Segmented controls ────────────────────────────────────────────────── */
+  --segmented-control-padding: 4px;
+  --segmented-control-gap: 4px;
+  --segmented-control-height: 38px;
+  --segmented-control-icon-size: 22px;
+
   /* ── Typography (from reference/theme/theme.ts) ────────────────────────── */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-size-2xs: 10px;
   --font-size-xs:  11px;
   --font-size-sm:  12px;
@@ -119,4 +125,34 @@
   --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.15);
+
+  /* ── Layout shell ─────────────────────────────────────────────────────── */
+  --page-max-width: 1280px;
+  --page-gutter: 24px;
+  --page-top-padding: 20px;
+  --page-bottom-padding: 32px;
+  --top-nav-inline: 24px;
+  --top-nav-block: 16px;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --page-max-width: 100%;
+    --page-gutter: 16px;
+    --page-top-padding: 16px;
+    --page-bottom-padding: 24px;
+    --top-nav-inline: 16px;
+    --top-nav-block: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --page-gutter: 12px;
+    --page-top-padding: 12px;
+    --page-bottom-padding: 20px;
+    --top-nav-inline: 12px;
+    --top-nav-block: 12px;
+    --segmented-control-height: 36px;
+  }
 }

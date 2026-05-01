@@ -1,11 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// fit.persona — Type Definitions (PWA)
-// Cleaned from reference/types/index.ts — NO Expo/RN imports
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Client ───────────────────────────────────────────────────────────────────
-
-/** status is DERIVED — never manually set. See deriveClientStatus(). */
 export type ClientStatus = 'active' | 'inactive' | 'completed';
 
 export type SyncStatus = 'synced' | 'pending' | 'pending_delete';
@@ -17,16 +9,11 @@ export interface Client {
   email?: string;
   goal: string;
   overview_notes?: string;
-  /** DERIVED — never stored. Computed on every read. */
-  status: ClientStatus;
-  /** Increments on every write. Used for conflict resolution. */
   version: number;
   sync_status: SyncStatus;
-  created_at: string;       // ISO 8601
-  updated_at: string;       // ISO 8601
+  created_at: string;
+  updated_at: string;
 }
-
-// ── ClientProfile ────────────────────────────────────────────────────────────
 
 export type Gender = 'male' | 'female' | 'other';
 
@@ -38,136 +25,9 @@ export interface ClientProfile {
   initial_weight_kg: number;
   medical_notes?: string;
   medications?: string;
-  /** Base64 data URI or blob URL — NOT a filesystem path */
   photo_uri?: string;
   updated_at: string;
 }
-
-// ── Measurement (append-only time-series) ────────────────────────────────────
-
-export interface Measurement {
-  id: string;
-  client_id: string;
-  date: string;             // ISO 8601 date only
-  weight_kg?: number;
-  height_cm?: number;
-  body_fat_pct?: number;
-  chest_cm?: number;
-  waist_cm?: number;
-  hips_cm?: number;
-  arm_cm?: number;
-  thigh_cm?: number;
-  neck_cm?: number;
-  calf_cm?: number;
-  pull_strength_kg?: number;
-  push_strength_kg?: number;
-  lower_body_strength_kg?: number;
-  cardio_endurance_min?: number;
-  /** JSON-encoded values for dynamic fields */
-  custom_values_json?: string;
-  /** Parsed local-only helper for dynamic fields */
-  values?: Record<string, number | undefined>;
-  notes?: string;
-  created_at: string;
-}
-
-export type MeasurementCategory = 'body' | 'performance';
-
-export interface MeasurementConfig {
-  client_id: string;
-  key: string;
-  label: string;
-  unit?: string;
-  category: MeasurementCategory;
-  target_min?: number;
-  target_max?: number;
-  updated_at: string;
-}
-
-// ── Plan ─────────────────────────────────────────────────────────────────────
-
-export type PlanType = 'monthly' | 'weekly';
-
-export type PlanStatus = 'upcoming' | 'active' | 'completed';
-
-export interface Plan {
-  id: string;
-  client_id: string;
-  type: PlanType;
-  title: string;
-  goal: string;
-  start_date: string;
-  end_date: string;
-  parent_plan_id: string | null;
-  order_index: number | null;
-  status: PlanStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-// ── Session (append-only) ────────────────────────────────────────────────────
-
-export type SessionType = 'strength' | 'cardio' | 'mobility' | 'mixed';
-
-export type SessionStatus = 'planned' | 'completed' | 'missed';
-
-export type MissedReason = 'sick' | 'travel' | 'busy' | 'no_show' | 'other';
-
-export interface Session {
-  id: string;
-  plan_id: string | null;
-  client_id: string;
-  date: string;
-  start_time?: string;
-  end_time?: string;
-  duration_minutes?: number;
-  day_name: string;
-  focus: string;
-  type: SessionType;
-  status: SessionStatus;
-  missed_reason?: MissedReason;
-  missed_note?: string;
-  postponed_note?: string;
-  original_date?: string;
-  notes?: string;
-  measure_reminder?: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// ── SessionResult ────────────────────────────────────────────────────────────
-
-export interface SessionResult {
-  session_id: string;
-  perceived_difficulty: number;
-  energy_level: number;
-  performance_notes?: string;
-  trainer_notes?: string;
-  completed_at: string;
-}
-
-// ── Exercise ─────────────────────────────────────────────────────────────────
-
-export interface ExerciseSet {
-  weight_kg?: number;
-  reps: number;
-  rpe?: number;
-}
-
-export interface Exercise {
-  id: string;
-  session_id: string;
-  name: string;
-  order_index: number;
-  target_sets?: number;
-  target_reps?: string;
-  notes?: string;
-  sets: ExerciseSet[];
-  progression_note?: string;
-  created_at: string;
-}
-
-// ── ClientLifestyle ──────────────────────────────────────────────────────────
 
 export type StressLevel = 'low' | 'medium' | 'high';
 export type ActivityLevel = 'sedentary' | 'moderate' | 'active';
@@ -187,17 +47,15 @@ export interface ClientLifestyle {
   updated_at: string;
 }
 
-// ── ClientAssessment ─────────────────────────────────────────────────────────
-
 export type AssessmentExerciseKey =
-  | 'bench_press'
-  | 'squat'
-  | 'leg_press'
-  | 'lat_pulldown'
-  | 'seated_row'
-  | 'leg_curl'
-  | 'cardio'
-  | 'other';
+  | 'exersise_1'
+  | 'exersise_2'
+  | 'exersise_3'
+  | 'exersise_4'
+  | 'exersise_5'
+  | 'exersise_6'
+  | 'exersise_7'
+  | 'exersise_8';
 
 export interface AssessmentExercise {
   key: AssessmentExerciseKey;
@@ -215,6 +73,7 @@ export type FlexibilityKey =
 
 export interface FlexibilityResult {
   key: FlexibilityKey;
+  label?: string;
   right?: boolean;
   left?: boolean;
   pass?: boolean;
@@ -224,20 +83,81 @@ export interface FlexibilityResult {
 export interface ClientAssessment {
   client_id: string;
   assessed_at?: string;
-  bp_systolic?: number;
-  bp_diastolic?: number;
-  resting_heart_rate?: number;
+  bp_systolic?: number | null;
+  bp_diastolic?: number | null;
+  resting_heart_rate?: number | null;
   vitals_remarks?: string;
   exercises: AssessmentExercise[];
-  cardio_time_minutes?: number;
-  cardio_distance_km?: number;
-  cardio_mhr?: number;
+  cardio_time_minutes?: number | null;
+  cardio_distance_km?: number | null;
+  cardio_mhr?: number | null;
   flexibility: FlexibilityResult[];
   objectives?: string;
   updated_at: string;
 }
 
-// ── DietPlan ─────────────────────────────────────────────────────────────────
+export type MeasurementCategory = 'body' | 'performance';
+
+export interface MeasurementConfig {
+  client_id: string;
+  key: string;
+  label: string;
+  unit?: string;
+  category: MeasurementCategory;
+  target_min?: number;
+  target_max?: number;
+  updated_at: string;
+}
+
+export type MeasurementValueMap = Record<string, number | undefined>;
+
+export interface Measurement {
+  id: string;
+  client_id: string;
+  date: string;
+  weight_kg?: number;
+  height_cm?: number;
+  body_fat_pct?: number;
+  chest_cm?: number;
+  waist_cm?: number;
+  hips_cm?: number;
+  arm_cm?: number;
+  thigh_cm?: number;
+  neck_cm?: number;
+  calf_cm?: number;
+  pull_strength_kg?: number;
+  push_strength_kg?: number;
+  lower_body_strength_kg?: number;
+  cardio_endurance_min?: number;
+  custom_values_json?: string;
+  values?: MeasurementValueMap;
+  notes?: string;
+  created_at: string;
+}
+
+export interface MeasurementEntryInput {
+  date: string;
+  values: MeasurementValueMap;
+  notes?: string;
+}
+
+export type PlanType = 'monthly' | 'weekly';
+export type PlanStatus = 'upcoming' | 'active' | 'completed';
+
+export interface Plan {
+  id: string;
+  client_id: string;
+  type: PlanType;
+  title: string;
+  goal: string;
+  start_date: string;
+  end_date: string;
+  parent_plan_id: string | null;
+  order_index: number | null;
+  status: PlanStatus;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface DietMeal {
   name: string;
@@ -263,16 +183,66 @@ export interface DietPlan {
   updated_at: string;
 }
 
-// ── ProgressPhoto ────────────────────────────────────────────────────────────
+export type SessionType = 'strength' | 'cardio' | 'mobility' | 'mixed';
+export type SessionStatus = 'planned' | 'completed' | 'missed';
+export type MissedReason = 'sick' | 'travel' | 'busy' | 'no_show' | 'other';
+
+export interface Session {
+  id: string;
+  plan_id: string | null;
+  client_id: string;
+  date: string;
+  start_time?: string;
+  end_time?: string;
+  duration_minutes?: number;
+  day_name: string;
+  focus: string;
+  type: SessionType;
+  status: SessionStatus;
+  missed_reason?: MissedReason;
+  missed_note?: string;
+  postponed_note?: string;
+  original_date?: string;
+  notes?: string;
+  measure_reminder?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionResult {
+  session_id: string;
+  perceived_difficulty: number;
+  energy_level: number;
+  performance_notes?: string;
+  trainer_notes?: string;
+  completed_at: string;
+}
+
+export interface ExerciseSet {
+  weight_kg?: number;
+  reps: number;
+  rpe?: number;
+}
+
+export interface Exercise {
+  id: string;
+  session_id: string;
+  name: string;
+  order_index: number;
+  target_sets?: number;
+  target_reps?: string;
+  notes?: string;
+  sets: ExerciseSet[];
+  progression_note?: string;
+  created_at: string;
+}
 
 export type PhotoType = 'front' | 'side' | 'back';
-
 export type UploadStatus = 'local' | 'uploaded' | 'failed';
 
 export interface ProgressPhoto {
   id: string;
   client_id: string;
-  /** Blob URL or base64 data URI — NOT a filesystem path */
   uri: string;
   date: string;
   type?: PhotoType;
@@ -282,8 +252,6 @@ export interface ProgressPhoto {
   upload_status: UploadStatus;
   created_at: string;
 }
-
-// ── Sync Domain ──────────────────────────────────────────────────────────────
 
 export type SyncDomain =
   | 'core'
@@ -295,14 +263,7 @@ export type SyncDomain =
   | 'session_results'
   | 'exercises';
 
-export interface ClientDomainSyncState {
-  client_id: string;
-  domain: SyncDomain;
-  updated_at: string;
-}
-
 export type SyncQueueOperation = 'update' | 'delete';
-
 export type SyncQueueStatus = 'pending' | 'processing' | 'failed';
 
 export interface SyncQueueEntry {
@@ -315,4 +276,165 @@ export interface SyncQueueEntry {
   next_retry_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface LocalSyncMeta {
+  id: 'default';
+  remote_meta_updated_at?: string;
+  remote_index_updated_at?: string;
+  root_folder_id?: string;
+  clients_folder_id?: string;
+  media_folder_id?: string;
+  meta_file_id?: string;
+  clients_index_file_id?: string;
+  last_sync_at?: string;
+  last_sync_error?: string;
+}
+
+export interface ClientSyncState {
+  client_id: string;
+  remote_updated_at?: string;
+  remote_version?: number;
+  last_synced_at?: string;
+}
+
+export interface DriveMeta {
+  version: number;
+  updated_at: string;
+}
+
+export interface DriveClientIndexEntry {
+  id: string;
+  version: number;
+  updated_at: string;
+  deleted: boolean;
+  file_id?: string;
+}
+
+export interface DriveClientsIndex {
+  version: number;
+  updated_at: string;
+  clients: DriveClientIndexEntry[];
+}
+
+export interface DriveClientSnapshot {
+  version: number;
+  updated_at: string;
+  deleted: boolean;
+  client: Client;
+  profile: ClientProfile;
+  lifestyle: ClientLifestyle;
+  assessment: ClientAssessment;
+  measurementConfigs: MeasurementConfig[];
+  measurements: Measurement[];
+  plans: Plan[];
+  dietPlans: DietPlan[];
+  sessions: Session[];
+  sessionResults: SessionResult[];
+  exercises: Exercise[];
+  progressPhotos: ProgressPhoto[];
+}
+
+export interface DashboardClient {
+  id: string;
+  name: string;
+  goal: string;
+}
+
+export interface DashboardClientState {
+  status: ClientStatus;
+  nextSession: string;
+}
+
+export interface DashboardScheduleItem {
+  id: string;
+  client_id: string;
+  client_name: string;
+  date: string;
+  start_time: string;
+  focus: string;
+  duration_minutes: number;
+}
+
+export interface DashboardStats {
+  clients: DashboardClient[];
+  todaySessions: DashboardScheduleItem[];
+  activeClientCount: number;
+  clientDataMap: Record<string, DashboardClientState>;
+}
+
+export interface ScheduledSession extends Session {
+  client_name: string;
+}
+
+export interface SessionActivityEntry {
+  id: string;
+  date: string;
+  focus: string;
+  start_time: string;
+  duration_minutes: number;
+  status: 'completed' | 'missed';
+  energy_level?: number;
+  perceived_difficulty?: number;
+  performance_notes?: string;
+  missed_reason?: string;
+  missed_note?: string;
+}
+
+export interface ClientProgress {
+  measurements: Measurement[];
+  measurementConfigs: MeasurementConfig[];
+  latestMeasurement: Measurement | null;
+}
+
+export interface ClientDetail {
+  client: Client;
+  profile: ClientProfile;
+  lifestyle: ClientLifestyle;
+  assessment: ClientAssessment;
+  plans: Plan[];
+  dietPlans: DietPlan[];
+  sessions: Session[];
+  exercises: Exercise[];
+  sessionResults: SessionResult[];
+  measurementConfigs: MeasurementConfig[];
+  measurements: Measurement[];
+  progressPhotos: ProgressPhoto[];
+  status: ClientStatus;
+  activities: SessionActivityEntry[];
+}
+
+export interface CreateClientInput {
+  name: string;
+  phone?: string;
+  email?: string;
+  goal?: string;
+  profile?: Partial<Omit<ClientProfile, 'client_id' | 'updated_at'>>;
+  lifestyle?: Partial<Omit<ClientLifestyle, 'client_id' | 'updated_at'>>;
+  assessment?: Partial<Omit<ClientAssessment, 'client_id' | 'updated_at'>>;
+}
+
+export interface UpdateClientInput {
+  core?: Partial<Pick<Client, 'name' | 'phone' | 'email' | 'goal' | 'overview_notes'>>;
+  profile?: Partial<Omit<ClientProfile, 'client_id' | 'updated_at'>>;
+  lifestyle?: Partial<Omit<ClientLifestyle, 'client_id' | 'updated_at'>>;
+  assessment?: Partial<Omit<ClientAssessment, 'client_id' | 'updated_at'>>;
+}
+
+export interface UpdateSessionInput {
+  plan_id?: string | null;
+  date?: string;
+  start_time?: string;
+  end_time?: string;
+  duration_minutes?: number;
+  day_name?: string;
+  focus?: string;
+  type?: SessionType;
+  status?: SessionStatus;
+  missed_reason?: MissedReason;
+  missed_note?: string;
+  postponed_note?: string;
+  original_date?: string;
+  notes?: string;
+  measure_reminder?: boolean;
 }

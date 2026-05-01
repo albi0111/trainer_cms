@@ -14,7 +14,7 @@ interface TopNavBarProps {
 
 /**
  * TopNavBar — matches reference exactly.
- * Logo-centered with FIT badge + FIT.PERSONA gold text.
+ * Logo-centered with FIT mark.
  * Left/right slots for back button, sync indicator, etc.
  */
 export default function TopNavBar({
@@ -41,7 +41,7 @@ export default function TopNavBar({
     <header className="top-nav">
       <div className="top-nav__slot">{leftSlot}</div>
       {showLogo && (
-        <div className="top-nav__logo">
+        <div className="top-nav__logo" aria-label="FIT.PERSONA" role="img">
           <span className="top-nav__logo-badge">FIT</span>
           <span className="top-nav__logo-text">FIT.PERSONA</span>
         </div>

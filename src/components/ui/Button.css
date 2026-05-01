@@ -61,14 +61,16 @@
   background-color: rgba(255, 82, 82, 0.1);
 }
 
-/* Outline = gold border, black bg, gold text (reference: "+ Add Plan" button) */
+/* Outline = borderless modern style (reference: "+ Add Plan" button) */
 .btn--outline {
-  background-color: #000;
+  background-color: var(--color-surface-dark);
   color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-border);
 }
 .btn--outline:hover:not(:disabled) {
-  background-color: var(--color-primary-bg);
+  background-color: var(--color-surface-light);
+  border-color: var(--color-primary-dim);
+  color: var(--color-text);
 }
 
 /* ── Sizes ───────────────────────────────────────────────────────────────── */

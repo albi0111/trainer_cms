@@ -268,7 +268,7 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                   />
                 ) : (
                   <div key={cIdx} className="diet-input-cell" style={{ minWidth: (grid[rIdx]?.length || 1) > 2 ? 140 : 100, whiteSpace: 'pre-wrap' }}>
-                    {cell || <span style={{ color: '#555', fontStyle: 'italic' }}>No meal planned</span>}
+                    {cell}
                   </div>
                 )
               ))}

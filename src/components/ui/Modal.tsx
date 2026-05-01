@@ -16,32 +16,40 @@ export default function Modal({ open, onClose, title, children, footer, classNam
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+
     if (open) {
-      dialog.showModal();
+      if (!dialog.open) {
+        dialog.showModal();
+      }
       document.body.style.overflow = 'hidden';
     } else {
-      dialog.close();
+      if (dialog.open) {
+        dialog.close();
+      }
       document.body.style.overflow = '';
     }
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [open]);
 
-  // Close on backdrop click
-  const handleClick = (e: React.MouseEvent<HTMLDialogElement>) => {
-    const rect = dialogRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const isOutside =
-      e.clientX < rect.left ||
-      e.clientX > rect.right ||
-      e.clientY < rect.top ||
-      e.clientY > rect.bottom;
-    if (isOutside) onClose();
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
   };
 
   return (
-    <dialog ref={dialogRef} className={`modal ${className || ''}`} onClick={handleClick}>
+    <dialog
+      ref={dialogRef}
+      className={`modal ${className || ''}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={handleBackdropClick}
+    >
       <div className="modal__content">
         {title && (
           <div className="modal__header">

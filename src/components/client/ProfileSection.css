@@ -5,7 +5,7 @@
 .profile-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3xl);
+  gap: var(--space-lg);
   padding-bottom: 40px;
 }
 
@@ -13,6 +13,19 @@
 .profile-block {
   display: flex;
   flex-direction: column;
+  background-color: #181818;
+  border: 1px solid #262626;
+  border-radius: var(--radius-2xl);
+  padding: var(--space-xl);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.profile-block:active {
+  background-color: #222;
+  transform: scale(0.995);
 }
 
 .profile-block__header {
@@ -42,23 +55,31 @@
   text-transform: uppercase;
 }
 
+/* Edit button removed in favor of long-press */
 .profile-block__edit-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--color-surface-dark);
-  border: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  display: none;
 }
 
-.profile-block__edit-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+.profile-block__divider {
+  height: 1px;
+  background-color: var(--color-border-container);
+  width: 100%;
+  margin: var(--space-xl) 0;
+}
+
+.profile-block__sub-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.profile-block__sub-title {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* ── Info Grid / Rows ─────────────────────────────────────────────────────── */
@@ -92,10 +113,7 @@
 
 /* ── Dividers ─────────────────────────────────────────────────────────────── */
 .profile-divider {
-  height: 1px;
-  background-color: var(--color-border-container);
-  width: 100%;
-  margin: var(--space-sm) 0;
+  display: none;
 }
 
 /* ── Exercise Cards ───────────────────────────────────────────────────────── */
@@ -109,8 +127,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-lg);
-  background-color: #181818;
-  border: 1px solid #262626;
+  background-color: #222;
+  border: 1px solid #333;
   border-radius: 16px;
   padding: 16px;
 }
@@ -152,8 +170,8 @@
 }
 
 .test-row {
-  background-color: var(--color-surface-dark);
-  border: 1px solid var(--color-border-container);
+  background-color: #222;
+  border: 1px solid #333;
   border-radius: var(--radius-xl);
   padding: var(--space-md) var(--space-lg);
 }

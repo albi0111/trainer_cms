@@ -8,15 +8,16 @@ import EmptyState from '../ui/EmptyState';
 import AddPlanModal from './AddPlanModal';
 import EditPlanModal from './EditPlanModal';
 import AppAlert from '../shared/AppAlert';
-import { db } from '../../db/db';
 
 import { Plan, Session, Exercise } from '../../types';
+import { useLongPress } from '../../hooks/useLongPress';
+import { createMonthlyPlan, createWeeklyPlan, deletePlan, updatePlan } from '../../services/plan/planService';
+import { toDayName, todayLocalIso } from '../../services/shared/date';
 
 interface WorkoutPlanSectionProps {
   clientId: string;
   plans: Plan[];
   sessions: Session[];
-  allSessions: Session[];
   exercises: Exercise[];
   onOpenCalendar: (plan: Plan) => void;
   onEditSession: (session: Session) => void;
@@ -33,6 +34,8 @@ export default function WorkoutPlanSection({
   onPlansChange,
 }: WorkoutPlanSectionProps) {
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
+  const sessionLongPress = useLongPress();
+  const planLongPress = useLongPress();
   
   // Modal states
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
@@ -74,30 +77,13 @@ export default function WorkoutPlanSection({
               <div className="week-sessions-list">
                 {weekSessions.map(session => {
                   const sessionExercises = exercises.filter(e => e.session_id === session.id).sort((a, b) => a.order_index - b.order_index);
-                  const dayName = session.day_name || new Date(session.date).toLocaleDateString('en-US', { weekday: 'long' });
-                  
-                  let longPressTimer: any;
-
-                  const triggerEdit = () => {
-                    if (window.navigator.vibrate) {
-                      window.navigator.vibrate(20);
-                    }
-                    onEditSession(session);
-                  };
+                  const dayName = toDayName(session.date);
 
                   return (
                     <div 
                       key={session.id} 
                       className="day-block"
-                      onMouseDown={() => {
-                        longPressTimer = setTimeout(triggerEdit, 600); // 600ms hold
-                      }}
-                      onMouseUp={() => clearTimeout(longPressTimer)}
-                      onMouseLeave={() => clearTimeout(longPressTimer)}
-                      onTouchStart={() => {
-                        longPressTimer = setTimeout(triggerEdit, 600);
-                      }}
-                      onTouchEnd={() => clearTimeout(longPressTimer)}
+                      {...sessionLongPress.getLongPressHandlers(() => onEditSession(session))}
                     >
                       <div className="day-block__header">
                         <span className="day-block__dot"></span>
@@ -153,23 +139,7 @@ export default function WorkoutPlanSection({
                 <div className="plan-card__header">
                   <div 
                     className="plan-card__info"
-                    onMouseDown={() => {
-                      const timer = setTimeout(() => {
-                        if (window.navigator.vibrate) window.navigator.vibrate(20);
-                        setEditingPlan(plan);
-                      }, 700);
-                      (window as any)._planTimer = timer;
-                    }}
-                    onMouseUp={() => clearTimeout((window as any)._planTimer)}
-                    onMouseLeave={() => clearTimeout((window as any)._planTimer)}
-                    onTouchStart={() => {
-                      const timer = setTimeout(() => {
-                        if (window.navigator.vibrate) window.navigator.vibrate(20);
-                        setEditingPlan(plan);
-                      }, 700);
-                      (window as any)._planTimer = timer;
-                    }}
-                    onTouchEnd={() => clearTimeout((window as any)._planTimer)}
+                    {...planLongPress.getLongPressHandlers(() => setEditingPlan(plan))}
                     style={{ cursor: 'pointer' }}
                   >
                     <h3 className="plan-card__title">{plan.title}</h3>
@@ -234,32 +204,12 @@ export default function WorkoutPlanSection({
         onClose={() => setIsAddPlanModalOpen(false)}
         onSave={async (data) => {
           setIsAddPlanModalOpen(false);
-          const now = new Date().toISOString();
-          const pId = 'p' + Date.now();
-          const startDate = new Date().toISOString().split('T')[0] || '';
+          const startDate = todayLocalIso();
           
           if (data.type === 'monthly') {
-            const endDate = new Date(new Date(startDate).getTime() + 28 * 24 * 3600 * 1000).toISOString().split('T')[0] || '';
-            await db.plans.put({
-              id: pId, client_id: clientId, type: 'monthly', title: data.title, goal: data.goal, start_date: startDate, end_date: endDate,
-              parent_plan_id: null, order_index: null, status: 'upcoming', created_at: now, updated_at: now
-            });
-            // Auto generate 4 weeks
-            const startObj = new Date(startDate || '');
-            for (let i = 1; i <= 4; i++) {
-              const weekStart = new Date(startObj.getTime() + (i - 1) * 7 * 24 * 3600 * 1000).toISOString().split('T')[0] || '';
-              const weekEnd = new Date(startObj.getTime() + (i * 7 - 1) * 24 * 3600 * 1000).toISOString().split('T')[0] || '';
-              await db.plans.put({
-                id: pId + '-w' + i, client_id: clientId, type: 'weekly', title: `Week ${i}`, goal: '', start_date: weekStart, end_date: weekEnd,
-                parent_plan_id: pId, order_index: i, status: 'upcoming', created_at: now, updated_at: now
-              });
-            }
+            await createMonthlyPlan(clientId, data.title, data.goal, startDate);
           } else {
-            const endDate = new Date(new Date(startDate || '').getTime() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0] || '';
-            await db.plans.put({
-              id: pId, client_id: clientId, type: 'weekly', title: data.title, goal: data.goal, start_date: startDate, end_date: endDate,
-              parent_plan_id: null, order_index: null, status: 'upcoming', created_at: now, updated_at: now
-            });
+            await createWeeklyPlan(clientId, data.title, data.goal, startDate);
           }
           await onPlansChange();
         }}
@@ -272,8 +222,9 @@ export default function WorkoutPlanSection({
         plan={editingPlan}
         onClose={() => setEditingPlan(null)}
         onSave={async (id: string, data: { title: string, goal: string }) => {
-          await db.plans.update(id, { ...data, updated_at: new Date().toISOString() });
-          onPlansChange();
+          await updatePlan(id, clientId, data);
+          await onPlansChange();
+          setEditingPlan(null);
         }}
       />
       {/* Delete Plan Alert */}
@@ -285,11 +236,9 @@ export default function WorkoutPlanSection({
         cancelLabel="Cancel"
         onConfirm={async () => {
           if (planToDelete) {
-            await db.plans.delete(planToDelete.id);
-            const ss = await db.sessions.where('plan_id').equals(planToDelete.id).toArray();
-            await db.sessions.bulkDelete(ss.map(s => s.id));
+            await deletePlan(planToDelete.id, clientId);
             setPlanToDelete(null);
-            onPlansChange();
+            await onPlansChange();
           }
         }}
         onCancel={() => setPlanToDelete(null)}

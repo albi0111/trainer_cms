@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { db } from '../../db/db';
 import { Measurement, MeasurementConfig } from '../../types';
 import ManageMetricsModal from '../modals/ManageMetricsModal';
 import AddMeasurementModal from '../modals/AddMeasurementModal';
+import { getClientProgress } from '../../services/analytics/analyticsService';
 import './AnalyticsSection.css';
 
 interface AnalyticsSectionProps {
@@ -15,7 +15,9 @@ type DeltaMode = 'previous' | 'initial';
 export default function AnalyticsSection({
   clientId
 }: AnalyticsSectionProps) {
-  const isMobile = window.innerWidth < 768;
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const isCompact = viewportWidth < 768;
+  const isPhone = viewportWidth < 480;
 
   const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
   const [deltaMode, setDeltaMode] = useState<DeltaMode>('previous');
@@ -36,13 +38,15 @@ export default function AnalyticsSection({
   const loadData = async () => {
     setLoading(true);
     try {
-      const ms = await db.measurements.where('client_id').equals(clientId).toArray();
-      const cfg = await db.measurementConfigs.where('client_id').equals(clientId).toArray();
-      setMeasurements(ms);
-      setConfigs(cfg);
+      const progress = await getClientProgress(clientId);
+      setMeasurements(progress.measurements);
+      setConfigs(progress.measurementConfigs);
       
-      if (cfg.length > 0 && !cfg.find(c => c.key === selectedBodyMetric && c.category === 'body')) {
-        const firstBody = cfg.find(c => c.category === 'body');
+      if (
+        progress.measurementConfigs.length > 0 &&
+        !progress.measurementConfigs.find((config) => config.key === selectedBodyMetric && config.category === 'body')
+      ) {
+        const firstBody = progress.measurementConfigs.find((config) => config.category === 'body');
         if (firstBody) setSelectedBodyMetric(firstBody.key);
       }
     } catch (err) {
@@ -206,7 +210,7 @@ export default function AnalyticsSection({
                   background: 'linear-gradient(180deg, #FFD700 0%, #B8960F 100%)' 
                 }} />
                 <span className="analytics-bar-label" style={{ fontSize: isModal ? '12px' : '10px' }}>
-                  {isMobile ? c.label.charAt(0) : c.label}
+                  {isPhone ? c.label.charAt(0) : c.label}
                 </span>
               </div>
             );
@@ -218,9 +222,9 @@ export default function AnalyticsSection({
 
   const renderRadarChart = (isModal = false) => {
     if (perfConfigs.length === 0 || perfMs.length === 0) return null;
-    const size = isModal ? 400 : (isMobile ? 200 : 240);
+    const size = isModal ? 400 : (isPhone ? 184 : (isCompact ? 220 : 240));
     const center = size / 2;
-    const radius = isModal ? 150 : (isMobile ? 65 : 85);
+    const radius = isModal ? 150 : (isPhone ? 60 : (isCompact ? 74 : 85));
     const angleStep = (Math.PI * 2) / perfConfigs.length;
 
     const getPoint = (val: number, index: number, max: number = 100) => {
@@ -244,7 +248,7 @@ export default function AnalyticsSection({
             return (
               <g key={i}>
                 <line x1={center} y1={center} x2={end.x} y2={end.y} stroke="#333" strokeWidth="1" />
-                <text x={end.x} y={end.y - 8} fill="#666" fontSize={isModal ? '12' : (isMobile ? '8' : '10')} textAnchor="middle">{isMobile ? c.label.charAt(0) : c.label}</text>
+                <text x={end.x} y={end.y - 8} fill="#666" fontSize={isModal ? '12' : (isPhone ? '8' : '10')} textAnchor="middle">{isPhone ? c.label.charAt(0) : c.label}</text>
               </g>
             );
           })}
@@ -312,8 +316,12 @@ export default function AnalyticsSection({
 
       {activeTab === 'performance' && (
         <div className="analytics-perf-toggle">
-          <button className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`} onClick={() => setPerformanceView('bar')}>Bar (Compare)</button>
-          <button className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`} onClick={() => setPerformanceView('radar')}>Radar (Overview)</button>
+          <button className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`} onClick={() => setPerformanceView('bar')}>
+            {isPhone ? 'Compare' : 'Bar (Compare)'}
+          </button>
+          <button className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`} onClick={() => setPerformanceView('radar')}>
+            {isPhone ? 'Radar' : 'Radar (Overview)'}
+          </button>
         </div>
       )}
 

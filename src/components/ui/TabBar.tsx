@@ -27,6 +27,8 @@ export default function TabBar({ tabs, activeTab, onTabChange }: TabBarProps) {
               key={tab.key}
               className={`tab-bar__tab ${isActive ? 'tab-bar__tab--active' : ''}`}
               onClick={() => onTabChange(tab.key)}
+              aria-label={tab.label}
+              title={tab.label}
             >
               <span className="tab-bar__icon">{tab.icon}</span>
               <span className="tab-bar__label">{tab.label}</span>

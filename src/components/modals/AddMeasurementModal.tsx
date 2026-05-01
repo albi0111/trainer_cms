@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { db } from '../../db/db';
 import { MeasurementConfig } from '../../types';
 import ManageMetricsModal from './ManageMetricsModal';
 import DatePicker from '../ui/DatePicker';
+import {
+  addMeasurement,
+  getClientMeasurementConfigs,
+} from '../../services/measurement/measurementService';
 import './AddMeasurementModal.css';
 
 interface AddMeasurementModalProps {
@@ -27,6 +30,7 @@ export default function AddMeasurementModal({
   const [values, setValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     if (visible) {
@@ -37,10 +41,11 @@ export default function AddMeasurementModal({
   const loadConfigs = async () => {
     setLoadingConfigs(true);
     try {
-      const data = await db.measurementConfigs.where('client_id').equals(clientId).toArray();
-      setConfigs(data);
+      setConfigs(await getClientMeasurementConfigs(clientId));
+      setErrorMessage('');
     } catch (error) {
       console.error('[AddMeasurementModal] Load configs error:', error);
+      setErrorMessage('Failed to load metrics.');
     } finally {
       setLoadingConfigs(false);
     }
@@ -55,25 +60,19 @@ export default function AddMeasurementModal({
         if (!isNaN(val)) parsedValues[key] = val;
       });
 
-      const mId = 'm' + Date.now();
-      const now = new Date().toISOString();
-      
-      await db.measurements.put({
-        id: mId,
-        client_id: clientId,
+      await addMeasurement(clientId, {
         date: date || '',
         values: parsedValues,
-        custom_values_json: JSON.stringify(parsedValues),
         notes: notes || '',
-        created_at: now
       });
 
       setValues({});
       setNotes('');
+      setErrorMessage('');
       onSuccess();
     } catch (error) {
       console.error('[AddMeasurementModal] Save error:', error);
-      alert('Failed to save log entry');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save log entry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,6 +91,8 @@ export default function AddMeasurementModal({
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
+
+        {errorMessage && <div className="empty-hint">{errorMessage}</div>}
 
         <div className="add-measurement-tabs">
           <button 

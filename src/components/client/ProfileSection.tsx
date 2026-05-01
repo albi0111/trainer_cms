@@ -1,44 +1,45 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// ProfileSection — Premium redesigned client profile
-// ─────────────────────────────────────────────────────────────────────────────
-
 import './ProfileSection.css';
+import { ASSESSMENT_EXERCISES, FLEXIBILITY_LABELS } from '../../constants/assessment';
+import { useLongPress } from '../../hooks/useLongPress';
+import type {
+  ClientAssessment,
+  ClientLifestyle,
+  ClientProfile,
+  FlexibilityResult,
+} from '../../types';
 
-// Exercise icon map — matches reference EXERCISE_IMAGES (8 exercises)
-const EXERCISE_IMAGES: Record<string, string> = {
-  bench_press:  '/assesment-icons/assesment-exercise-1.png',
-  squat:        '/assesment-icons/assesment-exercise-2.png',
-  leg_press:    '/assesment-icons/assesment-exercise-3.png',
-  lat_pulldown: '/assesment-icons/assesment-exercise-4.png',
-  seated_row:   '/assesment-icons/assesment-exercise-5.jpeg',
-  leg_curl:     '/assesment-icons/assesment-exercise-6.jpeg',
-  cardio:       '/assesment-icons/assesment-exercise-7.png',
-  other:        '/assesment-icons/assesment-exercise-8.png',
+type ProfileSectionClientData = {
+  phone?: string;
+  email?: string;
 };
+
+type ProfileSectionProfileData = Omit<ClientProfile, 'client_id' | 'updated_at'>;
+type ProfileSectionLifestyleData = Omit<ClientLifestyle, 'client_id' | 'updated_at'>;
+type ProfileSectionAssessmentData = Omit<ClientAssessment, 'client_id' | 'updated_at'>;
+
+const EXERCISE_IMAGES = Object.fromEntries(
+  ASSESSMENT_EXERCISES.map((exercise) => [exercise.key, exercise.icon]),
+);
 
 interface ProfileSectionProps {
   data: {
-    client: any;
-    profile: any;
-    lifestyle: any;
-    assessment: any;
+    client: ProfileSectionClientData;
+    profile: ProfileSectionProfileData;
+    lifestyle: ProfileSectionLifestyleData;
+    assessment: ProfileSectionAssessmentData;
   } | null;
   onEditSection: (section: 'personal' | 'interview' | 'assessment') => void;
   onDeleteClient: () => void;
 }
 
 export default function ProfileSection({ data, onEditSection, onDeleteClient }: ProfileSectionProps) {
+  const { getLongPressHandlers } = useLongPress();
+
   if (!data) return <div className="profile-loading">Loading...</div>;
 
   const { client, profile, lifestyle, assessment } = data;
 
   // Icons
-  const pencilIcon = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-    </svg>
-  );
-
   const personalIcon = (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -80,136 +81,148 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
     </svg>
   );
 
-  const renderSectionHeader = (title: string, icon: React.ReactNode, onEdit?: () => void) => (
+  const renderSectionHeader = (title: string, icon: React.ReactNode) => (
     <div className="profile-block__header">
       <div className="profile-block__title-group">
         <span className="profile-block__icon">{icon}</span>
         <h3 className="profile-block__title">{title}</h3>
       </div>
-      {onEdit && (
-        <button className="profile-block__edit-btn" onClick={onEdit}>
-          {pencilIcon}
-        </button>
-      )}
     </div>
   );
 
   const renderInfoItem = (label: string, value: string | number | undefined) => (
     <div className="profile-info-item">
       <span className="profile-info-label">{label}</span>
-      <span className="profile-info-value">{value || '—'}</span>
+      <span className="profile-info-value">
+        {value === undefined || value === null || value === '' ? '—' : value}
+      </span>
     </div>
   );
 
   // Only show exercises that have notes (dynamic — empty = hidden)
   const exercisesWithNotes = (assessment?.exercises || []).filter(
-    (ex: any) => ex.note && ex.note.trim().length > 0
+    (exercise) => exercise.note && exercise.note.trim().length > 0
   );
 
-  // Mock tests if not in data
-  const tests = assessment?.flexibility || [];
+  const tests: FlexibilityResult[] = assessment?.flexibility || [];
 
   return (
     <div className="profile-section">
       {/* PERSONAL INFO */}
-      <section className="profile-block">
-        {renderSectionHeader('PERSONAL INFO', personalIcon, () => onEditSection('personal'))}
+      <section 
+        className="profile-block"
+        {...getLongPressHandlers(() => onEditSection('personal'))}
+      >
+        {renderSectionHeader('PERSONAL INFO', personalIcon)}
         <div className="profile-info-grid">
-          {renderInfoItem('AGE', `${profile?.age || 26} years`)}
-          {renderInfoItem('GENDER', profile?.gender || 'Male')}
-          {renderInfoItem('PHONE', client?.phone || '0123456789')}
-          {renderInfoItem('EMAIL', client?.email || 'test@test.com')}
+          {renderInfoItem('AGE', profile?.age ? `${profile.age} years` : undefined)}
+          {renderInfoItem('GENDER', profile?.gender)}
+          {renderInfoItem('PHONE', client?.phone)}
+          {renderInfoItem('EMAIL', client?.email)}
         </div>
       </section>
-
-      <div className="profile-divider" />
 
       {/* INTERVIEW */}
-      <section className="profile-block">
-        {renderSectionHeader('INTERVIEW', interviewIcon, () => onEditSection('interview'))}
+      <section 
+        className="profile-block"
+        {...getLongPressHandlers(() => onEditSection('interview'))}
+      >
+        {renderSectionHeader('INTERVIEW', interviewIcon)}
         <div className="profile-block__content" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {renderInfoItem('EXPERIENCE', lifestyle?.job_type || 'Beginner')}
-          {renderInfoItem('INJURIES / CONDITIONS', profile?.medical_notes || 'None reported')}
-          {renderInfoItem('LIFESTYLE', lifestyle?.notes || 'No lifestyle notes.')}
+          {renderInfoItem('EXPERIENCE', lifestyle?.job_type)}
+          {renderInfoItem('INJURIES / CONDITIONS', profile?.medical_notes)}
+          {renderInfoItem('LIFESTYLE', lifestyle?.notes)}
         </div>
       </section>
-
-      <div className="profile-divider" />
 
       {/* ASSESSMENT */}
-      <section className="profile-block">
-        {renderSectionHeader('ASSESSMENT', assessmentIcon, () => onEditSection('assessment'))}
+      <section 
+        className="profile-block"
+        {...getLongPressHandlers(() => onEditSection('assessment'))}
+      >
+        {renderSectionHeader('ASSESSMENT', assessmentIcon)}
         <div className="profile-info-grid" style={{ marginBottom: 20 }}>
-          {renderInfoItem('WEIGHT', `${profile?.initial_weight_kg || 74} kg`)}
-          {renderInfoItem('HEIGHT', `${profile?.height_cm || 178} cm`)}
-          {renderInfoItem('BP', assessment?.bp_systolic ? `${assessment.bp_systolic}/${assessment.bp_diastolic}` : '120/20')}
-          {renderInfoItem('RHR', `${assessment?.resting_heart_rate || 65} bpm`)}
+          {renderInfoItem('WEIGHT', profile?.initial_weight_kg ? `${profile.initial_weight_kg} kg` : undefined)}
+          {renderInfoItem('HEIGHT', profile?.height_cm ? `${profile.height_cm} cm` : undefined)}
+          {renderInfoItem('BP', assessment?.bp_systolic ? `${assessment.bp_systolic}/${assessment.bp_diastolic}` : undefined)}
+          {renderInfoItem('RHR', assessment?.resting_heart_rate ? `${assessment.resting_heart_rate} bpm` : undefined)}
         </div>
         <div style={{ marginBottom: 24 }}>
-          {renderInfoItem('OBJECTIVES', assessment?.objectives || 'goal\ngoal\ngoal\ngoal')}
+          {renderInfoItem('OBJECTIVES', assessment?.objectives)}
         </div>
         <div className="profile-info-grid">
-          {renderInfoItem('CARDIO TIME', `${assessment?.cardio_time_minutes || 3} min`)}
-          {renderInfoItem('DISTANCE', `${assessment?.cardio_distance_km || 3} km`)}
-          {renderInfoItem('MHR', `${assessment?.cardio_mhr || 130} bpm`)}
+          {renderInfoItem('CARDIO TIME', assessment?.cardio_time_minutes ? `${assessment.cardio_time_minutes} min` : undefined)}
+          {renderInfoItem('DISTANCE', assessment?.cardio_distance_km ? `${assessment.cardio_distance_km} km` : undefined)}
+          {renderInfoItem('MHR', assessment?.cardio_mhr ? `${assessment.cardio_mhr} bpm` : undefined)}
         </div>
-      </section>
 
-      {/* EXERCISES — only rendered if at least one exercise has a note */}
-      {exercisesWithNotes.length > 0 && (
-        <section className="profile-block">
-          {renderSectionHeader('EXERCISES', exerciseIcon)}
-          <div className="profile-exercises-list">
-            {exercisesWithNotes.map((ex: any, idx: number) => {
-              const imgSrc = EXERCISE_IMAGES[ex.key] || `/assesment-icons/assesment-exercise-${idx + 1}.png`;
-              return (
-                <div key={ex.key || idx} className="exercise-card">
-                  <div className="exercise-card__img-wrap">
-                    <img src={imgSrc} alt={ex.key} className="exercise-card__img" />
-                  </div>
-                  <div className="exercise-card__notes">{ex.note}</div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* FITNESS TESTS */}
-      <section className="profile-block">
-        {renderSectionHeader('FITNESS TESTS', testIcon)}
-        <div className="profile-tests-list">
-          {tests.map((test: any) => (
-            <div key={test.key} className="test-row">
-              <div className="test-row__main">
-                <div className="test-row__left">
-                  <span className="test-row__icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <path d="M12 2v20M2 12h20M5.3 5.3l13.4 13.4M5.3 18.7l13.4-13.4" />
-                    </svg>
-                  </span>
-                  <span className="test-row__name">{test.label}</span>
-                </div>
-                <div className="test-row__chips">
-                  {test.pass !== undefined ? (
-                    <span className="test-chip test-chip--pass">✓ Pass</span>
-                  ) : (
-                    <>
-                      <span className={`test-chip ${test.r ? 'test-chip--pass' : 'test-chip--fail'}`}>
-                        R {test.r ? '✓' : '✗'}
-                      </span>
-                      <span className={`test-chip ${test.l ? 'test-chip--pass' : 'test-chip--fail'}`}>
-                        L {test.l ? '✓' : '✗'}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              {test.note && <div className="test-row__notes">{test.note}</div>}
+        {/* Nested EXERCISES */}
+        {exercisesWithNotes.length > 0 && (
+          <div className="profile-block__nested-section">
+            <div className="profile-block__divider" />
+            <div className="profile-block__sub-header">
+              <span className="profile-block__icon">{exerciseIcon}</span>
+              <h4 className="profile-block__sub-title">EXERCISES</h4>
             </div>
-          ))}
+            <div className="profile-exercises-list">
+              {exercisesWithNotes.map((ex, idx) => {
+                const imgSrc = EXERCISE_IMAGES[ex.key] || ASSESSMENT_EXERCISES[idx]?.icon;
+                return (
+                  <div key={ex.key || idx} className="exercise-card">
+                    <div className="exercise-card__img-wrap">
+                      <img src={imgSrc} alt={ex.key} className="exercise-card__img" />
+                    </div>
+                    <div className="exercise-card__notes">{ex.note}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Nested FITNESS TESTS */}
+        <div className="profile-block__nested-section">
+          <div className="profile-block__divider" />
+          <div className="profile-block__sub-header">
+            <span className="profile-block__icon">{testIcon}</span>
+            <h4 className="profile-block__sub-title">FITNESS TESTS</h4>
+          </div>
+          <div className="profile-tests-list">
+            {tests.map((test) => (
+              <div key={test.key} className="test-row">
+                <div className="test-row__main">
+                  <div className="test-row__left">
+                    <span className="test-row__icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M12 2v20M2 12h20M5.3 5.3l13.4 13.4M5.3 18.7l13.4-13.4" />
+                      </svg>
+                    </span>
+                    <span className="test-row__name">{test.label || FLEXIBILITY_LABELS[test.key]}</span>
+                  </div>
+                  <div className="test-row__chips">
+                    {test.pass !== undefined ? (
+                      <span className={`test-chip ${test.pass ? 'test-chip--pass' : 'test-chip--fail'}`}>
+                        {test.pass ? '✓ Pass' : '✗ Fail'}
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`test-chip ${test.right ? 'test-chip--pass' : 'test-chip--fail'}`}>
+                          R {test.right ? '✓' : '✗'}
+                        </span>
+                        <span className={`test-chip ${test.left ? 'test-chip--pass' : 'test-chip--fail'}`}>
+                          L {test.left ? '✓' : '✗'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {test.note && <div className="test-row__notes">{test.note}</div>}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
+
 
       {/* DANGER ZONE */}
       <section className="danger-zone">
