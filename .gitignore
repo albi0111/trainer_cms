@@ -53,3 +53,7 @@ expo-env.d.ts
 .kotlin/
 /ios
 /android
+
+# Firebase
+.firebase/
+

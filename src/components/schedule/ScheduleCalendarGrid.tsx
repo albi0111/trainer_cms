@@ -108,7 +108,7 @@ export default function ScheduleCalendarGrid({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { startLongPress, cancelLongPress, consumeLongPress } = useLongPress();
+  const { startLongPress, handlePointerMove, cancelLongPress, consumeLongPress } = useLongPress();
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -233,7 +233,7 @@ export default function ScheduleCalendarGrid({
     event: ReactPointerEvent<HTMLElement>,
   ) => {
     const pointer = { x: event.clientX, y: event.clientY };
-    startLongPress(() => openContextMenu(type, data, pointer));
+    startLongPress(() => openContextMenu(type, data, pointer), event);
   };
 
   const handleScroll = () => {
@@ -315,6 +315,7 @@ export default function ScheduleCalendarGrid({
                               startContextTimer('slot', { date: dateStr, hour }, event);
                             }
                           }}
+                          onPointerMove={handlePointerMove}
                           onPointerUp={cancelLongPress}
                           onPointerLeave={cancelLongPress}
                           onPointerCancel={cancelLongPress}
@@ -381,6 +382,7 @@ export default function ScheduleCalendarGrid({
                               event.stopPropagation();
                               startContextTimer('session', { id: session.id }, event);
                             }}
+                            onPointerMove={handlePointerMove}
                             onPointerUp={cancelLongPress}
                             onPointerLeave={cancelLongPress}
                             onPointerCancel={cancelLongPress}

@@ -14,6 +14,18 @@
 
 .page-wrapper--scroll {
   overflow-y: auto;
-  overscroll-behavior-y: contain;
+  overflow-x: hidden;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y pinch-zoom;
   min-height: 0;
+}
+
+@media (pointer: coarse) {
+  .page-wrapper--scroll {
+    overflow: visible;
+    min-height: auto;
+    -webkit-overflow-scrolling: auto;
+  }
 }

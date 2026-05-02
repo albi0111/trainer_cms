@@ -20,6 +20,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body {
@@ -30,10 +31,10 @@ body {
   background-color: var(--color-bg);
   line-height: 1.5;
   min-height: 100dvh;
+  overflow-y: auto;
   overflow-x: hidden;
-
-  /* Prevent pull-to-refresh on mobile */
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y pinch-zoom;
 }
 
 #root {

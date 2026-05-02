@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -11,7 +12,7 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
   const syncStatus = useAppStore((state) => state.syncStatus);
   const pendingSyncCount = useAppStore((state) => state.pendingSyncCount);
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
-  const { startLongPress, cancelLongPress, consumeLongPress } = useLongPress();
+  const { startLongPress, handlePointerMove, cancelLongPress, consumeLongPress } = useLongPress();
 
   const hasError = syncStatus === 'error' || !isConnectedToDrive;
   const color = hasError
@@ -28,12 +29,12 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
         ? `${pendingSyncCount} Pending`
         : 'Synced';
 
-  const handlePointerDown = () => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!onLongPress) {
       return;
     }
 
-    startLongPress(onLongPress);
+    startLongPress(onLongPress, event);
   };
 
   const handlePointerEnd = () => {
@@ -53,6 +54,7 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
       type="button"
       onClick={handleClick}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerEnd}
       onPointerLeave={handlePointerEnd}
       onPointerCancel={handlePointerEnd}

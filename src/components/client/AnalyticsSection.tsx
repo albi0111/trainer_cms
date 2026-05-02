@@ -15,7 +15,9 @@ type DeltaMode = 'previous' | 'initial';
 export default function AnalyticsSection({
   clientId
 }: AnalyticsSectionProps) {
-  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024,
+  );
   const isCompact = viewportWidth < 768;
   const isPhone = viewportWidth < 480;
 
@@ -34,6 +36,23 @@ export default function AnalyticsSection({
   useEffect(() => {
     loadData();
   }, [clientId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const syncViewportWidth = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    syncViewportWidth();
+    window.addEventListener('resize', syncViewportWidth);
+
+    return () => {
+      window.removeEventListener('resize', syncViewportWidth);
+    };
+  }, []);
 
   const loadData = async () => {
     setLoading(true);

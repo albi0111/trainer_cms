@@ -7,6 +7,7 @@
   flex-direction: column;
   gap: var(--space-lg);
   padding-bottom: 40px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Section Block ────────────────────────────────────────────────────────── */
@@ -21,6 +22,9 @@
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 .profile-block:active {
@@ -243,6 +247,11 @@
   background-color: rgba(255, 82, 82, 0.03);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 .danger-zone__header {
@@ -281,6 +290,8 @@
   justify-content: center;
   gap: var(--space-sm);
   transition: opacity var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 .danger-delete-btn:hover {
