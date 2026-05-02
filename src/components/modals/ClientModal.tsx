@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from 'react';
 import './ClientModal.css';
 import Modal from '../ui/Modal'; // Using standard Modal wrapper for accessibility
 import { ASSESSMENT_EXERCISES, FLEXIBILITY_TESTS } from '../../constants/assessment';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { createClient, getClientDetail, updateClient } from '../../services/client/clientService';
 
 export type ClientModalStep = 'personal' | 'interview' | 'assessment';
@@ -22,8 +24,11 @@ interface ClientModalProps {
 export default function ClientModal({ open, onClose, clientId, initialStep = 'personal', onSuccess }: ClientModalProps) {
   const [step, setStep] = useState<ClientModalStep>(initialStep);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [nameError, setNameError] = useState('');
+  const haptic = useHaptic();
+  const { playConfirm, playError } = useSoundFeedback();
 
   // ── Form State ────────────────────────────────────────────────────────────
   const [name, setName] = useState('');
@@ -56,6 +61,7 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
     setCardioTime(''); setCardioDistance(''); setCardioMhr(''); setObjectives('');
     setNameError('');
     setErrorMessage('');
+    setSaveState('idle');
     setStep(initialStep);
   }, [initialStep]);
 
@@ -127,19 +133,22 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
   const validateName = useCallback(() => {
     if (!name.trim()) {
       setNameError('Please enter a name.');
+      playError();
       return false;
     }
 
     setNameError('');
     return true;
-  }, [name]);
+  }, [name, playError]);
 
   const handleSave = async () => {
     if (!validateName()) {
       return;
     }
 
+    haptic.medium();
     setIsSaving(true);
+    setSaveState('idle');
     setErrorMessage('');
     try {
       const bpParts = (bp || '').split('/');
@@ -209,9 +218,15 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
         });
       }
 
+      playConfirm();
+      setSaveState('saved');
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 1500);
+      });
       onSuccess?.(persistedClientId || clientId || '');
       onClose();
     } catch (error) {
+      playError();
       console.error('Failed to save client', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to save client data.');
     } finally {
@@ -309,7 +324,7 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
               <div className="cm-form-group">
                 <label className="cm-label">FULL NAME *</label>
                 <input
-                  className={`cm-input ${nameError ? 'cm-input--error' : ''}`}
+                  className={`cm-input ${nameError ? 'cm-input--error input-shake' : ''}`}
                   type="text"
                   value={name}
                   onChange={(e) => {
@@ -368,24 +383,24 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
 
           {step === 'assessment' && (
             <div className="cm-step-content">
-              <div className="cm-form-row">
-                <div className="cm-form-group">
-                  <label className="cm-label">WEIGHT (KG)</label>
-                  <input className="cm-input" type="text" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="75 KG" />
+              <div className="cm-form-row cm-form-row--compact">
+                <div className="cm-form-group cm-form-group--compact">
+                  <label className="cm-label cm-label--compact">WEIGHT (KG)</label>
+                  <input className="cm-input cm-input--compact" type="text" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="75 KG" />
                 </div>
-                <div className="cm-form-group">
-                  <label className="cm-label">HEIGHT (CM)</label>
-                  <input className="cm-input" type="text" value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="175 CM" />
+                <div className="cm-form-group cm-form-group--compact">
+                  <label className="cm-label cm-label--compact">HEIGHT (CM)</label>
+                  <input className="cm-input cm-input--compact" type="text" value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="175 CM" />
                 </div>
               </div>
-              <div className="cm-form-row">
-                <div className="cm-form-group">
-                  <label className="cm-label">BP (MMHG)</label>
-                  <input className="cm-input" type="text" value={bp} onChange={e => setBp(e.target.value)} placeholder="120/80" />
+              <div className="cm-form-row cm-form-row--compact">
+                <div className="cm-form-group cm-form-group--compact">
+                  <label className="cm-label cm-label--compact">BP (MMHG)</label>
+                  <input className="cm-input cm-input--compact" type="text" value={bp} onChange={e => setBp(e.target.value)} placeholder="120/80" />
                 </div>
-                <div className="cm-form-group">
-                  <label className="cm-label">RHR (BPM)</label>
-                  <input className="cm-input" type="text" value={rhr} onChange={e => setRhr(e.target.value)} placeholder="65" />
+                <div className="cm-form-group cm-form-group--compact">
+                  <label className="cm-label cm-label--compact">RHR (BPM)</label>
+                  <input className="cm-input cm-input--compact" type="text" value={rhr} onChange={e => setRhr(e.target.value)} placeholder="65" />
                 </div>
               </div>
 
@@ -459,7 +474,13 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
             <button className="cm-btn cm-btn--secondary" onClick={onClose}>Cancel</button>
           )}
           <button className={`cm-btn ${step === 'assessment' ? 'cm-btn--yellow' : 'cm-btn--primary'}`} onClick={handleNext} disabled={isSaving}>
-            {isSaving ? 'Saving...' : step === 'assessment' ? (clientId ? 'Update Client' : 'Add Client') : 'Next'}
+            {isSaving
+              ? 'Saving...'
+              : saveState === 'saved'
+                ? 'Saved ✓'
+                : step === 'assessment'
+                  ? (clientId ? 'Update Client' : 'Add Client')
+                  : 'Next'}
           </button>
         </div>
       </div>

@@ -4,6 +4,9 @@ import './NewSessionModal.css';
 import AppDatePicker from '../shared/AppDatePicker';
 import AppTimePicker from '../shared/AppTimePicker';
 import AppAlert from '../shared/AppAlert';
+import EmptyState from '../ui/EmptyState';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { Session } from '../../types';
 import { getSessionExercises } from '../../services/sessionService';
 
@@ -13,10 +16,21 @@ interface ExerciseDraft {
   reps: string;
 }
 
+interface SessionSaveDraft {
+  id?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  focus: string;
+  postponed_note: string;
+  exercises: ExerciseDraft[];
+  measure_reminder: boolean;
+}
+
 interface NewSessionModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (data: any) => Promise<void> | void;
+  onSave: (data: SessionSaveDraft) => Promise<void> | void;
   onDelete?: (sessionId: string) => void;
   initialDate: string;
   initialTime: string;
@@ -45,6 +59,10 @@ export default function NewSessionModal({
   const [remind, setRemind] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [timeInvalid, setTimeInvalid] = useState(false);
+  const haptic = useHaptic();
+  const { playError } = useSoundFeedback();
 
   useEffect(() => {
     if (editingSession) {
@@ -79,6 +97,8 @@ export default function NewSessionModal({
     }
 
     setError(null);
+    setSaveState('idle');
+    setTimeInvalid(false);
   }, [initialDate, initialTime, visible, editingSession]);
 
   useEffect(() => {
@@ -121,6 +141,7 @@ export default function NewSessionModal({
 
 
   const handleSave = async () => {
+    haptic.medium();
     // Overlap validation
     const startTimeNum = parseInt(startTime.replace(':', ''));
     const endTimeNum = parseInt(endTime.replace(':', ''));
@@ -136,6 +157,8 @@ export default function NewSessionModal({
     });
 
     if (overlappingSession) {
+      playError();
+      setTimeInvalid(true);
       setError(
         overlappingSession.client_name
           ? `This time overlaps with ${overlappingSession.client_name}'s session.`
@@ -145,6 +168,8 @@ export default function NewSessionModal({
     }
 
     try {
+      setTimeInvalid(false);
+      setSaveState('saving');
       await onSave({
         id: editingSession?.id,
         date,
@@ -156,7 +181,10 @@ export default function NewSessionModal({
         measure_reminder: remind
       });
       setError(null);
+      setSaveState('saved');
     } catch (saveError) {
+      playError();
+      setSaveState('idle');
       setError(saveError instanceof Error ? saveError.message : 'Failed to save session.');
     }
   };
@@ -191,10 +219,14 @@ export default function NewSessionModal({
 
             <div className="session-modal__row">
               <div className="session-modal__field">
-                <AppTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
+                <div className={timeInvalid ? 'input-shake' : ''}>
+                  <AppTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
+                </div>
               </div>
               <div className="session-modal__field">
-                <AppTimePicker label="End Time" value={endTime} onChange={setEndTime} />
+                <div className={timeInvalid ? 'input-shake' : ''}>
+                  <AppTimePicker label="End Time" value={endTime} onChange={setEndTime} />
+                </div>
               </div>
             </div>
 
@@ -235,7 +267,7 @@ export default function NewSessionModal({
               <div className="session-modal__exercise-list">
                 {exercises.length === 0 && (
                   <div className="session-modal__empty">
-                    <span>No exercises added yet</span>
+                    <EmptyState message="No exercises added yet." />
                   </div>
                 )}
                 {exercises.map(ex => (
@@ -300,9 +332,10 @@ export default function NewSessionModal({
           <button
             type="button"
             className="session-modal__save"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving'}
           >
-            Save Session
+            {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved ✓' : 'Save Session'}
           </button>
         </div>
       </div>

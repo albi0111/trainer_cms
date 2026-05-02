@@ -1,5 +1,6 @@
 import './TodaySchedule.css';
 import Avatar from '../ui/Avatar';
+import EmptyState from '../ui/EmptyState';
 
 interface Session {
   id: string;
@@ -25,7 +26,7 @@ export default function TodaySchedule({ sessions }: TodayScheduleProps) {
       
       {sessions.length === 0 ? (
         <div className="today-schedule__empty">
-          <p className="today-schedule__empty-text">No sessions today</p>
+          <EmptyState message="No sessions today." />
         </div>
       ) : (
         <div className="today-schedule__list">

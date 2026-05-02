@@ -6,6 +6,11 @@
   min-width: 0;
 }
 
+.analytics-section > * {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .analytics-header {
   display: flex;
   justify-content: space-between;
@@ -16,6 +21,7 @@
 }
 
 .analytics-tab-container {
+  position: relative;
   display: flex;
   background-color: var(--color-bg-elevated);
   border-radius: var(--radius-2xl);
@@ -27,6 +33,28 @@
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.analytics-toggle-pill {
+  position: absolute;
+  top: var(--segmented-control-padding);
+  bottom: var(--segmented-control-padding);
+  left: 0;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-border-container);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 10px 18px -14px rgba(255, 215, 0, 0.75);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 160ms ease;
+}
+
+.analytics-toggle-pill--ready {
+  opacity: 1;
 }
 
 .analytics-tab {
@@ -45,11 +73,12 @@
   box-sizing: border-box;
   min-width: 0;
   touch-action: pan-y;
+  position: relative;
+  z-index: 1;
 }
 
 .analytics-tab--active {
-  background-color: var(--color-border-container);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  color: var(--color-primary);
 }
 
 .analytics-tab__icon-circle {
@@ -104,6 +133,7 @@
   overscroll-behavior-x: contain;
   touch-action: manipulation;
   min-width: 0;
+  scroll-snap-type: x proximity;
 }
 
 .analytics-cards-scroll::-webkit-scrollbar {
@@ -127,6 +157,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   touch-action: manipulation;
+  scroll-snap-align: start;
 }
 
 .analytics-card--active {
@@ -177,6 +208,10 @@
   touch-action: pan-y;
 }
 
+.analytics-chart-area > * {
+  min-width: 0;
+}
+
 .analytics-chart-title {
   color: #AAA;
   font-size: 13px;
@@ -191,15 +226,23 @@
   width: 100%;
   height: auto;
   overflow: visible;
+  max-width: 100%;
 }
 
 .analytics-chart-placeholder {
+  width: 100%;
+  min-width: 0;
   height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #444;
   font-size: 14px;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+  padding: 0 10px;
 }
 
 /* ── Bar Chart ── */
@@ -239,6 +282,8 @@
   margin-top: 8px;
   text-align: center;
   line-height: 1.2;
+  max-width: 64px;
+  overflow-wrap: anywhere;
 }
 
 /* ── Bottom Add Button ── */
@@ -256,6 +301,7 @@
   transition: all 0.2s ease;
   margin-top: 10px;
   touch-action: pan-y;
+  min-width: 0;
 }
 
 .analytics-add-btn:hover {
@@ -267,10 +313,15 @@
   color: #888;
   font-size: 13px;
   font-weight: 700;
+  min-width: 0;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* ── Performance View Toggles ── */
 .analytics-perf-toggle {
+  position: relative;
   display: flex;
   background-color: var(--color-bg-elevated);
   border: 1px solid var(--color-border-container);
@@ -297,12 +348,12 @@
   box-sizing: border-box;
   line-height: 1;
   touch-action: pan-y;
+  position: relative;
+  z-index: 1;
 }
 
 .perf-toggle-btn.active {
-  background-color: var(--color-border-container);
   color: var(--color-primary);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 /* ── Chart Modal ── */
@@ -419,10 +470,13 @@
 @media (max-width: 480px) {
   .analytics-section {
     gap: 14px;
+    touch-action: auto;
   }
 
   .analytics-header {
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: 8px;
   }
 
@@ -445,18 +499,29 @@
   }
 
   .analytics-cards-scroll {
+    overflow: visible;
+    margin: 0;
     padding: 2px 0;
+    overscroll-behavior: auto;
+    touch-action: auto;
   }
 
   .analytics-cards-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+    width: 100%;
+    min-width: 0;
+    touch-action: auto;
   }
 
   .analytics-card {
-    min-width: 110px;
-    flex-basis: 110px;
+    min-width: 0;
+    width: 100%;
+    flex: none;
     padding: 16px 12px;
     border-radius: 16px;
+    touch-action: auto;
   }
 
   .analytics-card__label {
@@ -483,8 +548,10 @@
   }
 
   .analytics-chart-area {
-    padding: 18px 10px 14px;
+    padding: 16px 8px 12px;
     border-radius: 18px;
+    width: 100%;
+    touch-action: auto;
   }
 
   .analytics-chart-title {
@@ -493,9 +560,8 @@
   }
 
   .analytics-chart-placeholder {
-    height: 160px;
-    font-size: 13px;
-    text-align: center;
+    height: 140px;
+    font-size: 12px;
   }
 
   .analytics-bar-chart {
@@ -514,12 +580,23 @@
   }
 
   .analytics-add-btn {
-    padding: 16px;
-    gap: 10px;
+    flex-direction: column;
+    padding: 14px 12px;
+    gap: 8px;
+    width: 100%;
+    touch-action: auto;
+  }
+
+  .analytics-tab,
+  .analytics-manage-btn,
+  .analytics-perf-toggle,
+  .perf-toggle-btn {
+    touch-action: auto;
   }
 
   .analytics-add-btn__text {
-    font-size: 12px;
+    font-size: 11px;
+    max-width: 100%;
   }
 
   .chart-modal-overlay {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Measurement, MeasurementConfig } from '../../types';
 import ManageMetricsModal from '../modals/ManageMetricsModal';
@@ -11,6 +11,7 @@ interface AnalyticsSectionProps {
 }
 
 type DeltaMode = 'previous' | 'initial';
+type PillStyle = { width: number; x: number; ready: boolean };
 
 export default function AnalyticsSection({
   clientId
@@ -28,10 +29,31 @@ export default function AnalyticsSection({
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
   const [isLogProgressOpen, setIsLogProgressOpen] = useState(false);
   const [isManageMetricsOpen, setIsManageMetricsOpen] = useState(false);
+  const analyticsTabContainerRef = useRef<HTMLDivElement>(null);
+  const analyticsTabRefs = useRef<Record<'body' | 'performance', HTMLButtonElement | null>>({
+    body: null,
+    performance: null,
+  });
+  const perfToggleContainerRef = useRef<HTMLDivElement>(null);
+  const perfToggleRefs = useRef<Record<'bar' | 'radar', HTMLButtonElement | null>>({
+    bar: null,
+    radar: null,
+  });
+  const [analyticsTabPillStyle, setAnalyticsTabPillStyle] = useState<PillStyle>({
+    width: 0,
+    x: 0,
+    ready: false,
+  });
+  const [perfTogglePillStyle, setPerfTogglePillStyle] = useState<PillStyle>({
+    width: 0,
+    x: 0,
+    ready: false,
+  });
 
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const canOpenChartModal = !isPhone;
 
   useEffect(() => {
     loadData();
@@ -53,6 +75,104 @@ export default function AnalyticsSection({
       window.removeEventListener('resize', syncViewportWidth);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    const activeElement = analyticsTabRefs.current[activeTab];
+    if (!activeElement) {
+      return;
+    }
+
+    setAnalyticsTabPillStyle({
+      width: activeElement.offsetWidth,
+      x: activeElement.offsetLeft,
+      ready: true,
+    });
+  }, [activeTab]);
+
+  useLayoutEffect(() => {
+    const activeElement = perfToggleRefs.current[performanceView];
+    if (!activeElement) {
+      return;
+    }
+
+    setPerfTogglePillStyle({
+      width: activeElement.offsetWidth,
+      x: activeElement.offsetLeft,
+      ready: true,
+    });
+  }, [performanceView, activeTab]);
+
+  useEffect(() => {
+    const syncAnalyticsTabPill = () => {
+      const activeElement = analyticsTabRefs.current[activeTab];
+      if (!activeElement) {
+        return;
+      }
+
+      setAnalyticsTabPillStyle({
+        width: activeElement.offsetWidth,
+        x: activeElement.offsetLeft,
+        ready: true,
+      });
+    };
+
+    syncAnalyticsTabPill();
+
+    const handleResize = () => {
+      syncAnalyticsTabPill();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && analyticsTabContainerRef.current) {
+      resizeObserver = new ResizeObserver(syncAnalyticsTabPill);
+      resizeObserver.observe(analyticsTabContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'performance') {
+      return undefined;
+    }
+
+    const syncPerfTogglePill = () => {
+      const activeElement = perfToggleRefs.current[performanceView];
+      if (!activeElement) {
+        return;
+      }
+
+      setPerfTogglePillStyle({
+        width: activeElement.offsetWidth,
+        x: activeElement.offsetLeft,
+        ready: true,
+      });
+    };
+
+    syncPerfTogglePill();
+
+    const handleResize = () => {
+      syncPerfTogglePill();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && perfToggleContainerRef.current) {
+      resizeObserver = new ResizeObserver(syncPerfTogglePill);
+      resizeObserver.observe(perfToggleContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
+    };
+  }, [activeTab, performanceView]);
 
   const loadData = async () => {
     setLoading(true);
@@ -165,8 +285,12 @@ export default function AnalyticsSection({
 
     return (
       <div 
-        style={{ width: '100%', cursor: isModal ? 'default' : 'pointer' }}
-        onClick={() => !isModal && setIsChartModalOpen(true)}
+        style={{ width: '100%', cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
+        onClick={() => {
+          if (!isModal && canOpenChartModal) {
+            setIsChartModalOpen(true);
+          }
+        }}
       >
         <div className="analytics-chart-title">{config?.label} Trend</div>
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="analytics-line-chart">
@@ -212,8 +336,12 @@ export default function AnalyticsSection({
 
     return (
       <div 
-        style={{ width: '100%', cursor: isModal ? 'default' : 'pointer' }}
-        onClick={() => !isModal && setIsChartModalOpen(true)}
+        style={{ width: '100%', cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
+        onClick={() => {
+          if (!isModal && canOpenChartModal) {
+            setIsChartModalOpen(true);
+          }
+        }}
       >
         <div className="analytics-chart-title">Session Comparison</div>
         <div className="analytics-bar-chart" style={{ height: isModal ? '380px' : '260px' }}>
@@ -257,8 +385,18 @@ export default function AnalyticsSection({
 
     return (
       <div 
-        style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: isModal ? 'default' : 'pointer' }}
-        onClick={() => !isModal && setIsChartModalOpen(true)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          cursor: !isModal && canOpenChartModal ? 'pointer' : 'default',
+        }}
+        onClick={() => {
+          if (!isModal && canOpenChartModal) {
+            setIsChartModalOpen(true);
+          }
+        }}
       >
         <div className="analytics-chart-title">Normalization Radar</div>
         <svg width={size} height={size}>
@@ -283,8 +421,22 @@ export default function AnalyticsSection({
   return (
     <div className="analytics-section">
       <div className="analytics-header">
-        <div className="analytics-tab-container">
-          <button className={`analytics-tab ${activeTab === 'body' ? 'analytics-tab--active' : ''}`} onClick={() => setActiveTab('body')}>
+        <div className="analytics-tab-container" ref={analyticsTabContainerRef}>
+          <span
+            className={`analytics-toggle-pill ${analyticsTabPillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
+            style={{
+              width: `${analyticsTabPillStyle.width}px`,
+              transform: `translateX(${analyticsTabPillStyle.x}px)`,
+            }}
+            aria-hidden="true"
+          />
+          <button
+            ref={(element) => {
+              analyticsTabRefs.current.body = element;
+            }}
+            className={`analytics-tab ${activeTab === 'body' ? 'analytics-tab--active' : ''}`}
+            onClick={() => setActiveTab('body')}
+          >
             <div className="analytics-tab__icon-circle">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'body' ? '#000' : '#444'} strokeWidth="2" strokeLinecap="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -294,7 +446,13 @@ export default function AnalyticsSection({
             <span className="analytics-tab__text">BODY</span>
           </button>
 
-          <button className={`analytics-tab ${activeTab === 'performance' ? 'analytics-tab--active' : ''}`} onClick={() => setActiveTab('performance')}>
+          <button
+            ref={(element) => {
+              analyticsTabRefs.current.performance = element;
+            }}
+            className={`analytics-tab ${activeTab === 'performance' ? 'analytics-tab--active' : ''}`}
+            onClick={() => setActiveTab('performance')}
+          >
             <div className="analytics-tab__icon-circle">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'performance' ? '#000' : '#444'} strokeWidth="2.5" strokeLinecap="round">
                 <path d="M19 12h.01M13 2v2M13 20v2M22 13h-2M4 13H2M14.5 9l-2.5 2.5 2.5 2.5M9.5 15l2.5-2.5-2.5-2.5"/>
@@ -334,11 +492,31 @@ export default function AnalyticsSection({
       </div>
 
       {activeTab === 'performance' && (
-        <div className="analytics-perf-toggle">
-          <button className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`} onClick={() => setPerformanceView('bar')}>
+        <div className="analytics-perf-toggle" ref={perfToggleContainerRef}>
+          <span
+            className={`analytics-toggle-pill ${perfTogglePillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
+            style={{
+              width: `${perfTogglePillStyle.width}px`,
+              transform: `translateX(${perfTogglePillStyle.x}px)`,
+            }}
+            aria-hidden="true"
+          />
+          <button
+            ref={(element) => {
+              perfToggleRefs.current.bar = element;
+            }}
+            className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`}
+            onClick={() => setPerformanceView('bar')}
+          >
             {isPhone ? 'Compare' : 'Bar (Compare)'}
           </button>
-          <button className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`} onClick={() => setPerformanceView('radar')}>
+          <button
+            ref={(element) => {
+              perfToggleRefs.current.radar = element;
+            }}
+            className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`}
+            onClick={() => setPerformanceView('radar')}
+          >
             {isPhone ? 'Radar' : 'Radar (Overview)'}
           </button>
         </div>

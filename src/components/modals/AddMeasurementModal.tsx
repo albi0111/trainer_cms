@@ -6,6 +6,8 @@ import {
   addMeasurement,
   getClientMeasurementConfigs,
 } from '../../services/measurement/measurementService';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import './AddMeasurementModal.css';
 
 interface AddMeasurementModalProps {
@@ -30,10 +32,14 @@ export default function AddMeasurementModal({
   const [values, setValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const haptic = useHaptic();
+  const { playConfirm, playError } = useSoundFeedback();
 
   useEffect(() => {
     if (visible) {
+      setSaveState('idle');
       loadConfigs();
     }
   }, [visible, clientId]);
@@ -69,8 +75,14 @@ export default function AddMeasurementModal({
       setValues({});
       setNotes('');
       setErrorMessage('');
-      onSuccess();
+      setSaveState('saved');
+      playConfirm();
+      window.setTimeout(() => {
+        setSaveState('idle');
+        onSuccess();
+      }, 1500);
     } catch (error) {
+      playError();
       console.error('[AddMeasurementModal] Save error:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to save log entry.');
     } finally {
@@ -163,8 +175,8 @@ export default function AddMeasurementModal({
 
         <div className="add-measurement-footer">
           <button className="cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="save-btn" onClick={handleSave} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Log Entry'}
+          <button className="save-btn" onClick={() => { haptic.medium(); void handleSave(); }} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : saveState === 'saved' ? 'Saved ✓' : 'Log Entry'}
           </button>
         </div>
       </div>

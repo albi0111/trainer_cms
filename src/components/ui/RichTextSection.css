@@ -7,6 +7,15 @@
   margin-bottom: 16px;
 }
 
+.rich-text-section__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 999px;
+  animation: rich-text-section-spin 0.7s linear infinite;
+}
+
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
 .rich-text-toolbar {
   display: flex;
@@ -161,4 +170,10 @@
 .rich-text-editor u,
 .rich-text-content u {
   text-decoration: underline;
+}
+
+@keyframes rich-text-section-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

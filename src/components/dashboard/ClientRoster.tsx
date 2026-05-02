@@ -3,6 +3,7 @@ import './ClientRoster.css';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import EmptyState from '../ui/EmptyState';
 import type { ClientStatus } from '../../types';
 import { toClientBadgeStatus } from '../../utils/clientStatus';
 
@@ -78,7 +79,7 @@ export default function ClientRoster({
       ) : (
         <div className="roster-list">
           {filtered.length === 0 ? (
-            <div className="roster-empty">No clients found.</div>
+            <EmptyState message="No clients found." />
           ) : (
             filtered.map((client) => {
               const state = clientDataMap[client.id] || { status: 'active', nextSession: 'no upcoming sessions' };

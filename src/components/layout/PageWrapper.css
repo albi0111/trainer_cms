@@ -21,11 +21,3 @@
   touch-action: pan-y pinch-zoom;
   min-height: 0;
 }
-
-@media (pointer: coarse) {
-  .page-wrapper--scroll {
-    overflow: visible;
-    min-height: auto;
-    -webkit-overflow-scrolling: auto;
-  }
-}

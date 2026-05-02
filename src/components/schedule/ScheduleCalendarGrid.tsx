@@ -3,7 +3,7 @@
 // Reference: /reference/components/schedule/ScheduleCalendarGrid.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import './ScheduleCalendarGrid.css';
 import { useLongPress } from '../../hooks/useLongPress';
 
@@ -108,7 +108,8 @@ export default function ScheduleCalendarGrid({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { startLongPress, handlePointerMove, cancelLongPress, consumeLongPress } = useLongPress();
+  const longPressPointRef = useRef({ x: 0, y: 0 });
+  const { cancelLongPress, consumeLongPress, getLongPressHandlers } = useLongPress();
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -227,15 +228,6 @@ export default function ScheduleCalendarGrid({
     });
   };
 
-  const startContextTimer = (
-    type: ContextMenuState['type'],
-    data: Omit<Extract<ContextMenuState, { type: typeof type }>, 'type' | 'x' | 'y'>,
-    event: ReactPointerEvent<HTMLElement>,
-  ) => {
-    const pointer = { x: event.clientX, y: event.clientY };
-    startLongPress(() => openContextMenu(type, data, pointer), event);
-  };
-
   const handleScroll = () => {
     if (contextMenu) {
       setContextMenu(null);
@@ -297,30 +289,48 @@ export default function ScheduleCalendarGrid({
                     </div>
 
                     <div className={`schedule-calendar-grid-v2__time-row ${isToday ? 'is-today' : ''}`}>
-                      {HOURS.map((hour) => (
-                        <div
-                          key={`${dateStr}-${hour}`}
-                          className={`schedule-calendar-grid-v2__slot ${isToday ? 'is-today' : ''}`}
-                          onClick={() => {
-                            if (consumeLongPress()) {
-                              return;
-                            }
+                      {HOURS.map((hour) => {
+                        const slotLongPressHandlers = onPasteSession
+                          ? getLongPressHandlers(() => openContextMenu('slot', { date: dateStr, hour }, longPressPointRef.current))
+                          : null;
 
-                            if (!contextMenu) {
-                              onSlotPress(dateStr, hour);
-                            }
-                          }}
-                          onPointerDown={(event) => {
-                            if (onPasteSession) {
-                              startContextTimer('slot', { date: dateStr, hour }, event);
-                            }
-                          }}
-                          onPointerMove={handlePointerMove}
-                          onPointerUp={cancelLongPress}
-                          onPointerLeave={cancelLongPress}
-                          onPointerCancel={cancelLongPress}
-                        />
-                      ))}
+                        return (
+                          <div
+                            key={`${dateStr}-${hour}`}
+                            className={`schedule-calendar-grid-v2__slot ${isToday ? 'is-today' : ''}`}
+                            onClick={() => {
+                              if (consumeLongPress()) {
+                                return;
+                              }
+
+                              if (!contextMenu) {
+                                onSlotPress(dateStr, hour);
+                              }
+                            }}
+                            onTouchStart={(event) => {
+                              const touch = event.touches[0];
+                              if (!touch || !slotLongPressHandlers) {
+                                return;
+                              }
+
+                              longPressPointRef.current = { x: touch.clientX, y: touch.clientY };
+                              slotLongPressHandlers.onTouchStart(event);
+                            }}
+                            onTouchEnd={slotLongPressHandlers?.onTouchEnd}
+                            onTouchCancel={slotLongPressHandlers?.onTouchCancel}
+                            onMouseDown={(event) => {
+                              if (!slotLongPressHandlers) {
+                                return;
+                              }
+
+                              longPressPointRef.current = { x: event.clientX, y: event.clientY };
+                              slotLongPressHandlers.onMouseDown(event);
+                            }}
+                            onMouseUp={slotLongPressHandlers?.onMouseUp}
+                            onMouseLeave={cancelLongPress}
+                          />
+                        );
+                      })}
 
                       {daySessions.map((session) => {
                         if (!session.start_time) {
@@ -349,6 +359,10 @@ export default function ScheduleCalendarGrid({
                         const isHighlighted = highlightSessionId ? session.id === highlightSessionId : false;
                         const isDimmed = highlightSessionId ? session.id !== highlightSessionId : false;
 
+                        const sessionLongPressHandlers = canManageSession
+                          ? getLongPressHandlers(() => openContextMenu('session', { id: session.id }, longPressPointRef.current))
+                          : null;
+
                         return (
                           <div
                             key={session.id}
@@ -374,18 +388,33 @@ export default function ScheduleCalendarGrid({
                                 onSessionPress(session);
                               }
                             }}
-                            onPointerDown={(event) => {
-                              if (!canManageSession) {
+                            onTouchStart={(event) => {
+                              if (!sessionLongPressHandlers) {
+                                return;
+                              }
+
+                              const touch = event.touches[0];
+                              if (!touch) {
                                 return;
                               }
 
                               event.stopPropagation();
-                              startContextTimer('session', { id: session.id }, event);
+                              longPressPointRef.current = { x: touch.clientX, y: touch.clientY };
+                              sessionLongPressHandlers.onTouchStart(event);
                             }}
-                            onPointerMove={handlePointerMove}
-                            onPointerUp={cancelLongPress}
-                            onPointerLeave={cancelLongPress}
-                            onPointerCancel={cancelLongPress}
+                            onTouchEnd={sessionLongPressHandlers?.onTouchEnd}
+                            onTouchCancel={sessionLongPressHandlers?.onTouchCancel}
+                            onMouseDown={(event) => {
+                              if (!sessionLongPressHandlers) {
+                                return;
+                              }
+
+                              event.stopPropagation();
+                              longPressPointRef.current = { x: event.clientX, y: event.clientY };
+                              sessionLongPressHandlers.onMouseDown(event);
+                            }}
+                            onMouseUp={sessionLongPressHandlers?.onMouseUp}
+                            onMouseLeave={cancelLongPress}
                           >
                             <span className="schedule-calendar-grid-v2__session-client">
                               {isOwnedSession ? 'OWN' : session.client_name.substring(0, 8)}

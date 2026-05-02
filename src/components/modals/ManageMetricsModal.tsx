@@ -6,6 +6,8 @@ import {
   upsertClientMeasurementConfig,
   deleteClientMeasurementConfig,
 } from '../../services/measurement/measurementService';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import './ManageMetricsModal.css';
 
 interface ManageMetricsModalProps {
@@ -36,12 +38,21 @@ export default function ManageMetricsModal({
   const [editingConfig, setEditingConfig] = useState<Partial<MeasurementConfig>>({});
   const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
+  const haptic = useHaptic();
+  const { playConfirm, playDelete, playError } = useSoundFeedback();
 
   useEffect(() => {
     if (visible) {
       fetchConfigs();
     }
   }, [visible, clientId]);
+
+  useEffect(() => {
+    if (!visible || !isEditing) {
+      setSaveState('idle');
+    }
+  }, [isEditing, visible]);
 
   const fetchConfigs = async () => {
     setLoading(true);
@@ -63,6 +74,7 @@ export default function ManageMetricsModal({
 
   const handleSave = async () => {
     if (!editingConfig.key || !editingConfig.label || !editingConfig.category) {
+      playError();
       setErrorMessage('Key, label, and category are required.');
       return;
     }
@@ -79,9 +91,12 @@ export default function ManageMetricsModal({
       setIsEditing(false);
       setEditingConfig({});
       setErrorMessage('');
+      setSaveState('saved');
+      playConfirm();
       void fetchConfigs();
       onSuccess();
     } catch (err) {
+      playError();
       console.error('[ManageMetricsModal] Save error:', err);
       setErrorMessage(err instanceof Error ? err.message : 'Failed to save metric.');
     }
@@ -92,9 +107,12 @@ export default function ManageMetricsModal({
       await deleteClientMeasurementConfig(clientId, key);
       setConfirmDeleteKey(null);
       setErrorMessage('');
+      playDelete();
+      haptic.error();
       void fetchConfigs();
       onSuccess();
     } catch (err) {
+      playError();
       console.error('[ManageMetricsModal] Remove error:', err);
       setErrorMessage(err instanceof Error ? err.message : 'Failed to remove metric.');
     }
@@ -109,9 +127,11 @@ export default function ManageMetricsModal({
         category: metric.category,
       });
       setErrorMessage('');
+      playConfirm();
       void fetchConfigs();
       onSuccess();
     } catch (err) {
+      playError();
       console.error('[ManageMetricsModal] Add error:', err);
       setErrorMessage(err instanceof Error ? err.message : 'Failed to add metric.');
     }
@@ -190,7 +210,9 @@ export default function ManageMetricsModal({
 
             <div className="form-actions">
               <button className="cancel-btn" onClick={() => setIsEditing(false)}>Cancel</button>
-              <button className="save-btn" onClick={handleSave}>Save Metric</button>
+              <button className="save-btn" onClick={() => { haptic.medium(); void handleSave(); }}>
+                {saveState === 'saved' ? 'Saved ✓' : 'Save Metric'}
+              </button>
             </div>
           </div>
         ) : (

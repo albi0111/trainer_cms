@@ -1,17 +1,58 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ScheduleCalendarModal.css'; // Reusing modal styles
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 
 interface AddPlanModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (data: { type: 'monthly' | 'weekly', title: string, goal: string }) => void;
+  onSave: (data: { type: 'monthly' | 'weekly', title: string, goal: string }) => Promise<void> | void;
 }
 
 export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalProps) {
   const [type, setType] = useState<'monthly' | 'weekly'>('monthly');
   const [title, setTitle] = useState('');
   const [goal, setGoal] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [titleInvalid, setTitleInvalid] = useState(false);
+  const haptic = useHaptic();
+  const { playConfirm, playError } = useSoundFeedback();
+
+  useEffect(() => {
+    if (!visible) {
+      setSaveState('idle');
+      setTitleInvalid(false);
+    }
+  }, [visible]);
+
+  const handleSave = async () => {
+    haptic.medium();
+
+    if (!title.trim()) {
+      setTitleInvalid(true);
+      playError();
+      return;
+    }
+
+    setTitleInvalid(false);
+    setSaveState('saving');
+
+    try {
+      await onSave({ type, title, goal });
+      playConfirm();
+      setSaveState('saved');
+      window.setTimeout(() => {
+        setTitle('');
+        setGoal('');
+        setSaveState('idle');
+        onClose();
+      }, 1500);
+    } catch {
+      playError();
+      setSaveState('idle');
+    }
+  };
 
   if (!visible) return null;
 
@@ -49,10 +90,15 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
           <div className="uc-form-group">
             <label className="uc-label">Title</label>
             <input 
-              type="text" 
-              className="uc-input" 
+              type="text"
+              className={`uc-input ${titleInvalid ? 'input-shake' : ''}`}
               value={title} 
-              onChange={e => setTitle(e.target.value)} 
+              onChange={e => {
+                setTitle(e.target.value);
+                if (titleInvalid && e.target.value.trim()) {
+                  setTitleInvalid(false);
+                }
+              }}
               placeholder="e.g. Hypertrophy Phase 1"
             />
           </div>
@@ -73,15 +119,10 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
           <button 
             className="uc-btn uc-btn--yellow" 
             style={{ width: '100%' }}
-            onClick={() => {
-              if (title.trim()) {
-                onSave({ type, title, goal });
-                setTitle('');
-                setGoal('');
-              }
-            }}
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving'}
           >
-            Create Plan
+            {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved ✓' : 'Create Plan'}
           </button>
         </div>
       </div>

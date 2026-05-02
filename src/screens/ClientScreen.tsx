@@ -38,6 +38,8 @@ import {
   type SessionExerciseDraft,
 } from '../services/sessionService';
 import { toDayName } from '../services/shared/date';
+import { useHaptic } from '../hooks/useHaptic';
+import { useSoundFeedback } from '../hooks/useSoundFeedback';
 import { useAppStore } from '../store/useAppStore';
 import type {
   ClientAssessment,
@@ -72,6 +74,8 @@ const TABS = [
     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> },
 ];
 
+const TAB_INDEX = Object.fromEntries(TABS.map((tab, index) => [tab.key, index])) as Record<string, number>;
+
 const EMPTY_CLIENT = {
   id: '',
   name: '',
@@ -95,8 +99,12 @@ export default function ClientScreen() {
   const invalidateClientDetail = useAppStore((state) => state.invalidateClientDetail);
   const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
   const setSelectedClientId = useAppStore((state) => state.setSelectedClientId);
+  const haptic = useHaptic();
+  const { playDelete, playSuccess } = useSoundFeedback();
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [previousTab, setPreviousTab] = useState<string | null>(null);
+  const [tabDirection, setTabDirection] = useState<'forward' | 'back'>('forward');
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [overviewNotes, setOverviewNotes] = useState('');
   const [medicationNotes, setMedicationNotes] = useState('');
@@ -231,6 +239,20 @@ export default function ClientScreen() {
     void loadCalendarSessions(newSessionSlot.date);
   }, [loadCalendarSessions, newSessionSlot?.date]);
 
+  useEffect(() => {
+    if (!previousTab) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setPreviousTab(null);
+    }, 280);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [previousTab]);
+
   const handleCompleteSession = useCallback(async (sessionId: string, data: CompleteSessionData) => {
     try {
       await completeSession(sessionId, clientId, {
@@ -238,11 +260,13 @@ export default function ClientScreen() {
         energy: data.energy,
         performanceNotes: data.performanceNotes,
       });
+      playSuccess();
+      haptic.success();
       await refreshPageData();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to complete session.');
     }
-  }, [clientId, refreshPageData]);
+  }, [clientId, haptic, playSuccess, refreshPageData]);
 
   const handleMissSession = useCallback(async (sessionId: string, data: MarkMissedData) => {
     try {
@@ -348,8 +372,156 @@ export default function ClientScreen() {
 
     closeSessionEditor();
     closeCalendar();
+    playSuccess();
+    haptic.success();
     await refreshPageData();
-  }, [clientId, closeCalendar, closeSessionEditor, editingSession, refreshPageData]);
+  }, [clientId, closeCalendar, closeSessionEditor, editingSession, haptic, playSuccess, refreshPageData]);
+
+  const handleTabChange = useCallback((nextTab: string) => {
+    if (nextTab === activeTab) {
+      return;
+    }
+
+    setTabDirection((TAB_INDEX[nextTab] ?? 0) > (TAB_INDEX[activeTab] ?? 0) ? 'forward' : 'back');
+    setPreviousTab(activeTab);
+    setActiveTab(nextTab);
+  }, [activeTab]);
+
+  const renderTabPanel = useCallback((tabKey: string) => {
+    if (tabKey === 'overview') {
+      return (
+        <div className="overview-container">
+          <OverviewSection
+            value={overviewNotes}
+            isEditing={isEditingOverview}
+            onValueChange={setOverviewNotes}
+            onToggleEdit={() => setIsEditingOverview(!isEditingOverview)}
+            onSave={async () => {
+              await updateClientOverview(clientId, overviewNotes);
+              setIsEditingOverview(false);
+              await refreshPageData();
+            }}
+          />
+
+          <RecentActivitySection activities={activities} onRevert={handleRevert} />
+
+          <SessionsSection
+            upcoming={upcomingSessions}
+            pending={pendingSessions}
+            onCompleteSession={handleCompleteSession}
+            onMissSession={handleMissSession}
+            onPostponeSession={(sessionId) => {
+              const session = allSessions.find((item) => item.id === sessionId);
+              if (!session) {
+                return;
+              }
+              setEditingSession(session);
+              setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
+              setPostponeMode(true);
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (tabKey === 'analytics') {
+      return <AnalyticsSection clientId={clientId} />;
+    }
+
+    if (tabKey === 'plans') {
+      return (
+        <div className="plans-container">
+          <WorkoutPlanSection
+            clientId={clientId}
+            plans={workoutPlans}
+            sessions={upcomingSessions.concat(pendingSessions)}
+            exercises={exercises}
+            onOpenCalendar={openCalendar}
+            onEditSession={(session) => {
+              setEditingSession(session);
+              setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
+              setPostponeMode(false);
+            }}
+            onPlansChange={refreshPageData}
+          />
+        </div>
+      );
+    }
+
+    if (tabKey === 'health') {
+      return (
+        <div className="health-container">
+          <MedicationSection
+            value={medicationNotes}
+            isEditing={isEditingMed}
+            onValueChange={setMedicationNotes}
+            onToggleEdit={() => setIsEditingMed(!isEditingMed)}
+            onSave={async () => {
+              await updateClient(clientId, {
+                profile: {
+                  medications: medicationNotes,
+                },
+              });
+              setIsEditingMed(false);
+              await refreshPageData();
+            }}
+          />
+
+          <DietPlanSection
+            dietPlans={dietPlans}
+            isEditing={isEditingDiet}
+            onToggleEdit={() => setIsEditingDiet(!isEditingDiet)}
+            onSavePlan={async (planData) => {
+              await saveDietPlan(clientId, planData, dietPlans[0]?.id);
+              setIsEditingDiet(false);
+              await refreshPageData();
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <ProfileSection
+        data={{
+          client: clientData,
+          profile: profileData,
+          lifestyle: lifestyleData,
+          assessment: assessmentData,
+        }}
+        onEditSection={(section) => {
+          setUpdateModalStep(section);
+          setIsUpdateModalVisible(true);
+        }}
+        onDeleteClient={() => setDeleteClientVisible(true)}
+      />
+    );
+  }, [
+    activities,
+    allSessions,
+    assessmentData,
+    clientData,
+    clientId,
+    dietPlans,
+    exercises,
+    handleCompleteSession,
+    handleMissSession,
+    handleRevert,
+    isEditingDiet,
+    isEditingMed,
+    isEditingOverview,
+    lifestyleData,
+    medicationNotes,
+    openCalendar,
+    overviewNotes,
+    pendingSessions,
+    profileData,
+    refreshPageData,
+    upcomingSessions,
+    workoutPlans,
+  ]);
+
+  const visibleTabs = previousTab ? [previousTab, activeTab] : [activeTab];
 
   const plannerSessions = calendarSessions || allSessions.map((session) => ({
     ...session,
@@ -371,111 +543,30 @@ export default function ClientScreen() {
             status={clientData.status}
           />
 
-          <TabBar tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabBar tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
 
           {errorMessage && <div className="client-inline-error">{errorMessage}</div>}
 
-          <div className="tab-content">
-            {activeTab === 'overview' && (
-              <div className="overview-container">
-                <OverviewSection
-                  value={overviewNotes}
-                  isEditing={isEditingOverview}
-                  onValueChange={setOverviewNotes}
-                  onToggleEdit={() => setIsEditingOverview(!isEditingOverview)}
-                  onSave={async () => {
-                    await updateClientOverview(clientId, overviewNotes);
-                    setIsEditingOverview(false);
-                    await refreshPageData();
-                  }}
-                />
+          <div className={`tab-content ${previousTab ? 'tab-content--transitioning' : ''}`}>
+            {visibleTabs.map((tabKey) => {
+              const isExiting = previousTab === tabKey;
 
-                <RecentActivitySection activities={activities} onRevert={handleRevert} />
-
-                <SessionsSection
-                  upcoming={upcomingSessions}
-                  pending={pendingSessions}
-                  onCompleteSession={handleCompleteSession}
-                  onMissSession={handleMissSession}
-                  onPostponeSession={(sessionId) => {
-                    const session = allSessions.find((item) => item.id === sessionId);
-                    if (!session) {
-                      return;
-                    }
-                    setEditingSession(session);
-                    setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
-                    setPostponeMode(true);
-                  }}
-                />
-              </div>
-            )}
-
-            {activeTab === 'analytics' && <AnalyticsSection clientId={clientId} />}
-
-            {activeTab === 'plans' && (
-              <div className="plans-container">
-                <WorkoutPlanSection
-                  clientId={clientId}
-                  plans={workoutPlans}
-                  sessions={upcomingSessions.concat(pendingSessions)}
-                  exercises={exercises}
-                  onOpenCalendar={openCalendar}
-                  onEditSession={(session) => {
-                    setEditingSession(session);
-                    setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
-                    setPostponeMode(false);
-                  }}
-                  onPlansChange={refreshPageData}
-                />
-              </div>
-            )}
-
-            {activeTab === 'health' && (
-              <div className="health-container">
-                <MedicationSection
-                  value={medicationNotes}
-                  isEditing={isEditingMed}
-                  onValueChange={setMedicationNotes}
-                  onToggleEdit={() => setIsEditingMed(!isEditingMed)}
-                  onSave={async () => {
-                    await updateClient(clientId, {
-                      profile: {
-                        medications: medicationNotes,
-                      },
-                    });
-                    setIsEditingMed(false);
-                    await refreshPageData();
-                  }}
-                />
-
-                <DietPlanSection
-                  dietPlans={dietPlans}
-                  isEditing={isEditingDiet}
-                  onToggleEdit={() => setIsEditingDiet(!isEditingDiet)}
-                  onSavePlan={async (planData) => {
-                    await saveDietPlan(clientId, planData, dietPlans[0]?.id);
-                    setIsEditingDiet(false);
-                    await refreshPageData();
-                  }}
-                />
-              </div>
-            )}
-
-            {activeTab === 'profile' && (
-              <ProfileSection
-                data={{
-                  client: clientData,
-                  profile: profileData,
-                  lifestyle: lifestyleData,
-                  assessment: assessmentData,
-                }}
-                onEditSection={(section) => {
-                  setUpdateModalStep(section);
-                  setIsUpdateModalVisible(true);
-                }}
-                onDeleteClient={() => setDeleteClientVisible(true)}
-              />
-            )}
+              return (
+                <div
+                  key={tabKey}
+                  className={[
+                    'tab-pane',
+                    isExiting
+                      ? `tab-pane--${tabDirection}-exit`
+                      : previousTab
+                        ? `tab-pane--${tabDirection}-enter`
+                        : 'tab-pane--current',
+                  ].join(' ')}
+                >
+                  {renderTabPanel(tabKey)}
+                </div>
+              );
+            })}
           </div>
         </div>
       </PageWrapper>
@@ -516,6 +607,8 @@ export default function ClientScreen() {
         }}
         onDeleteSession={async (sessionId) => {
           await deleteSession(sessionId, clientId);
+          playDelete();
+          haptic.error();
           await refreshPageData();
         }}
         onPasteSession={async (date, hour, sourceId) => {
@@ -550,6 +643,8 @@ export default function ClientScreen() {
         postponeMode={postponeMode}
         onDelete={async (sessionId) => {
           await deleteSession(sessionId, clientId);
+          playDelete();
+          haptic.error();
           closeSessionEditor();
           await refreshPageData();
         }}
@@ -564,6 +659,8 @@ export default function ClientScreen() {
         cancelLabel="Cancel"
         onConfirm={async () => {
           await deleteClient(clientId);
+          playDelete();
+          haptic.error();
           setDeleteClientVisible(false);
           invalidateClientDetail(clientId);
           invalidateDashboard();

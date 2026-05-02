@@ -25,6 +25,7 @@ export default function Button({
 }: ButtonProps) {
   const classes = [
     'btn',
+    'pressable',
     `btn--${variant}`,
     `btn--${size}`,
     fullWidth ? 'btn--full' : '',

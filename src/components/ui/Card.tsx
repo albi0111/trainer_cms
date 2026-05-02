@@ -17,11 +17,14 @@ export default function Card({
   className = '',
   onClick,
 }: CardProps) {
+  const isPressable = Boolean(onClick);
+
   const classes = [
     'card',
+    isPressable ? 'pressable' : '',
     `card--pad-${padding}`,
     bordered ? 'card--bordered' : '',
-    onClick ? 'card--clickable' : '',
+    isPressable ? 'card--clickable' : '',
     className,
   ]
     .filter(Boolean)

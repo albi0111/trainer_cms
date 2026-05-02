@@ -6,7 +6,8 @@
 .client-page {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
   background-color: var(--color-bg);
 }
 
@@ -150,6 +151,53 @@
   gap: 16px;
 }
 
+.tab-content {
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-content--transitioning {
+  min-height: 320px;
+}
+
+.tab-pane--current {
+  position: relative;
+}
+
+.tab-pane--forward-enter,
+.tab-pane--back-enter {
+  position: relative;
+  width: 100%;
+  z-index: 2;
+  will-change: transform, opacity, filter;
+}
+
+.tab-pane--forward-exit,
+.tab-pane--back-exit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  z-index: 1;
+  pointer-events: none;
+  will-change: transform, opacity, filter;
+}
+
+.tab-pane--forward-enter {
+  animation: tab-pane-forward-enter 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-pane--forward-exit {
+  animation: tab-pane-forward-exit 180ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.tab-pane--back-enter {
+  animation: tab-pane-back-enter 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-pane--back-exit {
+  animation: tab-pane-back-exit 180ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
 @media (max-width: 900px) {
   .client-content {
     padding-bottom: 28px;
@@ -188,5 +236,57 @@
     padding: 10px 14px;
     gap: 6px;
     font-size: 12px;
+  }
+}
+
+@keyframes tab-pane-forward-enter {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tab-pane-forward-exit {
+  from {
+    opacity: 1;
+    filter: blur(0px) brightness(1);
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(10px) brightness(0.42);
+    transform: translateX(-22px) scale(0.985);
+  }
+}
+
+@keyframes tab-pane-back-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tab-pane-back-exit {
+  from {
+    opacity: 1;
+    filter: blur(0px) brightness(1);
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    filter: blur(10px) brightness(0.42);
+    transform: translateX(22px) scale(0.985);
   }
 }

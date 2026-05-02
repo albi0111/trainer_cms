@@ -31,7 +31,8 @@ export default function OverviewSection({
       onToggleEdit={onToggleEdit}
       onSave={onSave}
       placeholder="Start typing notes..."
-      emptyText="No overview notes yet. Tap Edit to add profile context."
+      emptyText="No overview notes yet. Long press to add profile context."
+      showViewAction={false}
     />
   );
 }

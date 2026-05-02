@@ -1,5 +1,6 @@
 import './TopNavBar.css';
 import { useNavigate } from 'react-router-dom';
+import { useHaptic } from '../../hooks/useHaptic';
 
 interface TopNavBarProps {
   /** Content to render on the left side (e.g. back button) */
@@ -24,11 +25,27 @@ export default function TopNavBar({
   showBack = false,
 }: TopNavBarProps) {
   const navigate = useNavigate();
+  const haptic = useHaptic();
+
+  const handleBack = () => {
+    haptic.light();
+
+    const historyIndex = typeof window !== 'undefined'
+      ? (window.history.state as { idx?: number } | null)?.idx ?? 0
+      : 0;
+
+    if (historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/');
+  };
 
   const leftSlot = leftContent ?? (showBack ? (
     <button
-      className="top-nav__back"
-      onClick={() => navigate('/')}
+      className="top-nav__back pressable"
+      onClick={handleBack}
       aria-label="Go back"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -38,7 +55,7 @@ export default function TopNavBar({
   ) : null);
 
   return (
-    <header className="top-nav">
+    <header className="top-nav app-header">
       <div className="top-nav__slot">{leftSlot}</div>
       {showLogo && (
         <div className="top-nav__logo" aria-label="FIT.PERSONA" role="img">

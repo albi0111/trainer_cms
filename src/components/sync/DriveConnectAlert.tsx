@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import AppAlert from '../shared/AppAlert';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useAppStore } from '../../store/useAppStore';
 
 interface DriveConnectAlertProps {
@@ -16,6 +18,8 @@ export default function DriveConnectAlert({
   const connectDrive = useAppStore((state) => state.connectDrive);
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const haptic = useHaptic();
+  const { playConfirm, playError } = useSoundFeedback();
 
   useEffect(() => {
     if (!visible) {
@@ -29,10 +33,13 @@ export default function DriveConnectAlert({
     setIsConnecting(true);
 
     try {
+      haptic.medium();
       await connectDrive();
+      playConfirm();
       await onConnected?.();
       onClose();
     } catch (error) {
+      playError();
       setErrorMessage(error instanceof Error ? error.message : 'Failed to connect Google Drive.');
       console.error('Failed to connect Google Drive', error);
     } finally {

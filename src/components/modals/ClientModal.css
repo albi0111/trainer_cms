@@ -76,14 +76,17 @@
 .cm-body {
   max-height: 60vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 8px;
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 .cm-step-content {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
 }
 
 /* ── Form Elements ── */
@@ -91,12 +94,22 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .cm-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  min-width: 0;
+}
+
+.cm-form-row--compact {
+  gap: 12px;
+}
+
+.cm-form-group--compact {
+  gap: 6px;
 }
 
 .cm-label {
@@ -106,9 +119,15 @@
   letter-spacing: 0.5px;
 }
 
+.cm-label--compact {
+  letter-spacing: 0.35px;
+}
+
 .cm-input,
 .cm-select,
 .cm-textarea {
+  width: 100%;
+  min-width: 0;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -118,6 +137,11 @@
   font-weight: 600;
   outline: none;
   transition: all var(--transition-fast);
+}
+
+.cm-input--compact {
+  padding: 10px 12px;
+  font-size: 13px;
 }
 
 .cm-input:focus,
@@ -340,4 +364,28 @@
 .cm-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .cm-body {
+    padding-right: 0;
+  }
+
+  .cm-form-row {
+    gap: 12px;
+  }
+
+  .cm-form-row--compact {
+    gap: 10px;
+  }
+
+  .cm-label--compact {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+  }
+
+  .cm-input--compact {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
 }

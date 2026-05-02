@@ -13,6 +13,21 @@
   align-items: center;
 }
 
+.diet-plan-section {
+  min-width: 0;
+}
+
+.diet-plan-section__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.diet-plan-section__save-btn {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
 /* ── Macros Section ──────────────────────────────────────────────────────── */
 .diet-macros-section {
   margin-bottom: 16px;
@@ -27,12 +42,13 @@
 }
 
 .diet-macro-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
 .diet-macro-box {
-  flex: 1;
+  min-width: 0;
   background-color: #1A1A1A;
   padding: 16px 8px;
   border-radius: 12px;
@@ -43,7 +59,7 @@
 }
 
 .diet-macro-input {
-  font-size: 24px;
+  font-size: clamp(18px, 3vw, 24px);
   font-weight: 800;
   padding: 0;
   margin: 0;
@@ -73,6 +89,8 @@
 .diet-grid-scroll {
   overflow-x: auto;
   padding-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .diet-grid-scroll::-webkit-scrollbar {
@@ -80,10 +98,23 @@
 }
 
 .diet-grid-container {
+  --diet-column-width: 112px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: max-content;
   min-width: 100%;
+}
+
+.diet-grid-container--wide {
+  --diet-column-width: 144px;
+}
+
+.diet-grid-container--single-column .diet-input-cell,
+.diet-grid-container--single-column .diet-header-cell {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
 }
 
 .diet-grid-row {
@@ -92,8 +123,13 @@
   gap: 8px;
 }
 
+.diet-grid-row--header {
+  margin-bottom: 4px;
+}
+
 .diet-day-cell {
   width: 60px;
+  min-width: 60px;
   flex-shrink: 0;
   background-color: var(--color-bg-elevated);
   display: flex;
@@ -112,8 +148,9 @@
 }
 
 .diet-input-cell {
-  flex: 1;
-  min-width: 100px;
+  flex: 0 0 var(--diet-column-width);
+  width: var(--diet-column-width);
+  min-width: var(--diet-column-width);
   background-color: #1A1A1A;
   color: #FFF;
   font-size: 13px;
@@ -127,6 +164,10 @@
   transition: border-color var(--transition-fast);
 }
 
+.diet-input-cell--readonly {
+  white-space: pre-wrap;
+}
+
 .diet-input-cell:focus {
   border-color: var(--color-primary);
 }
@@ -137,8 +178,9 @@
 
 /* ── Header Cells ────────────────────────────────────────────────────────── */
 .diet-header-cell {
-  flex: 1;
-  min-width: 100px;
+  flex: 0 0 var(--diet-column-width);
+  width: var(--diet-column-width);
+  min-width: var(--diet-column-width);
   display: flex;
   align-items: center;
   background-color: var(--color-bg-elevated);
@@ -178,4 +220,87 @@
   background-color: transparent;
   border-color: transparent;
   padding: 0;
+}
+
+@media (max-width: 768px) {
+  .diet-plan-section .card__header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .diet-plan-section__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .diet-macro-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diet-grid-scroll {
+    margin: 0 -4px;
+    padding: 0 4px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .diet-plan-section__actions {
+    gap: 6px;
+  }
+
+  .diet-macro-box {
+    padding: 12px 8px;
+    border-radius: 10px;
+  }
+
+  .diet-macro-input {
+    font-size: 20px;
+  }
+
+  .diet-macro-unit {
+    font-size: 10px;
+  }
+
+  .diet-macro-label {
+    font-size: 9px;
+    letter-spacing: 0.4px;
+  }
+
+  .diet-grid-container {
+    --diet-column-width: 132px;
+  }
+
+  .diet-grid-container--wide {
+    --diet-column-width: 148px;
+  }
+
+  .diet-grid-row {
+    gap: 6px;
+  }
+
+  .diet-day-cell {
+    width: 52px;
+    min-width: 52px;
+    padding: 10px 0;
+  }
+
+  .diet-day-text {
+    font-size: 12px;
+  }
+
+  .diet-header-cell,
+  .diet-input-cell {
+    border-radius: 10px;
+  }
+
+  .diet-header-input {
+    font-size: 11px;
+  }
+
+  .diet-input-cell {
+    min-height: 58px;
+    padding: 10px;
+    font-size: 12px;
+  }
 }

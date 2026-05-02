@@ -21,7 +21,7 @@ export default function IconButton({
 }: IconButtonProps) {
   return (
     <button
-      className={`icon-btn icon-btn--${size} icon-btn--${variant} ${className}`}
+      className={`icon-btn pressable icon-btn--${size} icon-btn--${variant} ${className}`}
       aria-label={label}
       title={label}
       {...props}

@@ -5,6 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import './MarkMissedModal.css';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 
 const REASONS = ['sick', 'travel', 'busy', 'no_show', 'other'] as const;
 type Reason = typeof REASONS[number];
@@ -29,9 +31,16 @@ export default function MarkMissedModal({
 }: MarkMissedModalProps) {
   const [reason, setReason] = useState<Reason>('travel');
   const [note, setNote] = useState('');
+  const [noteInvalid, setNoteInvalid] = useState(false);
+  const haptic = useHaptic();
+  const { playError } = useSoundFeedback();
 
   useEffect(() => {
-    if (visible) { setReason('travel'); setNote(''); }
+    if (visible) {
+      setReason('travel');
+      setNote('');
+      setNoteInvalid(false);
+    }
   }, [visible]);
 
   useEffect(() => {
@@ -44,6 +53,16 @@ export default function MarkMissedModal({
   if (!visible) return null;
 
   const canConfirm = reason !== 'other' || note.trim().length > 0;
+  const handleConfirm = () => {
+    if (!canConfirm) {
+      setNoteInvalid(true);
+      playError();
+      return;
+    }
+
+    haptic.medium();
+    onConfirm({ reason, note });
+  };
 
   return (
     <div className="missed-modal__overlay" onClick={onClose}>
@@ -74,16 +93,21 @@ export default function MarkMissedModal({
         {/* Note */}
         <div className="missed-modal__note-label">Note (Required if 'other')</div>
         <textarea
-          className="missed-modal__textarea"
+          className={`missed-modal__textarea ${noteInvalid ? 'input-shake' : ''}`}
           value={note}
-          onChange={e => setNote(e.target.value)}
+          onChange={e => {
+            setNote(e.target.value);
+            if (noteInvalid && e.target.value.trim()) {
+              setNoteInvalid(false);
+            }
+          }}
           placeholder="Add a note..."
         />
 
         {/* Red Confirm */}
         <button
           className="missed-modal__confirm-btn"
-          onClick={() => canConfirm && onConfirm({ reason, note })}
+          onClick={handleConfirm}
           style={!canConfirm ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
         >
           Confirm Missed

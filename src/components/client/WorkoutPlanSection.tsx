@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import './WorkoutPlanSection.css';
 import SectionHeader from '../ui/SectionHeader';
 import Card from '../ui/Card';
@@ -11,6 +11,8 @@ import AppAlert from '../shared/AppAlert';
 
 import { Plan, Session, Exercise } from '../../types';
 import { useLongPress } from '../../hooks/useLongPress';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { createMonthlyPlan, createWeeklyPlan, deletePlan, updatePlan } from '../../services/plan/planService';
 import { toDayName, todayLocalIso } from '../../services/shared/date';
 
@@ -24,6 +26,119 @@ interface WorkoutPlanSectionProps {
   onPlansChange: () => Promise<void>;
 }
 
+interface PlanTitlePressAreaProps {
+  title: string;
+  goal?: string;
+  type?: string;
+  weekCount: number;
+  onLongPress: () => void;
+}
+
+interface DayBlockPressAreaProps {
+  dayName: string;
+  focus?: string;
+  exercises: Exercise[];
+  onLongPress: () => void;
+}
+
+function PlanTitlePressArea({
+  title,
+  goal,
+  type,
+  weekCount,
+  onLongPress,
+}: PlanTitlePressAreaProps) {
+  const { handlers, progress, isHolding } = useLongPress({ onLongPress });
+
+  const titleStyle = useMemo(() => {
+    if (!(progress > 0 || isHolding)) {
+      return undefined;
+    }
+
+    return {
+      transform: `scale(${1 - (progress * 0.028)})`,
+      opacity: 1 - (progress * 0.16),
+      filter: `brightness(${1 - (progress * 0.12)})`,
+    };
+  }, [isHolding, progress]);
+
+  return (
+    <div
+      className={[
+        'plan-card__info',
+        isHolding ? 'plan-card__info--holding' : '',
+      ].filter(Boolean).join(' ')}
+      {...handlers}
+    >
+      <h3 className="plan-card__title" style={titleStyle}>{title}</h3>
+      <div className="plan-card__tags">
+        {goal && <Tag variant="yellow">{goal}</Tag>}
+        {type && <Tag variant="gray">{type}</Tag>}
+        {type === 'monthly' && <Tag variant="gray">{weekCount} Weeks</Tag>}
+      </div>
+    </div>
+  );
+}
+
+function DayBlockPressArea({
+  dayName,
+  focus,
+  exercises,
+  onLongPress,
+}: DayBlockPressAreaProps) {
+  const { handlers, progress, isHolding } = useLongPress({ onLongPress });
+
+  const style = useMemo(() => {
+    if (!(progress > 0 || isHolding)) {
+      return undefined;
+    }
+
+    const borderOpacity = 0.18 + (progress * 0.34);
+    const glowOpacity = 0.08 + (progress * 0.12);
+
+    return {
+      transform: `scale(${1 - (progress * 0.014)})`,
+      borderColor: `rgba(255, 215, 0, ${borderOpacity})`,
+      boxShadow: `0 0 0 ${1.5 * progress}px rgba(255, 215, 0, ${glowOpacity}), 0 0 18px ${3 * progress}px rgba(255, 215, 0, ${glowOpacity * 0.75})`,
+      backgroundColor: `rgba(16, 16, 16, ${1 - (progress * 0.08)})`,
+    };
+  }, [isHolding, progress]);
+
+  return (
+    <div
+      className={[
+        'day-block',
+        isHolding ? 'day-block--holding' : '',
+      ].filter(Boolean).join(' ')}
+      style={style}
+      {...handlers}
+    >
+      <div className="day-block__header">
+        <span className="day-block__dot"></span>
+        <span className="day-block__name">{dayName}</span>
+        {focus ? <span className="day-block__focus">{focus}</span> : null}
+      </div>
+
+      <div className="day-block__exercises">
+        {exercises.map((exercise) => (
+          <div key={exercise.id} className="exercise-card">
+            <div className="exercise-card__info">
+              <span className="exercise-card__name">{exercise.name}</span>
+            </div>
+            <div className="exercise-card__value-pill">
+              <span className="exercise-card__value">
+                {exercise.target_sets && exercise.target_reps
+                  ? `${exercise.target_sets}x${exercise.target_reps}`
+                  : (exercise.target_reps || exercise.target_sets)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WorkoutPlanSection({
   clientId,
   plans,
@@ -34,8 +149,8 @@ export default function WorkoutPlanSection({
   onPlansChange,
 }: WorkoutPlanSectionProps) {
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
-  const sessionLongPress = useLongPress();
-  const planLongPress = useLongPress();
+  const haptic = useHaptic();
+  const { playDelete } = useSoundFeedback();
   
   // Modal states
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
@@ -80,32 +195,13 @@ export default function WorkoutPlanSection({
                   const dayName = toDayName(session.date);
 
                   return (
-                    <div 
+                    <DayBlockPressArea
                       key={session.id} 
-                      className="day-block"
-                      {...sessionLongPress.getLongPressHandlers(() => onEditSession(session))}
-                    >
-                      <div className="day-block__header">
-                        <span className="day-block__dot"></span>
-                        <span className="day-block__name">{dayName.toUpperCase()}</span>
-                        {session.focus && <span className="day-block__focus">{session.focus}</span>}
-                      </div>
-                      
-                      <div className="day-block__exercises">
-                        {sessionExercises.map(ex => (
-                          <div key={ex.id} className="exercise-card">
-                            <div className="exercise-card__info">
-                              <span className="exercise-card__name">{ex.name}</span>
-                            </div>
-                            <div className="exercise-card__value-pill">
-                              <span className="exercise-card__value">
-                                {ex.target_sets && ex.target_reps ? `${ex.target_sets}x${ex.target_reps}` : (ex.target_reps || ex.target_sets)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                      dayName={dayName.toUpperCase()}
+                      focus={session.focus}
+                      exercises={sessionExercises}
+                      onLongPress={() => onEditSession(session)}
+                    />
                   );
                 })}
               </div>
@@ -137,18 +233,13 @@ export default function WorkoutPlanSection({
             return (
               <Card key={plan.id} padding="md" className="plan-card">
                 <div className="plan-card__header">
-                  <div 
-                    className="plan-card__info"
-                    {...planLongPress.getLongPressHandlers(() => setEditingPlan(plan))}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <h3 className="plan-card__title">{plan.title}</h3>
-                    <div className="plan-card__tags">
-                      {plan.goal && <Tag variant="yellow">{plan.goal}</Tag>}
-                      {plan.type && <Tag variant="gray">{plan.type}</Tag>}
-                      {plan.type === 'monthly' && <Tag variant="gray">{childWeeks.length} Weeks</Tag>}
-                    </div>
-                  </div>
+                  <PlanTitlePressArea
+                    title={plan.title}
+                    goal={plan.goal}
+                    type={plan.type}
+                    weekCount={childWeeks.length}
+                    onLongPress={() => setEditingPlan(plan)}
+                  />
                   <div className="plan-card__actions">
                     {plan.type === 'weekly' && (
                       <div className="planning-pill" onClick={() => onOpenCalendar(plan)} style={{ marginRight: '8px' }}>
@@ -203,7 +294,6 @@ export default function WorkoutPlanSection({
         visible={isAddPlanModalOpen}
         onClose={() => setIsAddPlanModalOpen(false)}
         onSave={async (data) => {
-          setIsAddPlanModalOpen(false);
           const startDate = todayLocalIso();
           
           if (data.type === 'monthly') {
@@ -224,7 +314,6 @@ export default function WorkoutPlanSection({
         onSave={async (id: string, data: { title: string, goal: string }) => {
           await updatePlan(id, clientId, data);
           await onPlansChange();
-          setEditingPlan(null);
         }}
       />
       {/* Delete Plan Alert */}
@@ -237,6 +326,8 @@ export default function WorkoutPlanSection({
         onConfirm={async () => {
           if (planToDelete) {
             await deletePlan(planToDelete.id, clientId);
+            playDelete();
+            haptic.error();
             setPlanToDelete(null);
             await onPlansChange();
           }

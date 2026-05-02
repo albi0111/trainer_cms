@@ -3,10 +3,13 @@
 // Reference: /reference/components/shared/RichTextSection.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './RichTextSection.css';
 import Card from './Card';
 import IconButton from './IconButton';
+import LongPressCard from '../LongPressCard';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 
 interface RichTextSectionProps {
   title: string;
@@ -15,9 +18,10 @@ interface RichTextSectionProps {
   value: string;
   onChange: (val: string) => void;
   onToggleEdit: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
   placeholder?: string;
   emptyText?: string;
+  showViewAction?: boolean;
 }
 
 export default function RichTextSection({
@@ -30,13 +34,21 @@ export default function RichTextSection({
   onSave,
   placeholder = 'Start typing...',
   emptyText = 'No content yet.',
+  showViewAction = true,
 }: RichTextSectionProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const { playConfirm, playError } = useSoundFeedback();
+  const haptic = useHaptic();
 
   const editIcon = (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
       <path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+
+  const spinnerIcon = (
+    <span className="rich-text-section__spinner" aria-hidden="true" />
   );
 
   const saveIcon = (
@@ -72,6 +84,23 @@ export default function RichTextSection({
     }
   };
 
+  const handleSave = async () => {
+    haptic.medium();
+    setSaveState('saving');
+
+    try {
+      await onSave();
+      playConfirm();
+      setSaveState('saved');
+      window.setTimeout(() => {
+        setSaveState('idle');
+      }, 1500);
+    } catch {
+      playError();
+      setSaveState('idle');
+    }
+  };
+
   const onInput = (e: React.FormEvent<HTMLDivElement>) => {
     onChange(e.currentTarget.innerHTML);
   };
@@ -89,17 +118,21 @@ export default function RichTextSection({
     return html;
   };
 
-  return (
-    <Card padding="md" className="rich-text-section">
+  const content = (
+    <>
       <div className="card__header">
         <div className="card__header-left">
           <span className="card__header-icon">{icon}</span>
           <span className="card__header-title">{title}</span>
         </div>
-        <IconButton
-          icon={isEditing ? saveIcon : editIcon}
-          onClick={isEditing ? onSave : onToggleEdit}
-        />
+        {(isEditing || showViewAction) ? (
+          <IconButton
+            icon={isEditing ? (saveState === 'saving' ? spinnerIcon : saveState === 'saved' ? saveIcon : saveIcon) : editIcon}
+            onClick={isEditing ? () => void handleSave() : onToggleEdit}
+            disabled={saveState === 'saving'}
+            label={isEditing ? (saveState === 'saved' ? 'Saved' : 'Save') : 'Edit'}
+          />
+        ) : null}
       </div>
 
       {isEditing ? (
@@ -161,6 +194,20 @@ export default function RichTextSection({
            dangerouslySetInnerHTML={{ __html: renderValue() }}
         />
       )}
-    </Card>
+    </>
+  );
+
+  if (isEditing) {
+    return (
+      <Card padding="md" className="rich-text-section">
+        {content}
+      </Card>
+    );
+  }
+
+  return (
+    <LongPressCard onLongPress={onToggleEdit} className="card card--pad-md rich-text-section">
+      {content}
+    </LongPressCard>
   );
 }

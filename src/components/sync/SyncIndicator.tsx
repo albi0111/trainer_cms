@@ -1,4 +1,3 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -12,7 +11,7 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
   const syncStatus = useAppStore((state) => state.syncStatus);
   const pendingSyncCount = useAppStore((state) => state.pendingSyncCount);
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
-  const { startLongPress, handlePointerMove, cancelLongPress, consumeLongPress } = useLongPress();
+  const { cancelLongPress, consumeLongPress, getLongPressHandlers } = useLongPress();
 
   const hasError = syncStatus === 'error' || !isConnectedToDrive;
   const color = hasError
@@ -29,18 +28,6 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
         ? `${pendingSyncCount} Pending`
         : 'Synced';
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!onLongPress) {
-      return;
-    }
-
-    startLongPress(onLongPress, event);
-  };
-
-  const handlePointerEnd = () => {
-    cancelLongPress();
-  };
-
   const handleClick = () => {
     if (consumeLongPress()) {
       return;
@@ -49,15 +36,19 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
     onClick?.();
   };
 
+  const longPressHandlers = onLongPress ? getLongPressHandlers(onLongPress) : undefined;
+
   return (
     <button
       type="button"
+      className="pressable"
       onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerLeave={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
+      onTouchStart={longPressHandlers?.onTouchStart}
+      onTouchEnd={longPressHandlers?.onTouchEnd}
+      onTouchCancel={longPressHandlers?.onTouchCancel}
+      onMouseDown={longPressHandlers?.onMouseDown}
+      onMouseUp={longPressHandlers?.onMouseUp}
+      onMouseLeave={cancelLongPress}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

@@ -1,17 +1,29 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import './ScheduleCalendarModal.css';
+import { useHaptic } from '../../hooks/useHaptic';
+import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+
+type EditablePlan = {
+  id: string;
+  title: string;
+  goal: string;
+};
 
 interface EditPlanModalProps {
   visible: boolean;
   onClose: () => void;
-  plan: any;
-  onSave: (id: string, data: { title: string, goal: string }) => void;
+  plan: EditablePlan | null;
+  onSave: (id: string, data: { title: string, goal: string }) => Promise<void> | void;
 }
 
 export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPlanModalProps) {
   const [title, setTitle] = useState('');
   const [goal, setGoal] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [titleInvalid, setTitleInvalid] = useState(false);
+  const haptic = useHaptic();
+  const { playConfirm, playError } = useSoundFeedback();
 
   useEffect(() => {
     if (plan) {
@@ -19,6 +31,43 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
       setGoal(plan.goal || '');
     }
   }, [plan]);
+
+  useEffect(() => {
+    if (!visible) {
+      setSaveState('idle');
+      setTitleInvalid(false);
+    }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!plan) {
+      return;
+    }
+
+    haptic.medium();
+
+    if (!title.trim()) {
+      setTitleInvalid(true);
+      playError();
+      return;
+    }
+
+    setTitleInvalid(false);
+    setSaveState('saving');
+
+    try {
+      await onSave(plan.id, { title, goal });
+      playConfirm();
+      setSaveState('saved');
+      window.setTimeout(() => {
+        setSaveState('idle');
+        onClose();
+      }, 1500);
+    } catch {
+      playError();
+      setSaveState('idle');
+    }
+  };
 
   if (!visible || !plan) return null;
 
@@ -39,9 +88,14 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
             <label className="uc-label">Title</label>
             <input 
               type="text" 
-              className="uc-input" 
+              className={`uc-input ${titleInvalid ? 'input-shake' : ''}`}
               value={title} 
-              onChange={e => setTitle(e.target.value)} 
+              onChange={e => {
+                setTitle(e.target.value);
+                if (titleInvalid && e.target.value.trim()) {
+                  setTitleInvalid(false);
+                }
+              }}
               placeholder="Plan Title"
             />
           </div>
@@ -62,14 +116,10 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
           <button 
             className="uc-btn uc-btn--yellow" 
             style={{ width: '100%' }}
-            onClick={() => {
-              if (title.trim()) {
-                onSave(plan.id, { title, goal });
-                onClose();
-              }
-            }}
+            onClick={() => void handleSave()}
+            disabled={saveState === 'saving'}
           >
-            Save Changes
+            {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved ✓' : 'Save Changes'}
           </button>
         </div>
       </div>

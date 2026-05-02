@@ -10,7 +10,7 @@
   justify-content: space-between;
   gap: var(--space-md);
   padding:
-    var(--top-nav-block)
+    max(var(--top-nav-block), env(safe-area-inset-top))
     calc(var(--top-nav-inline) + env(safe-area-inset-right))
     var(--top-nav-block)
     calc(var(--top-nav-inline) + env(safe-area-inset-left));

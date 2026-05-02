@@ -34,7 +34,8 @@ export default function MedicationSection({
       onToggleEdit={onToggleEdit}
       onSave={onSave}
       placeholder="List medications and supplements..."
-      emptyText="No medications tracked yet. Tap Edit to add medication notes."
+      emptyText="No medications tracked yet. Long press to add medication notes."
+      showViewAction={false}
     />
   );
 }

@@ -1,0 +1,20 @@
+.long-press-card {
+  position: relative;
+  isolation: isolate;
+  transform-origin: center;
+  transition:
+    border-color 160ms ease,
+    box-shadow 180ms ease,
+    transform 120ms ease,
+    background-color 180ms ease;
+  will-change: transform, box-shadow, border-color;
+}
+
+.long-press-card__overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(255, 215, 0, var(--long-press-overlay-opacity, 0));
+  transition: background-color 160ms ease;
+}

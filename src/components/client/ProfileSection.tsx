@@ -1,6 +1,6 @@
 import './ProfileSection.css';
 import { ASSESSMENT_EXERCISES, FLEXIBILITY_LABELS } from '../../constants/assessment';
-import { useLongPress } from '../../hooks/useLongPress';
+import LongPressCard from '../LongPressCard';
 import type {
   ClientAssessment,
   ClientLifestyle,
@@ -33,8 +33,6 @@ interface ProfileSectionProps {
 }
 
 export default function ProfileSection({ data, onEditSection, onDeleteClient }: ProfileSectionProps) {
-  const { getLongPressHandlers } = useLongPress();
-
   if (!data) return <div className="profile-loading">Loading...</div>;
 
   const { client, profile, lifestyle, assessment } = data;
@@ -109,9 +107,9 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
   return (
     <div className="profile-section">
       {/* PERSONAL INFO */}
-      <section 
+      <LongPressCard
         className="profile-block"
-        {...getLongPressHandlers(() => onEditSection('personal'))}
+        onLongPress={() => onEditSection('personal')}
       >
         {renderSectionHeader('PERSONAL INFO', personalIcon)}
         <div className="profile-info-grid">
@@ -120,12 +118,12 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
           {renderInfoItem('PHONE', client?.phone)}
           {renderInfoItem('EMAIL', client?.email)}
         </div>
-      </section>
+      </LongPressCard>
 
       {/* INTERVIEW */}
-      <section 
+      <LongPressCard
         className="profile-block"
-        {...getLongPressHandlers(() => onEditSection('interview'))}
+        onLongPress={() => onEditSection('interview')}
       >
         {renderSectionHeader('INTERVIEW', interviewIcon)}
         <div className="profile-block__content" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -133,12 +131,12 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
           {renderInfoItem('INJURIES / CONDITIONS', profile?.medical_notes)}
           {renderInfoItem('LIFESTYLE', lifestyle?.notes)}
         </div>
-      </section>
+      </LongPressCard>
 
       {/* ASSESSMENT */}
-      <section 
+      <LongPressCard
         className="profile-block"
-        {...getLongPressHandlers(() => onEditSection('assessment'))}
+        onLongPress={() => onEditSection('assessment')}
       >
         {renderSectionHeader('ASSESSMENT', assessmentIcon)}
         <div className="profile-info-grid" style={{ marginBottom: 20 }}>
@@ -221,7 +219,7 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
             ))}
           </div>
         </div>
-      </section>
+      </LongPressCard>
 
 
       {/* DANGER ZONE */}

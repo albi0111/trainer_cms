@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import './CompleteSessionModal.css';
+import { useHaptic } from '../../hooks/useHaptic';
 
 export interface CompleteSessionData {
   difficulty: number;
@@ -28,6 +29,7 @@ export default function CompleteSessionModal({
   const [difficulty, setDifficulty] = useState('1');
   const [energy, setEnergy] = useState('3');
   const [notes, setNotes] = useState('');
+  const haptic = useHaptic();
 
   // Reset on open
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function CompleteSessionModal({
   if (!visible) return null;
 
   const handleConfirm = () => {
+    haptic.medium();
     onConfirm({
       difficulty: Math.min(10, Math.max(1, parseInt(difficulty) || 1)),
       energy: Math.min(10, Math.max(1, parseInt(energy) || 1)),

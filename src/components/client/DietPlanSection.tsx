@@ -1,12 +1,8 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// DietPlanSection — Grid-based weekly meal planner with macros
-// Reference: /reference/components/client/DietPlanSection.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useState, useEffect } from 'react';
 import './DietPlanSection.css';
 import Card from '../ui/Card';
 import IconButton from '../ui/IconButton';
+import LongPressCard from '../LongPressCard';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -27,6 +23,88 @@ interface DietPlan {
   meals?: DietMeal[];
 }
 
+type MacroKey = 'calories' | 'protein_g' | 'carbs_g' | 'fats_g';
+
+type DietMacros = Record<MacroKey, string>;
+
+const DEFAULT_MACROS: DietMacros = {
+  calories: '',
+  protein_g: '',
+  carbs_g: '',
+  fats_g: '',
+};
+
+const MACRO_CONFIG: Array<{ key: MacroKey; l: string; ul: string; c: string }> = [
+  { key: 'calories', l: 'kcal', ul: 'CALORIES', c: '#FFE66D' },
+  { key: 'protein_g', l: 'g', ul: 'PROTEIN', c: '#FF6B6B' },
+  { key: 'carbs_g', l: 'g', ul: 'CARBS', c: '#4ECDC4' },
+  { key: 'fats_g', l: 'g', ul: 'FAT', c: '#FFE66D' },
+];
+
+function createEmptyGrid() {
+  return DAYS.map(() => ['']);
+}
+
+function buildDietState(plan?: DietPlan) {
+  if (!plan) {
+    return {
+      grid: createEmptyGrid(),
+      headers: ['Meal 1'],
+      macros: { ...DEFAULT_MACROS },
+    };
+  }
+
+  const macros: DietMacros = {
+    calories: plan.calories?.toString() ?? '',
+    protein_g: plan.protein_g?.toString() ?? '',
+    carbs_g: plan.carbs_g?.toString() ?? '',
+    fats_g: plan.fats_g?.toString() ?? '',
+  };
+
+  if (!plan.meals?.length) {
+    return {
+      grid: createEmptyGrid(),
+      headers: ['Meal 1'],
+      macros,
+    };
+  }
+
+  const grid = createEmptyGrid();
+  let headers = ['Meal 1'];
+  let hasHeaders = false;
+
+  plan.meals.forEach((meal) => {
+    if (meal.name === 'headers') {
+      try {
+        headers = JSON.parse(meal.foods) as string[];
+        hasHeaders = true;
+      } catch {
+        headers = ['Meal 1'];
+      }
+      return;
+    }
+
+    const dayIndex = DAYS.indexOf(meal.name);
+    if (dayIndex === -1) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(meal.foods) as string[] | string;
+      grid[dayIndex] = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      grid[dayIndex] = [meal.foods];
+    }
+  });
+
+  const columnCount = grid[0]?.length ?? 1;
+  if (!hasHeaders || headers.length !== columnCount) {
+    headers = Array.from({ length: columnCount }, (_, index) => `Meal ${index + 1}`);
+  }
+
+  return { grid, headers, macros };
+}
+
 interface DietPlanSectionProps {
   dietPlans: DietPlan[];
   isEditing?: boolean;
@@ -37,62 +115,17 @@ interface DietPlanSectionProps {
 export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, onSavePlan }: DietPlanSectionProps) {
   const [grid, setGrid] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>(['Meal 1']);
-  const [macros, setMacros] = useState({
-    calories: '',
-    protein_g: '',
-    carbs_g: '',
-    fats_g: '',
-  });
+  const [macros, setMacros] = useState<DietMacros>(DEFAULT_MACROS);
 
-  // Sync with props when not editing
   useEffect(() => {
-    if (isEditing) return;
-
-    if (dietPlans.length > 0) {
-      const plan = dietPlans[0]!;
-      setMacros({
-        calories: plan.calories?.toString() ?? '',
-        protein_g: plan.protein_g?.toString() ?? '',
-        carbs_g: plan.carbs_g?.toString() ?? '',
-        fats_g: plan.fats_g?.toString() ?? '',
-      });
-      if (plan.meals && plan.meals.length > 0) {
-        const loadedGrid = DAYS.map(() => ['']);
-        let loadedHeaders = ['Meal 1'];
-        let hasHeaders = false;
-
-        plan.meals.forEach(m => {
-          if (m.name === 'headers') {
-            try { loadedHeaders = JSON.parse(m.foods); hasHeaders = true; } catch {}
-          } else {
-            const dayIdx = DAYS.indexOf(m.name);
-            if (dayIdx !== -1) {
-              try {
-                const parsed = JSON.parse(m.foods);
-                loadedGrid[dayIdx] = Array.isArray(parsed) ? parsed : [m.foods];
-              } catch {
-                loadedGrid[dayIdx] = [m.foods];
-              }
-            }
-          }
-        });
-
-        const colsCount = loadedGrid[0]!.length;
-        if (!hasHeaders || loadedHeaders.length !== colsCount) {
-          loadedHeaders = Array.from({ length: colsCount }, (_, i) => `Meal ${i + 1}`);
-        }
-
-        setGrid(loadedGrid);
-        setHeaders(loadedHeaders);
-      } else {
-        setGrid(DAYS.map(() => ['']));
-        setHeaders(['Meal 1']);
-      }
-    } else {
-      setGrid(DAYS.map(() => ['']));
-      setHeaders(['Meal 1']);
-      setMacros({ calories: '', protein_g: '', carbs_g: '', fats_g: '' });
+    if (isEditing) {
+      return;
     }
+
+    const { grid: nextGrid, headers: nextHeaders, macros: nextMacros } = buildDietState(dietPlans[0]);
+    setGrid(nextGrid);
+    setHeaders(nextHeaders);
+    setMacros(nextMacros);
   }, [dietPlans, isEditing]);
 
   const handleAddColumn = () => {
@@ -123,7 +156,7 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
     });
   };
 
-  const handleMacroChange = (key: keyof typeof macros, val: string) => {
+  const handleMacroChange = (key: MacroKey, val: string) => {
     setMacros(prev => ({ ...prev, [key]: val }));
   };
 
@@ -146,15 +179,11 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
     });
   };
 
-  const MACRO_CONFIG = [
-    { key: 'calories', l: 'kcal', ul: 'CALORIES', c: '#FFE66D' },
-    { key: 'protein_g', l: 'g', ul: 'PROTEIN', c: '#FF6B6B' },
-    { key: 'carbs_g', l: 'g', ul: 'CARBS', c: '#4ECDC4' },
-    { key: 'fats_g', l: 'g', ul: 'FAT', c: '#FFE66D' },
-  ];
+  const hasWideColumns = headers.length > 2;
+  const hasSingleColumn = headers.length === 1;
 
-  return (
-    <Card padding="md" className="diet-plan-section">
+  const content = (
+    <>
       <div className="card__header">
         <div className="card__header-left">
           <span className="card__header-icon">
@@ -168,7 +197,7 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
           </span>
           <span className="card__header-title">Diet Plan</span>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="diet-plan-section__actions">
           {isEditing ? (
             <>
               <IconButton
@@ -180,16 +209,10 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                 onClick={handleSave}
                 label="Save Changes"
-                style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
+                className="diet-plan-section__save-btn"
               />
             </>
-          ) : (
-            <IconButton
-              icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5L14.5 4.5L5 14H2V11L11.5 1.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              onClick={onToggleEdit}
-              label="Edit Diet Plan"
-            />
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -203,14 +226,14 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                 <input
                   className="diet-macro-input"
                   style={{ color: m.c }}
-                  value={(macros as any)[m.key]}
-                  onChange={(e) => handleMacroChange(m.key as any, e.target.value)}
+                  value={macros[m.key]}
+                  onChange={(e) => handleMacroChange(m.key, e.target.value)}
                   placeholder="—"
                   type="text"
                   inputMode="numeric"
                 />
               ) : (
-                <span className="diet-macro-input" style={{ color: m.c }}>{(macros as any)[m.key] || '—'}</span>
+                <span className="diet-macro-input" style={{ color: m.c }}>{macros[m.key] || '—'}</span>
               )}
               <span className="diet-macro-unit">{m.l}</span>
               <span className="diet-macro-label">{m.ul}</span>
@@ -221,13 +244,15 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
 
       {/* Grid */}
       <div className="diet-grid-scroll">
-        <div className="diet-grid-container">
+        <div
+          className={`diet-grid-container ${hasWideColumns ? 'diet-grid-container--wide' : ''} ${hasSingleColumn ? 'diet-grid-container--single-column' : ''}`.trim()}
+        >
           {/* Headers row (only if multiple columns) */}
           {headers.length > 1 && (
-            <div className="diet-grid-row" style={{ marginBottom: 4 }}>
+            <div className="diet-grid-row diet-grid-row--header">
               <div className="diet-day-cell diet-day-cell--empty" />
               {headers.map((hdr, cIdx) => (
-                <div key={`header-${cIdx}`} className="diet-header-cell" style={{ minWidth: headers.length > 2 ? 140 : 100 }}>
+                <div key={`header-${cIdx}`} className="diet-header-cell">
                   {isEditing ? (
                     <input
                       className="diet-header-input"
@@ -261,13 +286,12 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                   <textarea
                     key={cIdx}
                     className="diet-input-cell"
-                    style={{ minWidth: (grid[rIdx]?.length || 1) > 2 ? 140 : 100 }}
                     value={cell}
                     onChange={(e) => handleCellChange(rIdx, cIdx, e.target.value)}
                     placeholder="Enter meal..."
                   />
                 ) : (
-                  <div key={cIdx} className="diet-input-cell" style={{ minWidth: (grid[rIdx]?.length || 1) > 2 ? 140 : 100, whiteSpace: 'pre-wrap' }}>
+                  <div key={cIdx} className="diet-input-cell diet-input-cell--readonly">
                     {cell}
                   </div>
                 )
@@ -276,6 +300,28 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
           ))}
         </div>
       </div>
-    </Card>
+    </>
+  );
+
+  if (isEditing) {
+    return (
+      <Card padding="md" className="diet-plan-section">
+        {content}
+      </Card>
+    );
+  }
+
+  if (!onToggleEdit) {
+    return (
+      <Card padding="md" className="diet-plan-section">
+        {content}
+      </Card>
+    );
+  }
+
+  return (
+    <LongPressCard onLongPress={onToggleEdit} className="card card--pad-md diet-plan-section">
+      {content}
+    </LongPressCard>
   );
 }

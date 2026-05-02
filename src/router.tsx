@@ -1,5 +1,6 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import AnimatedRouteShell from './components/layout/AnimatedRouteShell';
 
 const DashboardScreen = lazy(() => import('./screens/DashboardScreen'));
 const ClientScreen = lazy(() => import('./screens/ClientScreen'));
@@ -22,19 +23,25 @@ function withSuspense(element: ReactNode) {
 const router = createBrowserRouter([
   {
     path: '/',
-    element: withSuspense(<DashboardScreen />),
-  },
-  {
-    path: '/client/:id',
-    element: withSuspense(<ClientScreen />),
-  },
-  {
-    path: '/schedule',
-    element: withSuspense(<ScheduleScreen />),
-  },
-  {
-    path: '/settings',
-    element: withSuspense(<SettingsScreen />),
+    element: <AnimatedRouteShell />,
+    children: [
+      {
+        index: true,
+        element: withSuspense(<DashboardScreen />),
+      },
+      {
+        path: 'client/:id',
+        element: withSuspense(<ClientScreen />),
+      },
+      {
+        path: 'schedule',
+        element: withSuspense(<ScheduleScreen />),
+      },
+      {
+        path: 'settings',
+        element: withSuspense(<SettingsScreen />),
+      },
+    ],
   },
 ]);
 

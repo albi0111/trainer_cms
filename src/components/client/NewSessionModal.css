@@ -3,9 +3,9 @@
   inset: 0;
   z-index: 1200;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(4px);
   animation: session-modal-fade-in 180ms ease;
@@ -21,7 +21,21 @@
   border-radius: 28px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
   overflow: hidden;
-  animation: session-modal-slide-up 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: session-modal-slide-up 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.session-modal__dialog::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .session-modal__header {
@@ -29,7 +43,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding: 28px 28px 20px;
+  padding: 40px 28px 20px;
   border-bottom: 1px solid #2a2a2a;
 }
 
@@ -401,10 +415,17 @@
 @keyframes session-modal-slide-up {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(100%);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .session-modal__overlay {
+    align-items: center;
+    padding: 24px;
   }
 }
