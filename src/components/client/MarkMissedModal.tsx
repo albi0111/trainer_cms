@@ -32,6 +32,7 @@ export default function MarkMissedModal({
   const [reason, setReason] = useState<Reason>('travel');
   const [note, setNote] = useState('');
   const [noteInvalid, setNoteInvalid] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playError } = useSoundFeedback();
 
@@ -50,7 +51,21 @@ export default function MarkMissedModal({
     return () => window.removeEventListener('keydown', handler);
   }, [visible, onClose]);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const canConfirm = reason !== 'other' || note.trim().length > 0;
   const handleConfirm = () => {
@@ -65,7 +80,12 @@ export default function MarkMissedModal({
   };
 
   return (
-    <div className="missed-modal__overlay" onClick={onClose}>
+    <div
+      className="missed-modal__overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="missed-modal__box" onClick={e => e.stopPropagation()}>
         <div className="missed-modal__header">
           <span className="missed-modal__title">Mark Missed</span>

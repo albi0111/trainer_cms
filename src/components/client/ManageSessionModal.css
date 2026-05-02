@@ -6,18 +6,34 @@
 .manage-modal__overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
   z-index: 200;
   padding: 16px;
-  animation: fadeIn 150ms ease;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 200ms ease-out, visibility 0s linear 200ms;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.manage-modal__overlay[data-state='open'] {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition: opacity 200ms ease-out;
+}
+
+.manage-modal__overlay[data-state='closed'] {
+  opacity: 0;
+  transition: opacity 180ms ease-in, visibility 0s linear 180ms;
+}
+
+.manage-modal__overlay[data-opening='true'] {
+  will-change: backdrop-filter, opacity;
 }
 
 .manage-modal__box {
@@ -26,8 +42,10 @@
   padding: 36px 24px 24px;
   width: 100%;
   max-width: 360px;
-  animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .manage-modal__box::before {
@@ -42,9 +60,13 @@
   transform: translateX(-50%);
 }
 
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.manage-modal__overlay[data-state='open'] .manage-modal__box {
+  transform: translateY(0);
+}
+
+.manage-modal__overlay[data-state='closed'] .manage-modal__box {
+  transform: translateY(100%);
+  transition-duration: 280ms;
 }
 
 @media (min-width: 768px) {

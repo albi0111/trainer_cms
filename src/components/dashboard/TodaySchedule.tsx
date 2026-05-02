@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import './TodaySchedule.css';
 import Avatar from '../ui/Avatar';
 import EmptyState from '../ui/EmptyState';
+import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
 
 interface Session {
   id: string;
@@ -14,7 +16,19 @@ interface TodayScheduleProps {
   sessions: Session[];
 }
 
+let hasPlayedTodayScheduleEntrance = false;
+
 export default function TodaySchedule({ sessions }: TodayScheduleProps) {
+  const entrance = useStaggeredEntrance({
+    itemCount: hasPlayedTodayScheduleEntrance ? 0 : sessions.length,
+  });
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      hasPlayedTodayScheduleEntrance = true;
+    }
+  }, [sessions.length]);
+
   return (
     <div className="today-schedule">
       <div className="today-schedule__header">
@@ -30,17 +44,21 @@ export default function TodaySchedule({ sessions }: TodayScheduleProps) {
         </div>
       ) : (
         <div className="today-schedule__list">
-          {sessions.map((s) => (
-            <div key={s.id} className="schedule-item">
-              <Avatar name={s.client_name} size="md" />
-              <div className="schedule-item__info">
-                <h4 className="schedule-item__name">{s.client_name}</h4>
-                <p className="schedule-item__meta">
-                  {s.start_time || '--:--'} · {s.focus} · {s.duration_minutes || 60}min
-                </p>
+          {sessions.map((s, index) => {
+            const itemProps = entrance.getItemProps(index);
+
+            return (
+              <div key={s.id} className={`schedule-item ${itemProps.className}`} style={itemProps.style}>
+                <Avatar name={s.client_name} size="md" />
+                <div className="schedule-item__info">
+                  <h4 className="schedule-item__name">{s.client_name}</h4>
+                  <p className="schedule-item__meta">
+                    {s.start_time || '--:--'} · {s.focus} · {s.duration_minutes || 60}min
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -39,6 +39,7 @@ export default function ManageMetricsModal({
   const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playConfirm, playDelete, playError } = useSoundFeedback();
 
@@ -53,6 +54,22 @@ export default function ManageMetricsModal({
       setSaveState('idle');
     }
   }, [isEditing, visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const fetchConfigs = async () => {
     setLoading(true);
@@ -137,15 +154,18 @@ export default function ManageMetricsModal({
     }
   };
 
-  if (!visible) return null;
-
   const bodyConfigs = configs.filter(c => c.category === 'body');
   const perfConfigs = configs.filter(c => c.category === 'performance');
   const bodyAvailable = availableMetrics.filter(m => m.category === 'body');
   const perfAvailable = availableMetrics.filter(m => m.category === 'performance');
 
   return (
-    <div className="manage-metrics-overlay" onClick={onClose}>
+    <div
+      className="manage-metrics-overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="manage-metrics-container" onClick={e => e.stopPropagation()}>
         <div className="manage-metrics-header">
           <h2>{isEditing ? (editingConfig.updated_at ? 'EDIT METRIC' : 'CREATE METRIC') : 'MANAGE METRICS'}</h2>

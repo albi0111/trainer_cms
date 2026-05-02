@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './AppAlert.css';
 
@@ -18,6 +19,8 @@ interface AppAlertProps {
   preventClose?: boolean;
   children?: React.ReactNode;
 }
+
+const APP_ALERT_OPENING_MS = 200;
 
 const DEFAULT_ICONS: Record<AppAlertVariant, React.ReactNode> = {
   danger: (
@@ -65,7 +68,7 @@ export default function AppAlert({
   preventClose = false,
   children,
 }: AppAlertProps) {
-  if (!visible) return null;
+  const [isOpening, setIsOpening] = useState(false);
 
   const resolvedIcon = icon || DEFAULT_ICONS[variant];
   const handleCancel = () => {
@@ -75,8 +78,29 @@ export default function AppAlert({
     onCancel();
   };
 
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, APP_ALERT_OPENING_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
+
   return createPortal(
-    <div className="aa-overlay" onClick={handleCancel}>
+    <div
+      className="aa-overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={handleCancel}
+    >
       <div className="aa-modal" onClick={e => e.stopPropagation()}>
         <div className="aa-icon-container">
           <div className={`aa-icon-circle ${variant}`}>

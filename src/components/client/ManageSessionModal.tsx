@@ -22,6 +22,7 @@ export default function ManageSessionModal({
   onMarkMissed,
 }: ManageSessionModalProps) {
   const [loadingComplete, setLoadingComplete] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
 
   useEffect(() => {
     if (!visible) setLoadingComplete(false);
@@ -34,7 +35,21 @@ export default function ManageSessionModal({
     return () => window.removeEventListener('keydown', handler);
   }, [visible, onClose]);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const handleComplete = () => {
     setLoadingComplete(true);
@@ -45,7 +60,12 @@ export default function ManageSessionModal({
   };
 
   return (
-    <div className="manage-modal__overlay" onClick={onClose}>
+    <div
+      className="manage-modal__overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="manage-modal__box" onClick={e => e.stopPropagation()}>
         <div className="manage-modal__header">
           <span className="manage-modal__title">Manage Session</span>

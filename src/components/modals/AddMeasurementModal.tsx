@@ -34,6 +34,7 @@ export default function AddMeasurementModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
 
@@ -43,6 +44,22 @@ export default function AddMeasurementModal({
       loadConfigs();
     }
   }, [visible, clientId]);
+
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const loadConfigs = async () => {
     setLoadingConfigs(true);
@@ -90,12 +107,15 @@ export default function AddMeasurementModal({
     }
   };
 
-  if (!visible) return null;
-
   const filteredConfigs = configs.filter(c => c.category === activeTab);
 
   return (
-    <div className="add-measurement-overlay" onClick={onClose}>
+    <div
+      className="add-measurement-overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="add-measurement-container" onClick={e => e.stopPropagation()}>
         <div className="add-measurement-header">
           <h2>LOG PROGRESS</h2>

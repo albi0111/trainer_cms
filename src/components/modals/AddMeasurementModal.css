@@ -4,13 +4,34 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 200ms ease-out, visibility 0s linear 200ms;
+}
+
+.add-measurement-overlay[data-state='open'] {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition: opacity 200ms ease-out;
+}
+
+.add-measurement-overlay[data-state='closed'] {
+  opacity: 0;
+  transition: opacity 180ms ease-in, visibility 0s linear 180ms;
+}
+
+.add-measurement-overlay[data-opening='true'] {
+  will-change: backdrop-filter, opacity;
 }
 
 .add-measurement-container {
@@ -25,7 +46,17 @@
   box-shadow: 0 20px 40px rgba(0,0,0,0.5);
   overflow: hidden;
   position: relative;
-  animation: add-measurement-slide-up 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.add-measurement-overlay[data-state='open'] .add-measurement-container {
+  transform: translateY(0);
+}
+
+.add-measurement-overlay[data-state='closed'] .add-measurement-container {
+  transform: translateY(100%);
+  transition-duration: 280ms;
 }
 
 .add-measurement-container::before {
@@ -227,17 +258,5 @@
   .add-measurement-overlay {
     align-items: center;
     padding: 24px;
-  }
-}
-
-@keyframes add-measurement-slide-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
   }
 }

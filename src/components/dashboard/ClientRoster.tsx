@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './ClientRoster.css';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
+import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
 import type { ClientStatus } from '../../types';
 import { toClientBadgeStatus } from '../../utils/clientStatus';
 
@@ -19,6 +20,72 @@ interface ClientRosterProps {
   loading: boolean;
   onClientPress: (clientId: string) => void;
   onAddClient: () => void;
+}
+
+let hasPlayedInitialRosterEntrance = false;
+
+function AnimatedClientList({
+  clients,
+  clientDataMap,
+  onClientPress,
+  filterKey,
+}: {
+  clients: Client[];
+  clientDataMap: Record<string, { status: ClientStatus; nextSession: string }>;
+  onClientPress: (clientId: string) => void;
+  filterKey: string;
+}) {
+  const isFilterActive = filterKey.length > 0;
+  const entrance = useStaggeredEntrance({
+    itemCount: isFilterActive
+      ? clients.length
+      : (hasPlayedInitialRosterEntrance ? 0 : clients.length),
+    baseDelay: isFilterActive ? 25 : 40,
+    duration: isFilterActive ? 200 : 350,
+  });
+
+  useEffect(() => {
+    if (!isFilterActive && clients.length > 0) {
+      hasPlayedInitialRosterEntrance = true;
+    }
+  }, [clients.length, isFilterActive]);
+
+  return (
+    <>
+      {clients.map((client, index) => {
+        const state = clientDataMap[client.id] || { status: 'active', nextSession: 'no upcoming sessions' };
+        const itemProps = entrance.getItemProps(index);
+
+        return (
+          <div
+            key={client.id}
+            className={`client-card-item ${itemProps.className}`}
+            style={itemProps.style}
+            onClick={() => onClientPress(client.id)}
+          >
+            <Avatar name={client.name} size="md" variant="dark" />
+            <div className="client-card-item__info">
+              <h4 className="client-card-item__name">{client.name}</h4>
+              <p className="client-card-item__goal">{client.goal || 'General Fitness'}</p>
+              <div className="client-card-item__next">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: state.status === 'active' ? 'var(--color-primary)' : 'var(--color-text-label)' }}>
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span className="client-card-item__next-text">{state.nextSession}</span>
+              </div>
+            </div>
+            <div className="client-card-item__actions">
+              <Badge variant={toClientBadgeStatus(state.status)} />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-text-label)' }}>
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 export default function ClientRoster({
@@ -42,6 +109,7 @@ export default function ClientRoster({
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const filterKey = searchQuery.trim().toLowerCase();
 
   return (
     <div className="client-roster">
@@ -81,35 +149,13 @@ export default function ClientRoster({
           {filtered.length === 0 ? (
             <EmptyState message="No clients found." />
           ) : (
-            filtered.map((client) => {
-              const state = clientDataMap[client.id] || { status: 'active', nextSession: 'no upcoming sessions' };
-              return (
-                <div 
-                  key={client.id} 
-                  className="client-card-item" 
-                  onClick={() => onClientPress(client.id)}
-                >
-                  <Avatar name={client.name} size="md" variant="dark" />
-                  <div className="client-card-item__info">
-                    <h4 className="client-card-item__name">{client.name}</h4>
-                    <p className="client-card-item__goal">{client.goal || 'General Fitness'}</p>
-                    <div className="client-card-item__next">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: state.status === 'active' ? 'var(--color-primary)' : 'var(--color-text-label)' }}>
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                      </svg>
-                      <span className="client-card-item__next-text">{state.nextSession}</span>
-                    </div>
-                  </div>
-                  <div className="client-card-item__actions">
-                    <Badge variant={toClientBadgeStatus(state.status)} />
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--color-text-label)' }}>
-                      <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                  </div>
-                </div>
-              );
-            })
+            <AnimatedClientList
+              key={filterKey || '__default__'}
+              clients={filtered}
+              clientDataMap={clientDataMap}
+              onClientPress={onClientPress}
+              filterKey={filterKey}
+            />
           )}
         </div>
       )}

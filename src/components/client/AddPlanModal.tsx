@@ -16,6 +16,7 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
   const [goal, setGoal] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [titleInvalid, setTitleInvalid] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
 
@@ -24,6 +25,22 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
       setSaveState('idle');
       setTitleInvalid(false);
     }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
   }, [visible]);
 
   const handleSave = async () => {
@@ -54,10 +71,13 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
     }
   };
 
-  if (!visible) return null;
-
   return createPortal(
-    <div className="uc-overlay" onClick={onClose}>
+    <div
+      className="uc-overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="uc-modal" onClick={e => e.stopPropagation()}>
         <div className="uc-header">
           <h2 className="uc-title">Add New Plan</h2>

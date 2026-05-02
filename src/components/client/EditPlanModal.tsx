@@ -18,15 +18,18 @@ interface EditPlanModalProps {
 }
 
 export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPlanModalProps) {
+  const [displayPlan, setDisplayPlan] = useState(plan);
   const [title, setTitle] = useState('');
   const [goal, setGoal] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [titleInvalid, setTitleInvalid] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
 
   useEffect(() => {
     if (plan) {
+      setDisplayPlan(plan);
       setTitle(plan.title || '');
       setGoal(plan.goal || '');
     }
@@ -39,8 +42,24 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
+
   const handleSave = async () => {
-    if (!plan) {
+    if (!displayPlan) {
       return;
     }
 
@@ -56,7 +75,7 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
     setSaveState('saving');
 
     try {
-      await onSave(plan.id, { title, goal });
+      await onSave(displayPlan.id, { title, goal });
       playConfirm();
       setSaveState('saved');
       window.setTimeout(() => {
@@ -69,10 +88,16 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
     }
   };
 
-  if (!visible || !plan) return null;
+  if (!displayPlan) return null;
 
   return createPortal(
-    <div className="uc-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
+    <div
+      className="uc-overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+      style={{ zIndex: 1100 }}
+    >
       <div className="uc-modal" onClick={e => e.stopPropagation()}>
         <div className="uc-header">
           <div>

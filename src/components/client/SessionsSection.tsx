@@ -3,10 +3,11 @@
 // Dots → ManageSessionModal → CompleteSessionModal / MarkMissedModal
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './SessionsSection.css';
 import Card from '../ui/Card';
 import EmptyState from '../ui/EmptyState';
+import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
 import ManageSessionModal from './ManageSessionModal';
 import CompleteSessionModal, { type CompleteSessionData } from './CompleteSessionModal';
 import MarkMissedModal, { type MarkMissedData } from './MarkMissedModal';
@@ -23,6 +24,9 @@ interface SessionsSectionProps {
 
 type ModalState = 'none' | 'manage' | 'complete' | 'missed';
 
+let hasPlayedPendingSessionsEntrance = false;
+let hasPlayedUpcomingSessionsEntrance = false;
+
 export default function SessionsSection({
   upcoming,
   pending,
@@ -34,6 +38,24 @@ export default function SessionsSection({
   const [activeSession, setActiveSession] = useState<Session | null>(null);
 
   const displayedUpcoming = upcoming.slice(0, 3);
+  const pendingEntrance = useStaggeredEntrance({
+    itemCount: hasPlayedPendingSessionsEntrance ? 0 : pending.length,
+  });
+  const upcomingEntrance = useStaggeredEntrance({
+    itemCount: hasPlayedUpcomingSessionsEntrance ? 0 : displayedUpcoming.length,
+  });
+
+  useEffect(() => {
+    if (pending.length > 0) {
+      hasPlayedPendingSessionsEntrance = true;
+    }
+  }, [pending.length]);
+
+  useEffect(() => {
+    if (displayedUpcoming.length > 0) {
+      hasPlayedUpcomingSessionsEntrance = true;
+    }
+  }, [displayedUpcoming.length]);
 
   const dotsIcon = (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -53,31 +75,35 @@ export default function SessionsSection({
     setActiveSession(null);
   };
 
-  const renderItem = (s: Session, isPending: boolean) => (
-    <div
-      key={s.id}
-      className={`session-list-item ${isPending ? 'session-list-item--pending' : ''}`}
-      onClick={() => openManage(s)}
-      style={{ cursor: 'pointer' }}
-    >
-      <div className="session-list-item__content">
-        <div className="session-list-item__top">
-          <span className={`session-list-item__date ${isPending ? 'session-list-item__date--pending' : ''}`}>
-            {s.date}
-          </span>
-          <span className={`session-badge ${isPending ? 'session-badge--pending' : ''}`}>
-            {(s.date ? toDayName(s.date) : s.day_name || 'PENDING').toUpperCase()}
-          </span>
+  const renderItem = (s: Session, isPending: boolean, index: number) => {
+    const itemProps = (isPending ? pendingEntrance : upcomingEntrance).getItemProps(index);
+
+    return (
+      <div
+        key={s.id}
+        className={`session-list-item ${isPending ? 'session-list-item--pending' : ''} ${itemProps.className}`}
+        onClick={() => openManage(s)}
+        style={{ ...itemProps.style, cursor: 'pointer' }}
+      >
+        <div className="session-list-item__content">
+          <div className="session-list-item__top">
+            <span className={`session-list-item__date ${isPending ? 'session-list-item__date--pending' : ''}`}>
+              {s.date}
+            </span>
+            <span className={`session-badge ${isPending ? 'session-badge--pending' : ''}`}>
+              {(s.date ? toDayName(s.date) : s.day_name || 'PENDING').toUpperCase()}
+            </span>
+          </div>
+          <p className={`session-list-item__meta ${isPending ? 'session-list-item__meta--pending' : ''}`}>
+            {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
+          </p>
         </div>
-        <p className={`session-list-item__meta ${isPending ? 'session-list-item__meta--pending' : ''}`}>
-          {s.start_time || '00:00'} - {s.duration_minutes || 60}min - {s.focus || 'No focus'}
-        </p>
+        <button className="session-dots-btn" onClick={e => { e.stopPropagation(); openManage(s); }}>
+          {dotsIcon}
+        </button>
       </div>
-      <button className="session-dots-btn" onClick={e => { e.stopPropagation(); openManage(s); }}>
-        {dotsIcon}
-      </button>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -100,7 +126,7 @@ export default function SessionsSection({
         {pending.length > 0 && (
           <div className="sessions-subset">
             <h4 className="sessions-subset__heading">NEEDS LOGGING</h4>
-            {pending.map(s => renderItem(s, true))}
+            {pending.map((s, index) => renderItem(s, true, index))}
           </div>
         )}
 
@@ -109,7 +135,7 @@ export default function SessionsSection({
           <h4 className="sessions-subset__heading">UPCOMING</h4>
           {upcoming.length === 0
             ? <EmptyState message="No upcoming sessions." />
-            : displayedUpcoming.map(s => renderItem(s, false))}
+            : displayedUpcoming.map((s, index) => renderItem(s, false, index))}
         </div>
       </Card>
 

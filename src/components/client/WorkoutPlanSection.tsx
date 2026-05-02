@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './WorkoutPlanSection.css';
 import SectionHeader from '../ui/SectionHeader';
 import Card from '../ui/Card';
@@ -8,6 +8,7 @@ import EmptyState from '../ui/EmptyState';
 import AddPlanModal from './AddPlanModal';
 import EditPlanModal from './EditPlanModal';
 import AppAlert from '../shared/AppAlert';
+import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
 
 import { Plan, Session, Exercise } from '../../types';
 import { useLongPress } from '../../hooks/useLongPress';
@@ -40,6 +41,8 @@ interface DayBlockPressAreaProps {
   exercises: Exercise[];
   onLongPress: () => void;
 }
+
+let hasPlayedWorkoutPlansEntrance = false;
 
 function PlanTitlePressArea({
   title,
@@ -156,6 +159,16 @@ export default function WorkoutPlanSection({
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [planToDelete, setPlanToDelete] = useState<Plan | null>(null);
+  const topLevelPlans = plans.filter(p => p.type === 'monthly' || (p.type === 'weekly' && !p.parent_plan_id));
+  const planEntrance = useStaggeredEntrance({
+    itemCount: hasPlayedWorkoutPlansEntrance ? 0 : topLevelPlans.length,
+  });
+
+  useEffect(() => {
+    if (topLevelPlans.length > 0) {
+      hasPlayedWorkoutPlansEntrance = true;
+    }
+  }, [topLevelPlans.length]);
 
   const toggleWeek = (id: string) => {
     setExpandedWeeks(prev => 
@@ -228,62 +241,65 @@ export default function WorkoutPlanSection({
         <EmptyState message="No plans active. Tap Add Plan to map a new cycle." />
       ) : (
         <div className="plans-list">
-          {plans.filter(p => p.type === 'monthly' || (p.type === 'weekly' && !p.parent_plan_id)).map(plan => {
+          {topLevelPlans.map((plan, index) => {
             const childWeeks = plans.filter(p => p.parent_plan_id === plan.id).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+            const itemProps = planEntrance.getItemProps(index);
             return (
-              <Card key={plan.id} padding="md" className="plan-card">
-                <div className="plan-card__header">
-                  <PlanTitlePressArea
-                    title={plan.title}
-                    goal={plan.goal}
-                    type={plan.type}
-                    weekCount={childWeeks.length}
-                    onLongPress={() => setEditingPlan(plan)}
-                  />
-                  <div className="plan-card__actions">
-                    {plan.type === 'weekly' && (
-                      <div className="planning-pill" onClick={() => onOpenCalendar(plan)} style={{ marginRight: '8px' }}>
-                        {calendarPencilIcon}
-                      </div>
-                    )}
-                    <IconButton 
-                      icon={trashIcon} 
-                      onClick={() => setPlanToDelete(plan)} 
-                      variant="dark" 
+              <div key={plan.id} className={itemProps.className} style={itemProps.style}>
+                <Card padding="md" className="plan-card">
+                  <div className="plan-card__header">
+                    <PlanTitlePressArea
+                      title={plan.title}
+                      goal={plan.goal}
+                      type={plan.type}
+                      weekCount={childWeeks.length}
+                      onLongPress={() => setEditingPlan(plan)}
                     />
-                  </div>
-                </div>
-
-                {childWeeks.length > 0 && (
-                  <div className="plan-card__divider" />
-                )}
-
-                {plan.type === 'weekly' && (
-                  <div className="standalone-week-content">
-                    <div className="plan-card__divider" />
-                    {renderWeekBreakdown(plan)}
-                  </div>
-                )}
-
-                <div className="weeks-list">
-                  {childWeeks.map((week) => (
-                    <div key={week.id} className="week-item">
-                      <div className="week-item__header">
-                        <div className="week-item__title-row">
-                          <span className="week-badge">{week.title.toUpperCase()}</span>
-                          {week.goal && <span className="week-goal">{week.goal.toUpperCase()}</span>}
+                    <div className="plan-card__actions">
+                      {plan.type === 'weekly' && (
+                        <div className="planning-pill" onClick={() => onOpenCalendar(plan)} style={{ marginRight: '8px' }}>
+                          {calendarPencilIcon}
                         </div>
-                        <div className="week-item__actions">
-                          <div className="planning-pill" onClick={() => onOpenCalendar(week)}>
-                            {calendarPencilIcon}
+                      )}
+                      <IconButton 
+                        icon={trashIcon} 
+                        onClick={() => setPlanToDelete(plan)} 
+                        variant="dark" 
+                      />
+                    </div>
+                  </div>
+
+                  {childWeeks.length > 0 && (
+                    <div className="plan-card__divider" />
+                  )}
+
+                  {plan.type === 'weekly' && (
+                    <div className="standalone-week-content">
+                      <div className="plan-card__divider" />
+                      {renderWeekBreakdown(plan)}
+                    </div>
+                  )}
+
+                  <div className="weeks-list">
+                    {childWeeks.map((week) => (
+                      <div key={week.id} className="week-item">
+                        <div className="week-item__header">
+                          <div className="week-item__title-row">
+                            <span className="week-badge">{week.title.toUpperCase()}</span>
+                            {week.goal && <span className="week-goal">{week.goal.toUpperCase()}</span>}
+                          </div>
+                          <div className="week-item__actions">
+                            <div className="planning-pill" onClick={() => onOpenCalendar(week)}>
+                              {calendarPencilIcon}
+                            </div>
                           </div>
                         </div>
+                        {renderWeekBreakdown(week)}
                       </div>
-                      {renderWeekBreakdown(week)}
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             );
           })}
         </div>

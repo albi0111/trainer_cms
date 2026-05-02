@@ -61,6 +61,7 @@ export default function NewSessionModal({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [timeInvalid, setTimeInvalid] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
   const { playError } = useSoundFeedback();
 
@@ -114,7 +115,21 @@ export default function NewSessionModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [visible, onClose]);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const modalTitle = postponeMode
     ? 'Postpone Session'
@@ -190,7 +205,12 @@ export default function NewSessionModal({
   };
 
   return createPortal(
-    <div className="session-modal__overlay" onClick={onClose}>
+    <div
+      className="session-modal__overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="session-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="session-modal__header">
           <div className="session-modal__title-group">

@@ -35,6 +35,17 @@
   font-weight: var(--font-weight-extrabold);
   color: var(--color-text);
   line-height: 40px;
+  transform-origin: center;
+  transition: opacity 200ms ease;
+}
+
+.stat-value--counting {
+  opacity: 0.7;
+}
+
+.stat-value--complete {
+  opacity: 1;
+  animation: stat-value-pulse 200ms ease-out;
 }
 
 .stat-sub {
@@ -60,5 +71,25 @@
 
   .stat-sub {
     font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-value--complete {
+    animation: none;
+  }
+}
+
+@keyframes stat-value-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }

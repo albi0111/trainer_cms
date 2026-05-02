@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './DatePicker.css';
 import IconButton from './IconButton';
 import Button from './Button';
@@ -10,6 +11,8 @@ interface DatePickerProps {
   error?: string;
 }
 
+const PICKER_OPENING_MS = 200;
+
 const YEARS = Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - 2 + i).toString());
 const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
 
@@ -17,6 +20,7 @@ const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0)
 
 export default function DatePicker({ value, onChange, label, error }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const [selectedYear, setYear] = useState('');
   const [selectedMonth, setMonth] = useState('');
   const [selectedDay, setDay] = useState('');
@@ -31,6 +35,22 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
       setDay(safeDate.getDate().toString().padStart(2, '0'));
     }
   }, [isOpen, value]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, PICKER_OPENING_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [isOpen]);
 
   const daysInMonth = getDaysInMonth(parseInt(selectedYear || '2024'), parseInt(selectedMonth || '01'));
   const DAYS = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString().padStart(2, '0'));
@@ -80,9 +100,14 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
       </button>
       {error && <span className="field__error">{error}</span>}
 
-      {isOpen && (
-        <div className="picker-overlay">
-          <div className="picker-modal">
+      {typeof document !== 'undefined' && createPortal(
+        <div
+          className="picker-overlay"
+          data-state={isOpen ? 'open' : 'closed'}
+          data-opening={isOpening ? 'true' : 'false'}
+          onClick={() => setIsOpen(false)}
+        >
+          <div className="picker-modal" onClick={(event) => event.stopPropagation()}>
             <div className="picker-modal__header">
               <h3 className="picker-modal__title">Select Date</h3>
               <IconButton icon={closeIcon} onClick={() => setIsOpen(false)} variant="dark" />
@@ -113,7 +138,8 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
               Confirm
             </Button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

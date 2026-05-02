@@ -13,6 +13,9 @@ interface AnalyticsSectionProps {
 type DeltaMode = 'previous' | 'initial';
 type PillStyle = { width: number; x: number; ready: boolean };
 
+const CHART_MODAL_OPENING_MS = 200;
+const CHART_MODAL_CLOSING_MS = 280;
+
 export default function AnalyticsSection({
   clientId
 }: AnalyticsSectionProps) {
@@ -27,8 +30,12 @@ export default function AnalyticsSection({
   const [performanceView, setPerformanceView] = useState<'bar' | 'radar'>('bar');
   const [selectedBodyMetric, setSelectedBodyMetric] = useState<string>('weight_kg');
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
+  const [isChartModalPresent, setIsChartModalPresent] = useState(false);
+  const [isChartModalOpening, setIsChartModalOpening] = useState(false);
   const [isLogProgressOpen, setIsLogProgressOpen] = useState(false);
   const [isManageMetricsOpen, setIsManageMetricsOpen] = useState(false);
+  const chartModalCloseTimeoutRef = useRef<number | null>(null);
+  const chartModalOpeningTimeoutRef = useRef<number | null>(null);
   const analyticsTabContainerRef = useRef<HTMLDivElement>(null);
   const analyticsTabRefs = useRef<Record<'body' | 'performance', HTMLButtonElement | null>>({
     body: null,
@@ -58,6 +65,58 @@ export default function AnalyticsSection({
   useEffect(() => {
     loadData();
   }, [clientId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (chartModalCloseTimeoutRef.current !== null) {
+      window.clearTimeout(chartModalCloseTimeoutRef.current);
+      chartModalCloseTimeoutRef.current = null;
+    }
+
+    if (chartModalOpeningTimeoutRef.current !== null) {
+      window.clearTimeout(chartModalOpeningTimeoutRef.current);
+      chartModalOpeningTimeoutRef.current = null;
+    }
+
+    if (isChartModalOpen) {
+      setIsChartModalPresent(true);
+      setIsChartModalOpening(true);
+      chartModalOpeningTimeoutRef.current = window.setTimeout(() => {
+        setIsChartModalOpening(false);
+        chartModalOpeningTimeoutRef.current = null;
+      }, CHART_MODAL_OPENING_MS);
+      return;
+    }
+
+    setIsChartModalOpening(false);
+    if (!isChartModalPresent) {
+      return;
+    }
+
+    chartModalCloseTimeoutRef.current = window.setTimeout(() => {
+      setIsChartModalPresent(false);
+      chartModalCloseTimeoutRef.current = null;
+    }, CHART_MODAL_CLOSING_MS);
+  }, [isChartModalOpen, isChartModalPresent]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      if (chartModalCloseTimeoutRef.current !== null) {
+        window.clearTimeout(chartModalCloseTimeoutRef.current);
+      }
+
+      if (chartModalOpeningTimeoutRef.current !== null) {
+        window.clearTimeout(chartModalOpeningTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -533,8 +592,13 @@ export default function AnalyticsSection({
         <span className="analytics-add-btn__text">Log Progress</span>
       </button>
 
-      {isChartModalOpen && createPortal(
-        <div className="chart-modal-overlay" onClick={() => setIsChartModalOpen(false)}>
+      {isChartModalPresent && typeof document !== 'undefined' && createPortal(
+        <div
+          className="chart-modal-overlay"
+          data-state={isChartModalOpen ? 'open' : 'closed'}
+          data-opening={isChartModalOpening ? 'true' : 'false'}
+          onClick={() => setIsChartModalOpen(false)}
+        >
           <div className="chart-modal-content" onClick={e => e.stopPropagation()}>
             <div className="chart-modal-header">
               <h3>TREND OVERVIEW</h3>

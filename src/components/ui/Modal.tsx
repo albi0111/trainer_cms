@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './Modal.css';
 
 interface ModalProps {
@@ -10,26 +10,86 @@ interface ModalProps {
   className?: string;
 }
 
+const MODAL_OPENING_MS = 200;
+const MODAL_CLOSING_MS = 280;
+
 export default function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const openingTimeoutRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const [isActive, setIsActive] = useState(open);
+  const [isOpening, setIsOpening] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    if (openingTimeoutRef.current !== null) {
+      window.clearTimeout(openingTimeoutRef.current);
+      openingTimeoutRef.current = null;
+    }
+
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+
     if (open) {
       if (!dialog.open) {
         dialog.showModal();
       }
+
+      setIsOpening(true);
+      frameRef.current = window.requestAnimationFrame(() => {
+        setIsActive(true);
+        frameRef.current = null;
+      });
+      openingTimeoutRef.current = window.setTimeout(() => {
+        setIsOpening(false);
+        openingTimeoutRef.current = null;
+      }, MODAL_OPENING_MS);
       document.body.style.overflow = 'hidden';
     } else {
+      setIsOpening(false);
+      setIsActive(false);
       if (dialog.open) {
-        dialog.close();
+        closeTimeoutRef.current = window.setTimeout(() => {
+          if (dialog.open) {
+            dialog.close();
+          }
+          document.body.style.overflow = '';
+          closeTimeoutRef.current = null;
+        }, MODAL_CLOSING_MS);
+      } else {
+        document.body.style.overflow = '';
       }
-      document.body.style.overflow = '';
     }
 
     return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+
+      if (openingTimeoutRef.current !== null) {
+        window.clearTimeout(openingTimeoutRef.current);
+        openingTimeoutRef.current = null;
+      }
+
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      if (!open && dialog.open) {
+        dialog.close();
+      }
       document.body.style.overflow = '';
     };
   }, [open]);
@@ -44,6 +104,8 @@ export default function Modal({ open, onClose, title, children, footer, classNam
     <dialog
       ref={dialogRef}
       className={`modal ${className || ''}`}
+      data-state={isActive ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

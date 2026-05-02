@@ -29,6 +29,7 @@ export default function CompleteSessionModal({
   const [difficulty, setDifficulty] = useState('1');
   const [energy, setEnergy] = useState('3');
   const [notes, setNotes] = useState('');
+  const [isOpening, setIsOpening] = useState(false);
   const haptic = useHaptic();
 
   // Reset on open
@@ -47,7 +48,21 @@ export default function CompleteSessionModal({
     return () => window.removeEventListener('keydown', handler);
   }, [visible, onClose]);
 
-  if (!visible) return null;
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
 
   const handleConfirm = () => {
     haptic.medium();
@@ -59,7 +74,12 @@ export default function CompleteSessionModal({
   };
 
   return (
-    <div className="complete-modal__overlay" onClick={onClose}>
+    <div
+      className="complete-modal__overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="complete-modal__box" onClick={e => e.stopPropagation()}>
         <div className="complete-modal__header">
           <span className="complete-modal__title">

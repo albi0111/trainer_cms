@@ -126,6 +126,187 @@ textarea::placeholder {
   color: var(--color-text-placeholder);
 }
 
+body .field__label,
+body .cm-label,
+body .uc-label,
+body .complete-modal__label,
+body .complete-modal__notes-label,
+body .missed-modal__label,
+body .missed-modal__note-label,
+body .session-modal__label,
+body .metric-input-wrap label,
+body .form-group label {
+  color: var(--color-text-label);
+  transition: color 200ms ease, opacity 200ms ease;
+}
+
+body .cm-input,
+body .cm-select,
+body .cm-textarea,
+body .cm-test-note-input,
+body .uc-input,
+body .uc-select,
+body .uc-textarea,
+body .session-modal__input,
+body .session-modal__textarea,
+body .complete-modal__input,
+body .complete-modal__textarea,
+body .missed-modal__textarea,
+body .notes-input,
+body .metric-input-wrap input,
+body .form-group input,
+body .picker-input,
+body .rich-text-toolbar__select,
+body .rich-text-editor,
+body .diet-input-cell {
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  outline: none;
+  box-shadow: none;
+}
+
+body .roster-search,
+body .schedule-calendar-modal__goal-shell,
+body .cm-exercise-row,
+body .diet-header-cell:has(.diet-header-input),
+body .diet-macro-box:has(.diet-macro-input) {
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+body .roster-search__input,
+body .schedule-calendar-modal__goal-input,
+body .cm-exercise-input,
+body .diet-header-input,
+body .diet-macro-input {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+body .roster-search__input:focus,
+body .schedule-calendar-modal__goal-input:focus,
+body .cm-exercise-input:focus,
+body .diet-header-input:focus,
+body .diet-macro-input:focus {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+body .cm-input:focus,
+body .cm-select:focus,
+body .cm-textarea:focus,
+body .cm-test-note-input:focus,
+body .uc-input:focus,
+body .uc-select:focus,
+body .uc-textarea:focus,
+body .session-modal__input:focus,
+body .session-modal__textarea:focus,
+body .complete-modal__input:focus,
+body .complete-modal__textarea:focus,
+body .missed-modal__textarea:focus,
+body .notes-input:focus,
+body .metric-input-wrap input:focus,
+body .form-group input:focus,
+body .picker-input:focus,
+body .picker-input:focus-visible,
+body .rich-text-toolbar__select:focus,
+body .rich-text-editor:focus,
+body .diet-input-cell:focus,
+body .roster-search:focus-within,
+body .schedule-calendar-modal__goal-shell:focus-within,
+body .cm-exercise-row:focus-within,
+body .diet-header-cell:focus-within,
+body .diet-macro-box:has(.diet-macro-input:focus) {
+  border-color: var(--color-primary);
+  background-color: rgba(255, 215, 0, 0.06);
+  box-shadow:
+    0 0 0 3px rgba(255, 215, 0, 0.15),
+    0 0 12px rgba(255, 215, 0, 0.08);
+  outline: none;
+}
+
+body .cm-input:not(:focus):not(:placeholder-shown),
+body .cm-textarea:not(:focus):not(:placeholder-shown),
+body .cm-test-note-input:not(:focus):not(:placeholder-shown),
+body .uc-input:not(:focus):not(:placeholder-shown),
+body .uc-textarea:not(:focus):not(:placeholder-shown),
+body .session-modal__input:not(:focus):not(:placeholder-shown),
+body .session-modal__textarea:not(:focus):not(:placeholder-shown),
+body .complete-modal__textarea:not(:focus):not(:placeholder-shown),
+body .missed-modal__textarea:not(:focus):not(:placeholder-shown),
+body .notes-input:not(:focus):not(:placeholder-shown),
+body .metric-input-wrap input:not(:focus):not(:placeholder-shown),
+body .form-group input:not(:focus):not(:placeholder-shown),
+body .rich-text-editor:not(:focus):not(:empty),
+body .diet-input-cell:not(:focus):not(:placeholder-shown),
+body .cm-select:not(:focus),
+body .uc-select:not(:focus),
+body .rich-text-toolbar__select:not(:focus),
+body .roster-search:has(.roster-search__input:not(:placeholder-shown)),
+body .schedule-calendar-modal__goal-shell:has(.schedule-calendar-modal__goal-input:not(:placeholder-shown)),
+body .cm-exercise-row:has(.cm-exercise-input:not(:placeholder-shown)) {
+  border-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+body .cm-form-group:focus-within .cm-label,
+body .uc-form-group:focus-within .uc-label,
+body .picker-field:focus-within .field__label,
+body .complete-modal__field:focus-within .complete-modal__label,
+body .complete-modal__box:has(.complete-modal__textarea:focus) .complete-modal__notes-label,
+body .missed-modal__box:has(.missed-modal__textarea:focus) .missed-modal__note-label,
+body .session-modal__field:focus-within .session-modal__label,
+body .metric-input-wrap:focus-within label,
+body .form-group:focus-within label {
+  color: var(--color-primary);
+}
+
+body .cm-form-group:has(.cm-input:not(:placeholder-shown), .cm-textarea:not(:placeholder-shown), .cm-select) .cm-label,
+body .uc-form-group:has(.uc-input:not(:placeholder-shown), .uc-textarea:not(:placeholder-shown), .uc-select) .uc-label,
+body .complete-modal__box:has(.complete-modal__textarea:not(:placeholder-shown)) .complete-modal__notes-label,
+body .missed-modal__box:has(.missed-modal__textarea:not(:placeholder-shown)) .missed-modal__note-label,
+body .session-modal__field:has(.session-modal__input:not(:placeholder-shown), .session-modal__textarea:not(:placeholder-shown)) .session-modal__label,
+body .metric-input-wrap:has(input:not(:placeholder-shown)) label,
+body .form-group:has(input:not(:placeholder-shown)) label {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body .cm-select,
+body .uc-select,
+body .rich-text-toolbar__select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A3A3A3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: calc(100% - 14px) center;
+  background-repeat: no-repeat;
+  background-size: 12px 8px;
+  padding-right: 40px;
+}
+
+body .cm-input--error,
+body .picker-input--error,
+body .input-shake:is(input, textarea, select),
+body .input-shake .cm-input,
+body .input-shake .cm-textarea,
+body .input-shake .uc-input,
+body .input-shake .uc-textarea,
+body .input-shake .session-modal__input,
+body .input-shake .session-modal__textarea,
+body .input-shake .complete-modal__input,
+body .input-shake .complete-modal__textarea,
+body .input-shake .missed-modal__textarea,
+body .input-shake .picker-input,
+body .input-shake > div {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
 /* Hide spin buttons for Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
@@ -185,7 +366,7 @@ button:active {
 }
 
 .input-shake {
-  animation: input-shake 300ms ease;
+  animation: input-shake 320ms ease-in-out;
 }
 
 .route-shell {
@@ -321,24 +502,70 @@ button:active {
     transform: translateX(0);
   }
 
-  20% {
+  14% {
     transform: translateX(-6px);
   }
 
-  40% {
+  28% {
     transform: translateX(6px);
   }
 
-  60% {
+  42% {
     transform: translateX(-4px);
   }
 
-  80% {
+  56% {
     transform: translateX(4px);
+  }
+
+  70% {
+    transform: translateX(-2px);
+  }
+
+  84% {
+    transform: translateX(2px);
   }
 
   100% {
     transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input-shake,
+  .context-menu-overlay,
+  .calendar-context-menu {
+    animation: none !important;
+  }
+
+  .modal::backdrop,
+  .picker-overlay,
+  .aa-overlay,
+  .manage-metrics-overlay,
+  .add-measurement-overlay,
+  .manage-modal__overlay,
+  .missed-modal__overlay,
+  .session-modal__overlay,
+  .complete-modal__overlay,
+  .uc-overlay,
+  .chart-modal-overlay {
+    transition-duration: 150ms !important;
+    transition-timing-function: ease !important;
+  }
+
+  .modal__content,
+  .picker-modal,
+  .aa-modal,
+  .manage-metrics-container,
+  .add-measurement-container,
+  .manage-modal__box,
+  .missed-modal__box,
+  .session-modal__dialog,
+  .complete-modal__box,
+  .uc-modal,
+  .chart-modal-content {
+    transform: none !important;
+    transition: none !important;
   }
 }
 

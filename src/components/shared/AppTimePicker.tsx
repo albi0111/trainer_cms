@@ -13,6 +13,8 @@ const PICKER_PORTAL_Z_INDEX = 1300;
 
 export default function AppTimePicker({ value, onChange, label }: AppTimePickerProps) {
   const [visible, setVisible] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const [selectedHour, setHour] = useState(value?.split(':')[0] || '08');
   const [selectedMinute, setMinute] = useState(value?.split(':')[1] || '00');
@@ -23,6 +25,53 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
       setMinute(value.split(':')[1] || '00');
     }
   }, [value]);
+
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    try {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const syncPreference = () => {
+        setPrefersReducedMotion(mediaQuery.matches);
+      };
+
+      syncPreference();
+
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', syncPreference);
+      } else {
+        mediaQuery.addListener(syncPreference);
+      }
+
+      return () => {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', syncPreference);
+        } else {
+          mediaQuery.removeListener(syncPreference);
+        }
+      };
+    } catch {
+      return;
+    }
+  }, []);
 
   const handleSave = () => {
     onChange(`${selectedHour}:${selectedMinute}`);
@@ -54,19 +103,38 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
         </div>
       </div>
 
-      {visible && createPortal(
+      {typeof document !== 'undefined' && createPortal(
         <div
           style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.85)', zIndex: PICKER_PORTAL_Z_INDEX,
-            display: 'flex', justifyContent: 'center', alignItems: 'center'
+            background: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            zIndex: PICKER_PORTAL_Z_INDEX,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: visible ? 1 : 0,
+            pointerEvents: visible ? 'auto' : 'none',
+            visibility: visible ? 'visible' : 'hidden',
+            transition: visible
+              ? 'opacity 200ms ease-out'
+              : 'opacity 180ms ease-in, visibility 0s linear 180ms',
+            willChange: isOpening ? (prefersReducedMotion ? 'opacity' : 'backdrop-filter, opacity') : undefined,
           }}
           onClick={() => setVisible(false)}
         >
           <div
             style={{
               width: '300px', backgroundColor: '#1A1A1A', borderRadius: '24px',
-              padding: '24px', border: '1px solid #333'
+              padding: '24px', border: '1px solid #333',
+              overflow: 'hidden',
+              transform: prefersReducedMotion ? 'none' : (visible ? 'translateY(0)' : 'translateY(100%)'),
+              transition: prefersReducedMotion
+                ? 'none'
+                : (visible
+                    ? 'transform 320ms cubic-bezier(0.32, 0.72, 0, 1)'
+                    : 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1)'),
             }}
             onClick={e => e.stopPropagation()}
           >

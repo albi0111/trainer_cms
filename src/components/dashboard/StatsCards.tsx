@@ -1,3 +1,4 @@
+import useCountUp from '../../hooks/useCountUp';
 import './StatsCards.css';
 
 interface StatsCardsProps {
@@ -9,6 +10,23 @@ export default function StatsCards({
   todaySessionCount,
   activeClientCount,
 }: StatsCardsProps) {
+  const todayCount = useCountUp({
+    target: todaySessionCount,
+    duration: 500,
+    easing: 'ease-out',
+  });
+  const activeCount = useCountUp({
+    target: activeClientCount,
+    duration: 700,
+    easing: 'spring',
+  });
+  const todayValueStateClass = !todayCount.isComplete
+    ? 'stat-value--counting'
+    : (todaySessionCount > 0 ? 'stat-value--complete' : '');
+  const activeValueStateClass = !activeCount.isComplete
+    ? 'stat-value--counting'
+    : (activeClientCount > 0 ? 'stat-value--complete' : '');
+
   return (
     <div className="stats-row">
       <div className="stat-card">
@@ -19,7 +37,9 @@ export default function StatsCards({
           </svg>
           <span className="stat-title">TODAY</span>
         </div>
-        <div className="stat-value">{todaySessionCount}</div>
+        <div className={`stat-value ${todayValueStateClass}`.trim()}>
+          {todayCount.current}
+        </div>
         <div className="stat-sub">sessions</div>
       </div>
       <div className="stat-card">
@@ -30,7 +50,9 @@ export default function StatsCards({
           </svg>
           <span className="stat-title">ACTIVE</span>
         </div>
-        <div className="stat-value">{activeClientCount}</div>
+        <div className={`stat-value ${activeValueStateClass}`.trim()}>
+          {activeCount.current}
+        </div>
         <div className="stat-sub">clients</div>
       </div>
     </div>

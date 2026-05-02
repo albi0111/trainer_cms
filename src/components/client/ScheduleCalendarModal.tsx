@@ -30,23 +30,47 @@ export default function ScheduleCalendarModal({
   onDeleteSession,
   onPasteSession,
 }: ScheduleCalendarModalProps) {
+  const [displayWeekPlan, setDisplayWeekPlan] = useState(weekPlan);
   const [goal, setGoal] = useState(weekPlan?.goal || '');
   const [sessionToDelete, setSessionToDelete] = useState<ScheduledSession | null>(null);
+  const [isOpening, setIsOpening] = useState(false);
 
   useEffect(() => {
     if (weekPlan) {
+      setDisplayWeekPlan(weekPlan);
       setGoal(weekPlan.goal || '');
     }
   }, [weekPlan]);
 
-  if (!visible || !weekPlan) return null;
+  useEffect(() => {
+    if (!visible) {
+      setIsOpening(false);
+      return;
+    }
+
+    setIsOpening(true);
+    const timeout = window.setTimeout(() => {
+      setIsOpening(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [visible]);
+
+  if (!displayWeekPlan) return null;
 
   return createPortal(
-    <div className="uc-overlay schedule-calendar-modal__overlay" onClick={onClose}>
+    <div
+      className="uc-overlay schedule-calendar-modal__overlay"
+      data-state={visible ? 'open' : 'closed'}
+      data-opening={isOpening ? 'true' : 'false'}
+      onClick={onClose}
+    >
       <div className="uc-modal schedule-calendar-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="uc-header schedule-calendar-modal__header">
           <div className="schedule-calendar-modal__intro">
-            <h2 className="uc-title schedule-calendar-modal__title">{weekPlan.title}</h2>
+            <h2 className="uc-title schedule-calendar-modal__title">{displayWeekPlan.title}</h2>
             <p className="uc-subtitle schedule-calendar-modal__subtitle">Select a slot to schedule a workout</p>
           </div>
           <div className="schedule-calendar-modal__controls">

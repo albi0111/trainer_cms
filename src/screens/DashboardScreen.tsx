@@ -30,6 +30,7 @@ export default function DashboardScreen() {
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  const [statsAnimationVersion, setStatsAnimationVersion] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
 
@@ -37,6 +38,7 @@ export default function DashboardScreen() {
     setLoading(true);
     try {
       setStats(await hydrateDashboard());
+      setStatsAnimationVersion((current) => current + 1);
     } catch (error) {
       console.error('Failed to load dashboard', error);
     } finally {
@@ -120,6 +122,7 @@ export default function DashboardScreen() {
           <div className="dashboard-layout">
             <div className="dashboard-layout__sidebar">
               <StatsCards 
+                key={statsAnimationVersion}
                 todaySessionCount={stats.todaySessions.length} 
                 activeClientCount={stats.activeClientCount} 
               />
