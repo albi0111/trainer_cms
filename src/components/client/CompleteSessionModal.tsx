@@ -3,10 +3,9 @@
 // Reference: user screenshots
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './CompleteSessionModal.css';
-import { useHaptic } from '../../hooks/useHaptic';
-import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
+import { useModalVelocityDismiss, usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
 
 export interface CompleteSessionData {
   difficulty: number;
@@ -18,7 +17,7 @@ interface CompleteSessionModalProps {
   visible: boolean;
   sessionFocus?: string;
   onClose: () => void;
-  onConfirm: (data: CompleteSessionData) => void;
+  onConfirm: (data: CompleteSessionData) => Promise<boolean>;
 }
 
 export default function CompleteSessionModal({
@@ -31,15 +30,24 @@ export default function CompleteSessionModal({
   const [energy, setEnergy] = useState('3');
   const [notes, setNotes] = useState('');
   const [isOpening, setIsOpening] = useState(false);
+  const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'success'>('idle');
   const overlayRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
-  const haptic = useHaptic();
+  const closeTimeoutRef = useRef<number | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const canDismiss = submitState === 'idle';
 
   useModalVelocityDismiss({
     visible,
-    onClose,
+    onClose: () => {
+      if (canDismiss) {
+        onClose();
+      }
+    },
     overlayRef,
     sheetRef: boxRef,
+    enabled: canDismiss,
   });
 
   // Reset on open
@@ -48,15 +56,34 @@ export default function CompleteSessionModal({
       setDifficulty('1');
       setEnergy('3');
       setNotes('');
+      setSubmitState('idle');
+      return;
+    }
+
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
     }
   }, [visible]);
 
   useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!visible) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && canDismiss) {
+        onClose();
+      }
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [visible, onClose]);
+  }, [canDismiss, onClose, visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -74,13 +101,33 @@ export default function CompleteSessionModal({
     };
   }, [visible]);
 
-  const handleConfirm = () => {
-    haptic.medium();
-    onConfirm({
-      difficulty: Math.min(10, Math.max(1, parseInt(difficulty) || 1)),
-      energy: Math.min(10, Math.max(1, parseInt(energy) || 1)),
+  const handleDismiss = () => {
+    if (canDismiss) {
+      onClose();
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (submitState !== 'idle') {
+      return;
+    }
+
+    setSubmitState('saving');
+    const didComplete = await onConfirm({
+      difficulty: Math.min(10, Math.max(1, Number.parseInt(difficulty, 10) || 1)),
+      energy: Math.min(10, Math.max(1, Number.parseInt(energy, 10) || 1)),
       performanceNotes: notes.trim(),
     });
+
+    if (!didComplete) {
+      setSubmitState('idle');
+      return;
+    }
+
+    setSubmitState('success');
+    closeTimeoutRef.current = window.setTimeout(() => {
+      onClose();
+    }, prefersReducedMotion ? 0 : 600);
   };
 
   return (
@@ -89,14 +136,15 @@ export default function CompleteSessionModal({
       className="complete-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
+      data-success-exit={submitState === 'success' ? 'true' : 'false'}
+      onClick={handleDismiss}
     >
       <div ref={boxRef} className="complete-modal__box" onClick={e => e.stopPropagation()}>
         <div className="complete-modal__header">
           <span className="complete-modal__title">
             {sessionFocus ? `Complete Session` : 'Complete Session'}
           </span>
-          <button className="complete-modal__close" onClick={onClose}>
+          <button className="complete-modal__close" onClick={handleDismiss} disabled={!canDismiss}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -142,8 +190,28 @@ export default function CompleteSessionModal({
         />
 
         {/* Green Confirm Button */}
-        <button className="complete-modal__confirm-btn" onClick={handleConfirm}>
-          Confirm Completion
+        <button
+          className={`complete-modal__confirm-btn complete-modal__confirm-btn--${submitState}`}
+          onClick={() => {
+            void handleConfirm();
+          }}
+          disabled={submitState !== 'idle'}
+        >
+          <span className="complete-modal__confirm-btn-content">
+            <span className="complete-modal__confirm-btn-label">
+              {submitState === 'saving'
+                ? 'Saving...'
+                : submitState === 'success'
+                  ? 'Completed'
+                  : 'Confirm Completion'}
+            </span>
+            <span className="complete-modal__confirm-btn-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline className="complete-modal__confirm-btn-path" pathLength="100" points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+          </span>
+          <span className="complete-modal__confirm-ring" aria-hidden="true" />
         </button>
       </div>
     </div>

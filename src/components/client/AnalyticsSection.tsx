@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { Measurement, MeasurementConfig } from '../../types';
 import ManageMetricsModal from '../modals/ManageMetricsModal';
 import AddMeasurementModal from '../modals/AddMeasurementModal';
+import OdometerNumber from '../OdometerNumber';
+import SkeletonScheduleCard from '../skeletons/SkeletonScheduleCard';
+import SkeletonStatCard from '../skeletons/SkeletonStatCard';
 import { getClientProgress } from '../../services/analytics/analyticsService';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import './AnalyticsSection.css';
@@ -63,7 +66,9 @@ export default function AnalyticsSection({
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
   const canOpenChartModal = !isPhone;
+  const hasLoadedAnalyticsRef = useRef(false);
 
   useModalVelocityDismiss({
     visible: isChartModalOpen,
@@ -75,6 +80,45 @@ export default function AnalyticsSection({
   useEffect(() => {
     loadData();
   }, [clientId]);
+
+  useEffect(() => {
+    hasLoadedAnalyticsRef.current = false;
+    setShowLoadingSkeleton(false);
+  }, [clientId]);
+
+  useEffect(() => {
+    if (hasLoadedAnalyticsRef.current || !loading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(true);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    hasLoadedAnalyticsRef.current = true;
+
+    if (!showLoadingSkeleton) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading, showLoadingSkeleton]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -485,122 +529,155 @@ export default function AnalyticsSection({
     );
   };
 
-  if (loading) return <div className="analytics-section loading">Loading analytics...</div>;
-
   return (
-    <div className="analytics-section">
-      <div className="analytics-header">
-        <div className="analytics-tab-container" ref={analyticsTabContainerRef}>
-          <span
-            className={`analytics-toggle-pill ${analyticsTabPillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
-            style={{
-              width: `${analyticsTabPillStyle.width}px`,
-              transform: `translateX(${analyticsTabPillStyle.x}px)`,
-            }}
-            aria-hidden="true"
-          />
-          <button
-            ref={(element) => {
-              analyticsTabRefs.current.body = element;
-            }}
-            className={`analytics-tab ${activeTab === 'body' ? 'analytics-tab--active' : ''}`}
-            onClick={() => setActiveTab('body')}
-          >
-            <div className="analytics-tab__icon-circle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'body' ? '#000' : '#444'} strokeWidth="2" strokeLinecap="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
-            <span className="analytics-tab__text">BODY</span>
-          </button>
+    <div className="analytics-section analytics-section--stack">
+      <div
+        className="analytics-section__content"
+        style={{
+          opacity: loading && !hasLoadedAnalyticsRef.current ? 0 : 1,
+          transform: loading && !hasLoadedAnalyticsRef.current ? 'translate3d(0, 6px, 0)' : 'translate3d(0, 0, 0)',
+          transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+        }}
+      >
+        <div className="analytics-header">
+          <div className="analytics-tab-container" ref={analyticsTabContainerRef}>
+            <span
+              className={`analytics-toggle-pill ${analyticsTabPillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
+              style={{
+                width: `${analyticsTabPillStyle.width}px`,
+                transform: `translateX(${analyticsTabPillStyle.x}px)`,
+              }}
+              aria-hidden="true"
+            />
+            <button
+              ref={(element) => {
+                analyticsTabRefs.current.body = element;
+              }}
+              className={`analytics-tab ${activeTab === 'body' ? 'analytics-tab--active' : ''}`}
+              onClick={() => setActiveTab('body')}
+            >
+              <div className="analytics-tab__icon-circle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'body' ? '#000' : '#444'} strokeWidth="2" strokeLinecap="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <span className="analytics-tab__text">BODY</span>
+            </button>
 
-          <button
-            ref={(element) => {
-              analyticsTabRefs.current.performance = element;
-            }}
-            className={`analytics-tab ${activeTab === 'performance' ? 'analytics-tab--active' : ''}`}
-            onClick={() => setActiveTab('performance')}
-          >
-            <div className="analytics-tab__icon-circle">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'performance' ? '#000' : '#444'} strokeWidth="2.5" strokeLinecap="round">
-                <path d="M19 12h.01M13 2v2M13 20v2M22 13h-2M4 13H2M14.5 9l-2.5 2.5 2.5 2.5M9.5 15l2.5-2.5-2.5-2.5"/>
-              </svg>
-            </div>
-            <span className="analytics-tab__text">PERFORMANCE</span>
+            <button
+              ref={(element) => {
+                analyticsTabRefs.current.performance = element;
+              }}
+              className={`analytics-tab ${activeTab === 'performance' ? 'analytics-tab--active' : ''}`}
+              onClick={() => setActiveTab('performance')}
+            >
+              <div className="analytics-tab__icon-circle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={activeTab === 'performance' ? '#000' : '#444'} strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M19 12h.01M13 2v2M13 20v2M22 13h-2M4 13H2M14.5 9l-2.5 2.5 2.5 2.5M9.5 15l2.5-2.5-2.5-2.5"/>
+                </svg>
+              </div>
+              <span className="analytics-tab__text">PERFORMANCE</span>
+            </button>
+          </div>
+
+          <button className="analytics-manage-btn" onClick={() => setIsManageMetricsOpen(true)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
           </button>
         </div>
 
-        <button className="analytics-manage-btn" onClick={() => setIsManageMetricsOpen(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
-            <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
+        <div className="analytics-cards-scroll">
+          <div className="analytics-cards-content">
+            {(activeTab === 'body' ? bodyConfigs : perfConfigs).map(c => {
+              const { current, delta } = getMetricData(c.key);
+              const deltaColor = delta > 0 ? '#3DCC88' : delta < 0 ? '#FF5252' : '#666';
+              const deltaSign = delta > 0 ? '+' : '';
+              const isSelected = activeTab === 'body' && c.key === selectedBodyMetric;
+
+              return (
+                <div key={c.key} className={`analytics-card ${isSelected ? 'analytics-card--active' : ''}`} onClick={() => activeTab === 'body' ? setSelectedBodyMetric(c.key) : toggleDeltaMode()}>
+                  <div className="analytics-card__label">{c.label.toUpperCase()}</div>
+                  <div className="analytics-card__value-row">
+                    {typeof current === 'number' ? (
+                      <>
+                        <OdometerNumber
+                          value={current}
+                          decimals={Number.isInteger(current) ? 0 : 1}
+                          className="analytics-card__value"
+                        />
+                        {c.unit ? <span className="analytics-card__unit">{c.unit}</span> : null}
+                      </>
+                    ) : (
+                      <span className="analytics-card__value">—</span>
+                    )}
+                  </div>
+                  <div className="analytics-card__delta" style={{ color: deltaColor }}>{deltaSign}{delta.toFixed(1)}{c.unit}<span className="analytics-card__delta-mode"> vs {deltaMode}</span></div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {activeTab === 'performance' && (
+          <div className="analytics-perf-toggle" ref={perfToggleContainerRef}>
+            <span
+              className={`analytics-toggle-pill ${perfTogglePillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
+              style={{
+                width: `${perfTogglePillStyle.width}px`,
+                transform: `translateX(${perfTogglePillStyle.x}px)`,
+              }}
+              aria-hidden="true"
+            />
+            <button
+              ref={(element) => {
+                perfToggleRefs.current.bar = element;
+              }}
+              className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`}
+              onClick={() => setPerformanceView('bar')}
+            >
+              {isPhone ? 'Compare' : 'Bar (Compare)'}
+            </button>
+            <button
+              ref={(element) => {
+                perfToggleRefs.current.radar = element;
+              }}
+              className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`}
+              onClick={() => setPerformanceView('radar')}
+            >
+              {isPhone ? 'Radar' : 'Radar (Overview)'}
+            </button>
+          </div>
+        )}
+
+        <div className="analytics-chart-area">
+          {activeTab === 'body' ? renderLineChart() : (performanceView === 'bar' ? renderBarChart() : renderRadarChart())}
+        </div>
+
+        <button className="analytics-add-btn" onClick={() => setIsLogProgressOpen(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
+          <span className="analytics-add-btn__text">Log Progress</span>
         </button>
       </div>
 
-      <div className="analytics-cards-scroll">
-        <div className="analytics-cards-content">
-          {(activeTab === 'body' ? bodyConfigs : perfConfigs).map(c => {
-            const { current, delta } = getMetricData(c.key);
-            const deltaColor = delta > 0 ? '#3DCC88' : delta < 0 ? '#FF5252' : '#666';
-            const deltaSign = delta > 0 ? '+' : '';
-            const isSelected = activeTab === 'body' && c.key === selectedBodyMetric;
-
-            return (
-              <div key={c.key} className={`analytics-card ${isSelected ? 'analytics-card--active' : ''}`} onClick={() => activeTab === 'body' ? setSelectedBodyMetric(c.key) : toggleDeltaMode()}>
-                <div className="analytics-card__label">{c.label.toUpperCase()}</div>
-                <div className="analytics-card__value-row">
-                  <span className="analytics-card__value">{current ?? '—'}<span className="analytics-card__unit">{c.unit}</span></span>
-                </div>
-                <div className="analytics-card__delta" style={{ color: deltaColor }}>{deltaSign}{delta.toFixed(1)}{c.unit}<span className="analytics-card__delta-mode"> vs {deltaMode}</span></div>
-              </div>
-            );
-          })}
+      {showLoadingSkeleton ? (
+        <div
+          className="analytics-section__skeleton"
+          style={{ opacity: loading ? 1 : 0 }}
+          aria-hidden="true"
+        >
+          <div className="analytics-section__skeleton-cards">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <SkeletonStatCard key={`analytics-skeleton-card-${index}`} />
+            ))}
+          </div>
+          <SkeletonScheduleCard />
         </div>
-      </div>
-
-      {activeTab === 'performance' && (
-        <div className="analytics-perf-toggle" ref={perfToggleContainerRef}>
-          <span
-            className={`analytics-toggle-pill ${perfTogglePillStyle.ready ? 'analytics-toggle-pill--ready' : ''}`}
-            style={{
-              width: `${perfTogglePillStyle.width}px`,
-              transform: `translateX(${perfTogglePillStyle.x}px)`,
-            }}
-            aria-hidden="true"
-          />
-          <button
-            ref={(element) => {
-              perfToggleRefs.current.bar = element;
-            }}
-            className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`}
-            onClick={() => setPerformanceView('bar')}
-          >
-            {isPhone ? 'Compare' : 'Bar (Compare)'}
-          </button>
-          <button
-            ref={(element) => {
-              perfToggleRefs.current.radar = element;
-            }}
-            className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`}
-            onClick={() => setPerformanceView('radar')}
-          >
-            {isPhone ? 'Radar' : 'Radar (Overview)'}
-          </button>
-        </div>
-      )}
-
-      <div className="analytics-chart-area">
-        {activeTab === 'body' ? renderLineChart() : (performanceView === 'bar' ? renderBarChart() : renderRadarChart())}
-      </div>
-
-      <button className="analytics-add-btn" onClick={() => setIsLogProgressOpen(true)}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span className="analytics-add-btn__text">Log Progress</span>
-      </button>
+      ) : null}
 
       {isChartModalPresent && typeof document !== 'undefined' && createPortal(
         <div

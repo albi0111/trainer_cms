@@ -1,10 +1,33 @@
 .badge {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 2px 8px;
   border-radius: var(--radius-xl);
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-bold);
+}
+
+.badge__pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  flex-shrink: 0;
+}
+
+.badge__pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-color: #22c55e;
+  opacity: 0.8;
+  transform: scale(1);
+  animation: badge-pulse-ring 1800ms ease-out infinite;
+  animation-play-state: var(--fp-active-badge-play-state, running);
 }
 
 /* Reference StatusBadge themes — exact color match */
@@ -26,4 +49,22 @@
 .badge--pending {
   background-color: var(--color-primary);
   color: var(--color-text-dark);
+}
+
+@keyframes badge-pulse-ring {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge__pulse-dot::after {
+    animation: none;
+  }
 }

@@ -37,6 +37,7 @@ export default function DashboardScreen() {
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
   const hasLoadedDashboardRef = useRef(false);
+  const isForegroundRefreshRunningRef = useRef(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -50,10 +51,34 @@ export default function DashboardScreen() {
     }
   }, [hydrateDashboard]);
 
+  const syncAndLoadDashboard = useCallback(async () => {
+    if (isForegroundRefreshRunningRef.current) {
+      return;
+    }
+
+    isForegroundRefreshRunningRef.current = true;
+
+    try {
+      if (isConnectedToDrive) {
+        try {
+          await runSync();
+        } catch (error) {
+          console.error('Failed to sync dashboard data', error);
+        }
+      }
+
+      await loadDashboard();
+    } finally {
+      isForegroundRefreshRunningRef.current = false;
+    }
+  }, [isConnectedToDrive, loadDashboard, runSync]);
+
   useEffect(() => {
     void loadDashboard();
-    void runSync().then(loadDashboard).catch(() => undefined);
-  }, [loadDashboard, runSync]);
+    if (isConnectedToDrive) {
+      void runSync().then(loadDashboard).catch(() => undefined);
+    }
+  }, [isConnectedToDrive, loadDashboard, runSync]);
 
   useEffect(() => {
     if (hasLoadedDashboardRef.current || !loading) {
@@ -91,11 +116,11 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     const handleWindowFocus = () => {
-      void loadDashboard();
+      void syncAndLoadDashboard();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void loadDashboard();
+        void syncAndLoadDashboard();
       }
     };
 
@@ -105,7 +130,7 @@ export default function DashboardScreen() {
       window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [loadDashboard]);
+  }, [syncAndLoadDashboard]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -162,7 +187,11 @@ export default function DashboardScreen() {
               <div className="dashboard-content-stack">
                 <div
                   className="dashboard-content-stack__content"
-                  style={{ opacity: loading && !hasLoadedDashboardRef.current ? 0 : 1 }}
+                  style={{
+                    opacity: loading && !hasLoadedDashboardRef.current ? 0 : 1,
+                    transform: loading && !hasLoadedDashboardRef.current ? 'translate3d(0, 6px, 0)' : 'translate3d(0, 0, 0)',
+                    transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+                  }}
                 >
                   <StatsCards
                     key={statsAnimationVersion}

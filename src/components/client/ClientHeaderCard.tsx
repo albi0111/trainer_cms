@@ -1,6 +1,7 @@
 import './ClientHeaderCard.css';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
+import OdometerNumber from '../OdometerNumber';
 import type { ClientStatus } from '../../types';
 import { toClientBadgeStatus } from '../../utils/clientStatus';
 
@@ -37,15 +38,25 @@ export default function ClientHeaderCard({
       <div className="client-stats-row">
         <div className="client-stat-item">
           <span className="client-stat-label">AGE</span>
-          <span className="client-stat-value">{age}y</span>
+          <OdometerNumber value={age} suffix="y" className="client-stat-value" />
         </div>
         <div className="client-stat-item">
           <span className="client-stat-label">WEIGHT</span>
-          <span className="client-stat-value">{weight} kg</span>
+          <OdometerNumber
+            value={weight}
+            decimals={Number.isInteger(weight) ? 0 : 1}
+            suffix="kg"
+            className="client-stat-value"
+          />
         </div>
         <div className="client-stat-item">
           <span className="client-stat-label">HEIGHT</span>
-          <span className="client-stat-value">{height} cm</span>
+          <OdometerNumber
+            value={height}
+            decimals={Number.isInteger(height) ? 0 : 1}
+            suffix="cm"
+            className="client-stat-value"
+          />
         </div>
       </div>
     </div>

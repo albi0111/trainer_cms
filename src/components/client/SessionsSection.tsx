@@ -8,6 +8,7 @@ import './SessionsSection.css';
 import Card from '../ui/Card';
 import EmptyState from '../ui/EmptyState';
 import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
+import useSessionCompleteAnimation from '../../hooks/useSessionCompleteAnimation';
 import ManageSessionModal from './ManageSessionModal';
 import CompleteSessionModal, { type CompleteSessionData } from './CompleteSessionModal';
 import MarkMissedModal, { type MarkMissedData } from './MarkMissedModal';
@@ -17,8 +18,8 @@ import { toDayName } from '../../services/shared/date';
 interface SessionsSectionProps {
   upcoming: Session[];
   pending: Session[];
-  onCompleteSession: (id: string, data: CompleteSessionData) => void;
-  onMissSession: (id: string, data: MarkMissedData) => void;
+  onCompleteSession: (id: string, data: CompleteSessionData) => Promise<boolean>;
+  onMissSession: (id: string, data: MarkMissedData) => Promise<boolean>;
   onPostponeSession?: (id: string) => void;
 }
 
@@ -36,6 +37,9 @@ export default function SessionsSection({
 }: SessionsSectionProps) {
   const [modalState, setModalState] = useState<ModalState>('none');
   const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const { triggerComplete, triggerMissed } = useSessionCompleteAnimation({
+    activityId: activeSession?.id ?? null,
+  });
 
   const displayedUpcoming = upcoming.slice(0, 3);
   const pendingEntrance = useStaggeredEntrance({
@@ -153,9 +157,17 @@ export default function SessionsSection({
         visible={modalState === 'complete'}
         sessionFocus={activeSession?.focus}
         onClose={closeAll}
-        onConfirm={(data) => {
-          if (activeSession) onCompleteSession(activeSession.id, data);
-          closeAll();
+        onConfirm={async (data) => {
+          if (!activeSession) {
+            return false;
+          }
+
+          const didComplete = await onCompleteSession(activeSession.id, data);
+          if (didComplete) {
+            triggerComplete();
+          }
+
+          return didComplete;
         }}
       />
 
@@ -164,9 +176,17 @@ export default function SessionsSection({
         visible={modalState === 'missed'}
         onClose={closeAll}
         onBack={() => setModalState('manage')}
-        onConfirm={(data) => {
-          if (activeSession) onMissSession(activeSession.id, data);
-          closeAll();
+        onConfirm={async (data) => {
+          if (!activeSession) {
+            return false;
+          }
+
+          const didMiss = await onMissSession(activeSession.id, data);
+          if (didMiss) {
+            triggerMissed();
+          }
+
+          return didMiss;
         }}
       />
     </>

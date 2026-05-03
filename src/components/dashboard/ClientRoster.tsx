@@ -180,13 +180,17 @@ export default function ClientRoster({
       </div>
 
       <div className="client-roster__count">
-        {loading && !hasLoadedRosterRef.current ? 'Loading clients…' : `${filtered.length} clients`}
+        {loading && !hasLoadedRosterRef.current ? '' : `${filtered.length} clients`}
       </div>
 
       <div className="client-roster__stack">
         <div
           className="roster-list client-roster__content"
-          style={{ opacity: loading && !hasLoadedRosterRef.current ? 0 : 1 }}
+          style={{
+            opacity: loading && !hasLoadedRosterRef.current ? 0 : 1,
+            transform: loading && !hasLoadedRosterRef.current ? 'translate3d(0, 6px, 0)' : 'translate3d(0, 0, 0)',
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+          }}
         >
           {filtered.length === 0 ? (
             <EmptyState message="No clients found." />

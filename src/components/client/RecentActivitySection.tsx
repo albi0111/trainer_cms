@@ -3,9 +3,15 @@
 // Reference: user screenshots
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './RecentActivitySection.css';
 import Card from '../ui/Card';
+import useCountUp from '../../hooks/useCountUp';
+import {
+  consumePendingSessionActivityAnimation,
+  SESSION_ACTIVITY_ANIMATION_EVENT,
+} from '../../hooks/useSessionCompleteAnimation';
+import { usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
 import type { SessionActivityEntry } from '../../services/sessionService';
 
 export type ActivityEntry = SessionActivityEntry;
@@ -17,9 +23,56 @@ interface RecentActivitySectionProps {
 
 const MAX_NOTE_LINES = 3;
 
-function ActivityItem({ activity, onRevert }: { activity: ActivityEntry; onRevert: () => void }) {
+function AnimatedActivityStat({
+  animationToken,
+  delayMs,
+  enabled,
+  value,
+}: {
+  animationToken: number;
+  delayMs: number;
+  enabled: boolean;
+  value: number;
+}) {
+  const { current, isComplete } = useCountUp({
+    target: enabled ? value : 0,
+    duration: 400,
+    delay: delayMs,
+    easing: 'ease-out',
+  });
+
+  return (
+    <span
+      className={[
+        'activity-stat__value',
+        enabled && !isComplete ? 'activity-stat__value--counting' : '',
+        enabled && isComplete && value > 0 ? 'activity-stat__value--arrived' : '',
+      ].filter(Boolean).join(' ')}
+      key={animationToken}
+    >
+      {enabled ? current : value}/10
+    </span>
+  );
+}
+
+function ActivityItem({
+  activity,
+  animationKind,
+  animationToken,
+  onRevert,
+  prefersReducedMotion,
+}: {
+  activity: ActivityEntry;
+  animationKind: 'completed' | 'missed' | null;
+  animationToken: number | null;
+  onRevert: () => void;
+  prefersReducedMotion: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const isCompleted = activity.status === 'completed';
+  const isAnimated = !prefersReducedMotion && animationKind !== null && animationToken !== null;
+  const animateCompletedStats = isAnimated && animationKind === 'completed';
+  const animateMissedReason = isAnimated && animationKind === 'missed';
 
   const noteText = isCompleted
     ? (activity.performance_notes ?? '')
@@ -41,19 +94,30 @@ function ActivityItem({ activity, onRevert }: { activity: ActivityEntry; onRever
   );
 
   const checkIcon = (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+      <polyline className="activity-status__stroke" pathLength="100" points="20 6 9 17 4 12" />
+    </svg>
   );
 
   const xIcon = (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round">
+      <line className="activity-status__stroke" pathLength="100" x1="18" y1="6" x2="6" y2="18" />
+      <line className="activity-status__stroke" pathLength="100" x1="6" y1="6" x2="18" y2="18" />
+    </svg>
   );
 
   return (
-    <div className="activity-item">
+    <div className={`activity-item${isAnimated ? ` activity-item--intro-${animationKind}` : ''}`}>
       {/* Status + date */}
       <div className="activity-item__status-row">
         <div className={`activity-status activity-status--${activity.status}`}>
-          <div className={`activity-status__dot activity-status__dot--${activity.status}`}>
+          <div
+            className={[
+              'activity-status__dot',
+              `activity-status__dot--${activity.status}`,
+              isAnimated ? 'activity-status__dot--animated' : '',
+            ].join(' ')}
+          >
             {isCompleted ? checkIcon : xIcon}
           </div>
           {activity.status.toUpperCase()}
@@ -76,13 +140,31 @@ function ActivityItem({ activity, onRevert }: { activity: ActivityEntry; onRever
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                <span className="activity-stat__value">{activity.energy_level ?? 0}/10</span>
+                {animateCompletedStats && animationToken !== null ? (
+                  <AnimatedActivityStat
+                    animationToken={animationToken}
+                    delayMs={120}
+                    enabled={(activity.energy_level ?? 0) > 0}
+                    value={activity.energy_level ?? 0}
+                  />
+                ) : (
+                  <span className="activity-stat__value">{activity.energy_level ?? 0}/10</span>
+                )}
               </div>
               <div className="activity-stat">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8l4 4-4 4M6 8l-4 4 4 4M2 12h20" />
                 </svg>
-                <span className="activity-stat__value">{activity.perceived_difficulty ?? 0}/10</span>
+                {animateCompletedStats && animationToken !== null ? (
+                  <AnimatedActivityStat
+                    animationToken={animationToken + 1}
+                    delayMs={0}
+                    enabled={(activity.perceived_difficulty ?? 0) > 0}
+                    value={activity.perceived_difficulty ?? 0}
+                  />
+                ) : (
+                  <span className="activity-stat__value">{activity.perceived_difficulty ?? 0}/10</span>
+                )}
               </div>
             </div>
           )}
@@ -92,7 +174,7 @@ function ActivityItem({ activity, onRevert }: { activity: ActivityEntry; onRever
 
       {/* Notes container */}
       {noteText && (
-        <div className="activity-item__notes-box">
+        <div className={`activity-item__notes-box${animateMissedReason ? ' activity-item__notes-box--reason-enter' : ''}`}>
           <p className="activity-item__notes-text">{displayedText}</p>
           {isTruncatable && (
             <button className="activity-item__see-more" onClick={() => setExpanded(!expanded)}>
@@ -109,7 +191,83 @@ export default function RecentActivitySection({
   activities,
   onRevert,
 }: RecentActivitySectionProps) {
+  const animationTimeoutRef = useRef<number | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [showAll, setShowAll] = useState(false);
+  const [animationEventVersion, setAnimationEventVersion] = useState(0);
+  const [animatedActivity, setAnimatedActivity] = useState<{
+    id: string;
+    kind: 'completed' | 'missed';
+    token: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleAnimationReady = () => {
+      setAnimationEventVersion((current) => current + 1);
+    };
+
+    try {
+      window.addEventListener(SESSION_ACTIVITY_ANIMATION_EVENT, handleAnimationReady);
+    } catch {
+      return;
+    }
+
+    return () => {
+      window.removeEventListener(SESSION_ACTIVITY_ANIMATION_EVENT, handleAnimationReady);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (animationTimeoutRef.current !== null) {
+      window.clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+
+    return () => {
+      if (animationTimeoutRef.current !== null) {
+        window.clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion || activities.length === 0) {
+      setAnimatedActivity(null);
+      return;
+    }
+
+    if (animationTimeoutRef.current !== null) {
+      window.clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+
+    let nextAnimation: { id: string; kind: 'completed' | 'missed'; token: number } | null = null;
+
+    for (const activity of activities) {
+      const pendingAnimation = consumePendingSessionActivityAnimation(activity.id, activity.status);
+      if (!pendingAnimation) {
+        continue;
+      }
+
+      nextAnimation = {
+        id: activity.id,
+        kind: pendingAnimation.kind,
+        token: animationEventVersion + Date.now(),
+      };
+      break;
+    }
+
+    if (!nextAnimation) {
+      return;
+    }
+
+    setAnimatedActivity(nextAnimation);
+
+    animationTimeoutRef.current = window.setTimeout(() => {
+      setAnimatedActivity((current) => (current?.id === nextAnimation?.id ? null : current));
+      animationTimeoutRef.current = null;
+    }, nextAnimation.kind === 'completed' ? 1800 : 1200);
+  }, [activities, animationEventVersion, prefersReducedMotion]);
 
   if (activities.length === 0) return null;
 
@@ -131,7 +289,14 @@ export default function RecentActivitySection({
       </div>
 
       {displayedActivities.map(a => (
-        <ActivityItem key={a.id} activity={a} onRevert={() => onRevert(a.id)} />
+        <ActivityItem
+          key={a.id}
+          activity={a}
+          animationKind={animatedActivity?.id === a.id ? animatedActivity.kind : null}
+          animationToken={animatedActivity?.id === a.id ? animatedActivity.token : null}
+          onRevert={() => onRevert(a.id)}
+          prefersReducedMotion={prefersReducedMotion}
+        />
       ))}
 
       {activities.length > 2 && (

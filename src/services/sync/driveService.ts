@@ -34,6 +34,21 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   };
 }
 
+async function getFreshReadHeaders(): Promise<HeadersInit> {
+  return {
+    ...(await getAuthHeaders()),
+    'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
+    Pragma: 'no-cache',
+  };
+}
+
+async function driveReadRequest(input: string): Promise<Response> {
+  return fetch(input, {
+    headers: await getFreshReadHeaders(),
+    cache: 'no-store',
+  });
+}
+
 async function getSyncMeta(): Promise<LocalSyncMeta> {
   const meta = await db.syncMeta.get('default');
   if (meta) {
@@ -71,9 +86,8 @@ async function listDriveFilesByName(name: string, parentId?: string, mimeType?: 
     queryParts.push(`mimeType = '${mimeType}'`);
   }
 
-  const response = await fetch(
+  const response = await driveReadRequest(
     `${DRIVE_API}?q=${encodeURIComponent(queryParts.join(' and '))}&fields=files(id,name,mimeType,createdTime,modifiedTime)&pageSize=20&orderBy=modifiedTime desc,createdTime desc`,
-    { headers: await getAuthHeaders() },
   );
   if (!response.ok) {
     throw new Error(`Drive lookup failed: ${response.status}`);
@@ -84,9 +98,7 @@ async function listDriveFilesByName(name: string, parentId?: string, mimeType?: 
 }
 
 async function getDriveFile(fileId: string): Promise<DriveFile | null> {
-  const response = await fetch(`${DRIVE_API}/${fileId}?fields=id,name,mimeType,createdTime,modifiedTime`, {
-    headers: await getAuthHeaders(),
-  });
+  const response = await driveReadRequest(`${DRIVE_API}/${fileId}?fields=id,name,mimeType,createdTime,modifiedTime`);
 
   if (response.status === 404) {
     return null;
@@ -125,9 +137,8 @@ async function createFolder(name: string, parentId?: string): Promise<string> {
 }
 
 export async function listFiles(parentId: string): Promise<DriveFile[]> {
-  const response = await fetch(
+  const response = await driveReadRequest(
     `${DRIVE_API}?q=${encodeURIComponent(`'${parentId}' in parents and trashed = false`)}&fields=files(id,name,mimeType)`,
-    { headers: await getAuthHeaders() },
   );
   if (!response.ok) {
     throw new Error(`Drive list failed: ${response.status}`);
@@ -137,9 +148,7 @@ export async function listFiles(parentId: string): Promise<DriveFile[]> {
 }
 
 export async function downloadFile<T>(fileId: string): Promise<T | null> {
-  const response = await fetch(`${DRIVE_API}/${fileId}?alt=media`, {
-    headers: await getAuthHeaders(),
-  });
+  const response = await driveReadRequest(`${DRIVE_API}/${fileId}?alt=media`);
 
   if (response.status === 404) {
     return null;

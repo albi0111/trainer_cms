@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import './DietPlanSection.css';
 import Card from '../ui/Card';
 import IconButton from '../ui/IconButton';
@@ -116,6 +116,8 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
   const [grid, setGrid] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>(['Meal 1']);
   const [macros, setMacros] = useState<DietMacros>(DEFAULT_MACROS);
+  const gridViewportRef = useRef<HTMLDivElement>(null);
+  const [gridViewportWidth, setGridViewportWidth] = useState(0);
 
   useEffect(() => {
     if (isEditing) {
@@ -127,6 +129,32 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
     setHeaders(nextHeaders);
     setMacros(nextMacros);
   }, [dietPlans, isEditing]);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncGridViewportWidth = () => {
+      setGridViewportWidth(gridViewportRef.current?.clientWidth ?? 0);
+    };
+
+    syncGridViewportWidth();
+
+    let resizeObserver: ResizeObserver | null = null;
+
+    if (typeof ResizeObserver !== 'undefined' && gridViewportRef.current) {
+      resizeObserver = new ResizeObserver(syncGridViewportWidth);
+      resizeObserver.observe(gridViewportRef.current);
+    }
+
+    window.addEventListener('resize', syncGridViewportWidth);
+
+    return () => {
+      window.removeEventListener('resize', syncGridViewportWidth);
+      resizeObserver?.disconnect();
+    };
+  }, []);
 
   const handleAddColumn = () => {
     setGrid(prev => prev.map(row => [...row, '']));
@@ -179,8 +207,30 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
     });
   };
 
-  const hasWideColumns = headers.length > 2;
-  const hasSingleColumn = headers.length === 1;
+  const columnCount = Math.max(headers.length, grid[0]?.length ?? 1, 1);
+  const compactLayout = gridViewportWidth > 0 ? gridViewportWidth <= 640 : false;
+  const narrowLayout = gridViewportWidth > 0 ? gridViewportWidth <= 480 : false;
+  const visibleColumnLimit = compactLayout ? 2 : 4;
+  const shouldOverflow = columnCount > visibleColumnLimit;
+  const dayColumnWidth = narrowLayout ? 52 : 60;
+  const gridGap = narrowLayout ? 6 : 8;
+  const fallbackViewportWidth = compactLayout ? 320 : 640;
+  const availableViewportWidth = gridViewportWidth || fallbackViewportWidth;
+  const visibleColumnCount = shouldOverflow ? visibleColumnLimit : columnCount;
+  const calculatedColumnWidth = (
+    availableViewportWidth
+    - dayColumnWidth
+    - (visibleColumnCount * gridGap)
+  ) / visibleColumnCount;
+  const minimumColumnWidth = compactLayout ? 118 : 112;
+  const columnWidth = Math.max(calculatedColumnWidth, minimumColumnWidth);
+  const overflowContainerWidth = dayColumnWidth + (columnCount * columnWidth) + (columnCount * gridGap);
+  const gridContainerStyle: CSSProperties & Record<'--diet-column-width' | '--diet-day-width' | '--diet-grid-gap', string> = {
+    '--diet-column-width': `${columnWidth}px`,
+    '--diet-day-width': `${dayColumnWidth}px`,
+    '--diet-grid-gap': `${gridGap}px`,
+    width: shouldOverflow ? `${overflowContainerWidth}px` : '100%',
+  };
 
   const content = (
     <>
@@ -243,11 +293,12 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
       </div>
 
       {/* Grid */}
-      <div className="diet-grid-scroll">
+      <div ref={gridViewportRef} className="diet-grid-scroll">
         <div
-          className={`diet-grid-container ${hasWideColumns ? 'diet-grid-container--wide' : ''} ${hasSingleColumn ? 'diet-grid-container--single-column' : ''}`.trim()}
+          className={`diet-grid-container${shouldOverflow ? ' diet-grid-container--overflow' : ''}`}
+          style={gridContainerStyle}
         >
-          {/* Headers row (only if multiple columns) */}
+          {/* Headers row */}
           {headers.length > 1 && (
             <div className="diet-grid-row diet-grid-row--header">
               <div className="diet-day-cell diet-day-cell--empty" />
@@ -258,6 +309,7 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                       className="diet-header-input"
                       value={hdr}
                       onChange={(e) => handleHeaderChange(cIdx, e.target.value)}
+                      placeholder={`Meal ${cIdx + 1}`}
                     />
                   ) : (
                     <span className="diet-header-input">{hdr}</span>
@@ -291,8 +343,15 @@ export default function DietPlanSection({ dietPlans, isEditing, onToggleEdit, on
                     placeholder="Enter meal..."
                   />
                 ) : (
-                  <div key={cIdx} className="diet-input-cell diet-input-cell--readonly">
-                    {cell}
+                  <div
+                    key={cIdx}
+                    className={`diet-input-cell diet-input-cell--readonly${cell.trim().length === 0 ? ' diet-input-cell--empty' : ''}`}
+                  >
+                    {cell.trim().length === 0 ? (
+                      <span className="diet-input-cell__placeholder">No meal added</span>
+                    ) : (
+                      cell
+                    )}
                   </div>
                 )
               ))}

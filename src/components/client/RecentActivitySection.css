@@ -15,6 +15,18 @@
   border-bottom: 1px solid #161616;
 }
 
+.activity-item--intro-completed,
+.activity-item--intro-missed {
+  opacity: 0;
+  transform: translate3d(0, -24px, 0);
+  will-change: transform, opacity;
+  animation: activity-item-intro 380ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.activity-item--intro-missed {
+  animation-duration: 360ms;
+}
+
 .activity-item:last-child {
   border-bottom: none;
 }
@@ -46,6 +58,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  transform-origin: center;
 }
 
 .activity-status__dot--completed {
@@ -56,6 +70,44 @@
 .activity-status__dot--missed {
   background-color: rgba(255, 82, 82, 0.15);
   color: #FF5252;
+}
+
+.activity-status__dot--animated {
+  opacity: 0;
+  transform: scale(0.6);
+  animation: activity-badge-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 50ms forwards;
+}
+
+.activity-item--intro-missed .activity-status__dot--animated {
+  animation-delay: 40ms;
+}
+
+.activity-item--intro-completed .activity-status__dot--animated {
+  animation: activity-badge-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 50ms forwards;
+}
+
+.activity-item--intro-completed .activity-status__dot--animated::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  box-shadow: 0 0 16px rgba(61, 204, 136, 0.7);
+  opacity: 0;
+  transform: scale(0.8);
+  animation: activity-complete-glow 1100ms ease-out 470ms forwards;
+}
+
+.activity-status__stroke {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+
+.activity-item--intro-completed .activity-status__stroke {
+  animation: activity-stroke-draw 280ms ease-out 150ms forwards;
+}
+
+.activity-item--intro-missed .activity-status__stroke {
+  animation: activity-stroke-draw 220ms ease-out 80ms forwards;
 }
 
 .activity-item__date {
@@ -106,6 +158,15 @@
   color: var(--color-primary);
   font-size: 12px;
   font-weight: 800;
+  transition: opacity 160ms ease;
+}
+
+.activity-stat__value--counting {
+  opacity: 0.6;
+}
+
+.activity-stat__value--arrived {
+  animation: activity-stat-pulse 200ms ease-out 1;
 }
 
 /* Revert button */
@@ -144,6 +205,12 @@
   border-left: 3px solid var(--color-primary);
 }
 
+.activity-item__notes-box--reason-enter {
+  opacity: 0;
+  transform: translate3d(-4px, 0, 0);
+  animation: activity-reason-enter 200ms ease-out 150ms forwards;
+}
+
 .activity-item__notes-text {
   color: #AAA;
   font-size: 13px;
@@ -173,4 +240,101 @@
   font-weight: 800;
   cursor: pointer;
   padding: 0;
+}
+
+@keyframes activity-item-intro {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes activity-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes activity-stroke-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes activity-complete-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes activity-reason-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes activity-stat-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-item--intro-completed,
+  .activity-item--intro-missed,
+  .activity-status__dot--animated,
+  .activity-item__notes-box--reason-enter,
+  .activity-item--intro-completed .activity-status__dot--animated,
+  .activity-item--intro-completed .activity-status__stroke,
+  .activity-item--intro-missed .activity-status__stroke,
+  .activity-stat__value--arrived {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

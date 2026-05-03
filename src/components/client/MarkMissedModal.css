@@ -57,6 +57,10 @@
   transition-duration: 280ms;
 }
 
+.missed-modal__overlay[data-state='closed'][data-success-exit='true'] .missed-modal__box {
+  transition-duration: 260ms;
+}
+
 .missed-modal__box::before {
   content: '';
   position: absolute;
@@ -94,6 +98,11 @@
   cursor: pointer;
   color: #888;
   transition: color var(--transition-fast);
+}
+
+.missed-modal__close:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .missed-modal__close:hover { color: #FFF; }
@@ -177,10 +186,64 @@
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 12px;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), transform 120ms ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .missed-modal__confirm-btn:hover { opacity: 0.9; }
+
+.missed-modal__confirm-btn:disabled {
+  cursor: default;
+}
+
+.missed-modal__confirm-btn-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.missed-modal__confirm-btn-icon {
+  display: inline-flex;
+  opacity: 0;
+  transform: scale(0.84);
+}
+
+.missed-modal__confirm-btn-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+
+.missed-modal__confirm-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.84);
+}
+
+.missed-modal__confirm-btn--saving {
+  opacity: 0.92;
+}
+
+.missed-modal__confirm-btn--success .missed-modal__confirm-btn-icon {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 160ms ease, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.missed-modal__confirm-btn--success .missed-modal__confirm-btn-path {
+  animation: missed-modal-confirm-draw 220ms ease-out 80ms forwards;
+}
+
+.missed-modal__confirm-btn--success .missed-modal__confirm-ring {
+  animation: missed-modal-confirm-ring 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
 
 .missed-modal__back-btn {
   width: 100%;
@@ -194,7 +257,50 @@
   transition: color var(--transition-fast);
 }
 
+.missed-modal__back-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .missed-modal__back-btn:hover { color: #FFF; }
+
+@keyframes missed-modal-confirm-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+
+  30% {
+    opacity: 0.45;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes missed-modal-confirm-draw {
+  0% {
+    stroke-dashoffset: 100;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .missed-modal__confirm-btn,
+  .missed-modal__confirm-btn-icon {
+    transition: opacity var(--transition-fast);
+  }
+
+  .missed-modal__confirm-btn--success .missed-modal__confirm-ring,
+  .missed-modal__confirm-btn--success .missed-modal__confirm-btn-path {
+    animation: none;
+  }
+}
 
 @media (min-width: 768px) {
   .missed-modal__overlay {

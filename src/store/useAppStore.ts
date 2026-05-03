@@ -3,7 +3,7 @@ import type { ClientDetail, DashboardStats, ScheduledSession } from '../types';
 import { getClientDetail } from '../services/client/clientService';
 import { getDashboardStats } from '../services/analytics/analyticsService';
 import { getMonthSchedule } from '../services/schedule/scheduleService';
-import { checkForUpdates, getSyncSnapshot, runSyncCycle } from '../services/sync/syncService';
+import { getSyncSnapshot, runSyncCycle } from '../services/sync/syncService';
 import { isAuthenticated, signIn, signOut } from '../services/sync/googleAuth';
 
 export type AppSyncStatus = 'idle' | 'syncing' | 'error';
@@ -111,8 +111,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   runSync: async () => {
     set({ syncStatus: 'syncing' });
     try {
-      await checkForUpdates();
-      await runSyncCycle();
+      const changed = await runSyncCycle();
+      if (changed) {
+        set({
+          dashboard: null,
+          clientDetails: {},
+          scheduleCache: null,
+        });
+      }
       await get().refreshSyncState();
       set({ syncStatus: 'idle' });
     } catch (error) {

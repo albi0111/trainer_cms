@@ -304,27 +304,29 @@ export default function ClientScreen() {
     };
   }, [previousTab]);
 
-  const handleCompleteSession = useCallback(async (sessionId: string, data: CompleteSessionData) => {
+  const handleCompleteSession = useCallback(async (sessionId: string, data: CompleteSessionData): Promise<boolean> => {
     try {
       await completeSession(sessionId, clientId, {
         difficulty: data.difficulty,
         energy: data.energy,
         performanceNotes: data.performanceNotes,
       });
-      playSuccess();
-      haptic.success();
       await refreshPageData();
+      return true;
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to complete session.');
+      return false;
     }
-  }, [clientId, haptic, playSuccess, refreshPageData]);
+  }, [clientId, refreshPageData]);
 
-  const handleMissSession = useCallback(async (sessionId: string, data: MarkMissedData) => {
+  const handleMissSession = useCallback(async (sessionId: string, data: MarkMissedData): Promise<boolean> => {
     try {
       await markSessionMissed(sessionId, clientId, data);
       await refreshPageData();
+      return true;
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to mark session missed.');
+      return false;
     }
   }, [clientId, refreshPageData]);
 
@@ -588,7 +590,11 @@ export default function ClientScreen() {
           <div className="client-content-stack">
             <div
               className="client-content-stack__content"
-              style={{ opacity: loading && !hasLoadedClientRef.current ? 0 : 1 }}
+              style={{
+                opacity: loading && !hasLoadedClientRef.current ? 0 : 1,
+                transform: loading && !hasLoadedClientRef.current ? 'translate3d(0, 6px, 0)' : 'translate3d(0, 0, 0)',
+                transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+              }}
             >
               <ClientHeaderCard
                 name={clientData.name}

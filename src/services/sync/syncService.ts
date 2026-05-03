@@ -65,6 +65,28 @@ function hasRemoteChanges(syncMeta: LocalSyncMeta, remoteMeta: DriveMeta, remote
   );
 }
 
+async function hasPullableRemoteChanges(index: DriveClientsIndex): Promise<boolean> {
+  const localClients = await db.clients.toArray();
+  const localById = new Map(localClients.map((client) => [client.id, client]));
+
+  for (const remoteEntry of index.clients) {
+    const localClient = localById.get(remoteEntry.id);
+
+    if (localClient?.sync_status === 'pending') {
+      if (remoteEntry.version !== localClient.version || remoteEntry.updated_at !== localClient.updated_at) {
+        return true;
+      }
+      continue;
+    }
+
+    if (shouldPullRemoteClient(localClient, remoteEntry)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function readSyncMeta(): Promise<LocalSyncMeta> {
   const meta = await db.syncMeta.get('default');
   if (meta) {
@@ -332,8 +354,10 @@ export async function syncFromCloud(): Promise<boolean> {
   const syncMeta = await readSyncMeta();
   const remoteMeta = await loadRemoteMeta(layout.metaFileId);
   const remoteIndex = await loadRemoteIndex(layout.clientsIndexFileId);
+  const hasRemoteUpdates = hasRemoteChanges(syncMeta, remoteMeta, remoteIndex)
+    || await hasPullableRemoteChanges(remoteIndex);
 
-  if (!(await hasPendingQueue()) && !hasRemoteChanges(syncMeta, remoteMeta, remoteIndex)) {
+  if (!(await hasPendingQueue()) && !hasRemoteUpdates) {
     await patchSyncMeta({
       last_sync_at: nowIsoUtc(),
       last_sync_error: '',
@@ -386,8 +410,10 @@ export async function checkForUpdates(): Promise<boolean> {
   const syncMeta = await readSyncMeta();
   const remoteMeta = await loadRemoteMeta(layout.metaFileId);
   const remoteIndex = await loadRemoteIndex(layout.clientsIndexFileId);
+  const hasRemoteUpdates = hasRemoteChanges(syncMeta, remoteMeta, remoteIndex)
+    || await hasPullableRemoteChanges(remoteIndex);
 
-  if (!hasRemoteChanges(syncMeta, remoteMeta, remoteIndex)) {
+  if (!hasRemoteUpdates) {
     await patchSyncMeta({
       last_sync_at: nowIsoUtc(),
       last_sync_error: '',
