@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import pkg from '../../package.json';
 import './SettingsScreen.css';
 
 import TopNavBar from '../components/layout/TopNavBar';
@@ -7,6 +8,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import DriveConnectAlert from '../components/sync/DriveConnectAlert';
 import SyncIndicator from '../components/sync/SyncIndicator';
+import { useSoundFeedback } from '../hooks/useSoundFeedback';
 import { useAppStore } from '../store/useAppStore';
 
 export default function SettingsScreen() {
@@ -18,10 +20,63 @@ export default function SettingsScreen() {
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
   const runSync = useAppStore((state) => state.runSync);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
+  const [isBuilderToastVisible, setIsBuilderToastVisible] = useState(false);
+  const builderTapCountRef = useRef(0);
+  const builderTapResetTimeoutRef = useRef<number | null>(null);
+  const builderToastTimeoutRef = useRef<number | null>(null);
+  const { playTick } = useSoundFeedback();
+  const version = typeof pkg.version === 'string' && pkg.version.trim() ? pkg.version : '1.0.0';
 
   useEffect(() => {
     void refreshSyncState();
   }, [refreshSyncState]);
+
+  useEffect(() => {
+    return () => {
+      if (builderTapResetTimeoutRef.current !== null) {
+        window.clearTimeout(builderTapResetTimeoutRef.current);
+      }
+
+      if (builderToastTimeoutRef.current !== null) {
+        window.clearTimeout(builderToastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleBuilderTap = () => {
+    builderTapCountRef.current += 1;
+
+    if (builderTapResetTimeoutRef.current !== null) {
+      window.clearTimeout(builderTapResetTimeoutRef.current);
+    }
+
+    builderTapResetTimeoutRef.current = window.setTimeout(() => {
+      builderTapCountRef.current = 0;
+      builderTapResetTimeoutRef.current = null;
+    }, 3000);
+
+    if (builderTapCountRef.current < 3) {
+      return;
+    }
+
+    builderTapCountRef.current = 0;
+
+    if (builderTapResetTimeoutRef.current !== null) {
+      window.clearTimeout(builderTapResetTimeoutRef.current);
+      builderTapResetTimeoutRef.current = null;
+    }
+
+    if (builderToastTimeoutRef.current !== null) {
+      window.clearTimeout(builderToastTimeoutRef.current);
+    }
+
+    playTick();
+    setIsBuilderToastVisible(true);
+    builderToastTimeoutRef.current = window.setTimeout(() => {
+      setIsBuilderToastVisible(false);
+      builderToastTimeoutRef.current = null;
+    }, 2500);
+  };
 
   return (
     <div className="settings-page">
@@ -78,14 +133,31 @@ export default function SettingsScreen() {
 
             <section className="settings-group">
               <h2 className="settings-group-title">ABOUT</h2>
-              <Card padding="md" className="settings-card">
-                <div className="setting-item">
-                  <span className="setting-item-label">Runtime</span>
-                  <span className="setting-item-value">Vite PWA</span>
+              <Card padding="lg" className="settings-card settings-about-card">
+                <div className="settings-about-card__brand">
+                  <div className="settings-about-card__logo" aria-hidden="true">FIT</div>
+                  <h3 className="settings-about-card__name">FIT.PERSONA</h3>
+                  <p className="settings-about-card__version">Version {version}</p>
                 </div>
-                <div className="setting-item">
-                  <span className="setting-item-label">Storage</span>
-                  <span className="setting-item-value">Dexie + Google Drive</span>
+
+                <div className="settings-about-card__divider" />
+
+                <div className="settings-about-card__credits">
+                  <span className="settings-about-card__eyebrow">Powered by</span>
+                  <button
+                    type="button"
+                    className="settings-about-card__builder"
+                    onClick={handleBuilderTap}
+                  >
+                    0111
+                  </button>
+                </div>
+
+                <div className="settings-about-card__divider" />
+
+                <div className="settings-about-card__dedication">
+                  <span className="settings-about-card__eyebrow">Built with ♥ for</span>
+                  <span className="settings-about-card__trainer">Ajith</span>
                 </div>
               </Card>
             </section>
@@ -108,6 +180,14 @@ export default function SettingsScreen() {
         onClose={() => setIsDrivePromptOpen(false)}
         onConnected={refreshSyncState}
       />
+
+      <div
+        className={`settings-builder-toast ${isBuilderToastVisible ? 'settings-builder-toast--visible' : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        Hello from the builder 👋
+      </div>
     </div>
   );
 }

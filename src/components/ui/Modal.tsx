@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './Modal.css';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface ModalProps {
   open: boolean;
@@ -15,11 +16,20 @@ const MODAL_CLOSING_MS = 280;
 
 export default function Modal({ open, onClose, title, children, footer, className }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const openingTimeoutRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
   const [isActive, setIsActive] = useState(open);
   const [isOpening, setIsOpening] = useState(false);
+
+  useModalVelocityDismiss({
+    visible: open,
+    onClose,
+    overlayRef: dialogRef,
+    sheetRef: contentRef,
+    overlayMode: 'dialog-backdrop',
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -112,7 +122,7 @@ export default function Modal({ open, onClose, title, children, footer, classNam
       }}
       onClick={handleBackdropClick}
     >
-      <div className="modal__content">
+      <div ref={contentRef} className="modal__content">
         {title && (
           <div className="modal__header">
             <h2 className="modal__title">{title}</h2>

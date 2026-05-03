@@ -3,10 +3,11 @@
 // Reference: user screenshots
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './MarkMissedModal.css';
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 const REASONS = ['sick', 'travel', 'busy', 'no_show', 'other'] as const;
 type Reason = typeof REASONS[number];
@@ -33,8 +34,17 @@ export default function MarkMissedModal({
   const [note, setNote] = useState('');
   const [noteInvalid, setNoteInvalid] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
   const { playError } = useSoundFeedback();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: boxRef,
+  });
 
   useEffect(() => {
     if (visible) {
@@ -81,12 +91,13 @@ export default function MarkMissedModal({
 
   return (
     <div
+      ref={overlayRef}
       className="missed-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="missed-modal__box" onClick={e => e.stopPropagation()}>
+      <div ref={boxRef} className="missed-modal__box" onClick={e => e.stopPropagation()}>
         <div className="missed-modal__header">
           <span className="missed-modal__title">Mark Missed</span>
           <button className="missed-modal__close" onClick={onClose}>

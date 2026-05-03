@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './NewSessionModal.css';
 import AppDatePicker from '../shared/AppDatePicker';
@@ -7,6 +7,7 @@ import AppAlert from '../shared/AppAlert';
 import EmptyState from '../ui/EmptyState';
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import { Session } from '../../types';
 import { getSessionExercises } from '../../services/sessionService';
 
@@ -62,8 +63,17 @@ export default function NewSessionModal({
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [timeInvalid, setTimeInvalid] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
   const { playError } = useSoundFeedback();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: dialogRef,
+  });
 
   useEffect(() => {
     if (editingSession) {
@@ -206,12 +216,13 @@ export default function NewSessionModal({
 
   return createPortal(
     <div
+      ref={overlayRef}
       className="session-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="session-modal__dialog" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="session-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="session-modal__header">
           <div className="session-modal__title-group">
             <h2 className="session-modal__title">{modalTitle}</h2>

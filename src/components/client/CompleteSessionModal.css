@@ -62,11 +62,12 @@
   position: absolute;
   top: 12px;
   left: 50%;
-  width: 42px;
+  width: var(--sheet-handle-width, 36px);
   height: 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
   transform: translateX(-50%);
+  transition: width 180ms ease;
 }
 
 .complete-modal__header {

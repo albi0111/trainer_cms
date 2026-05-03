@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './ScheduleCalendarModal.css';
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 type EditablePlan = {
   id: string;
@@ -24,8 +25,17 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [titleInvalid, setTitleInvalid] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: modalRef,
+  });
 
   useEffect(() => {
     if (plan) {
@@ -92,13 +102,14 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
 
   return createPortal(
     <div
+      ref={overlayRef}
       className="uc-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
       style={{ zIndex: 1100 }}
     >
-      <div className="uc-modal" onClick={e => e.stopPropagation()}>
+      <div ref={modalRef} className="uc-modal" onClick={e => e.stopPropagation()}>
         <div className="uc-header">
           <div>
             <h2 className="uc-title" style={{ color: '#FFD700' }}>Edit Plan Details</h2>

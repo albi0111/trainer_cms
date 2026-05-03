@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import './DatePicker.css';
 import IconButton from './IconButton';
 import Button from './Button';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface DatePickerProps {
   value?: string; // 'YYYY-MM-DD'
@@ -24,6 +25,15 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
   const [selectedYear, setYear] = useState('');
   const [selectedMonth, setMonth] = useState('');
   const [selectedDay, setDay] = useState('');
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useModalVelocityDismiss({
+    visible: isOpen,
+    onClose: () => setIsOpen(false),
+    overlayRef,
+    sheetRef: modalRef,
+  });
 
 
   useEffect(() => {
@@ -102,12 +112,13 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
 
       {typeof document !== 'undefined' && createPortal(
         <div
+          ref={overlayRef}
           className="picker-overlay"
           data-state={isOpen ? 'open' : 'closed'}
           data-opening={isOpening ? 'true' : 'false'}
           onClick={() => setIsOpen(false)}
         >
-          <div className="picker-modal" onClick={(event) => event.stopPropagation()}>
+          <div ref={modalRef} className="picker-modal" onClick={(event) => event.stopPropagation()}>
             <div className="picker-modal__header">
               <h3 className="picker-modal__title">Select Date</h3>
               <IconButton icon={closeIcon} onClick={() => setIsOpen(false)} variant="dark" />

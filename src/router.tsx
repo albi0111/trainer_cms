@@ -1,6 +1,6 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import AnimatedRouteShell from './components/layout/AnimatedRouteShell';
+import SwipeBackContainer from './components/SwipeBackContainer';
 
 const DashboardScreen = lazy(() => import('./screens/DashboardScreen'));
 const ClientScreen = lazy(() => import('./screens/ClientScreen'));
@@ -23,7 +23,7 @@ function withSuspense(element: ReactNode) {
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <AnimatedRouteShell />,
+    element: <SwipeBackContainer />,
     children: [
       {
         index: true,

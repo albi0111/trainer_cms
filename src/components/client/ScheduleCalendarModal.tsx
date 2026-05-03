@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './ScheduleCalendarModal.css';
 import type { ScheduledSession, Session } from '../../types';
 import ScheduleCalendarGrid from '../schedule/ScheduleCalendarGrid';
 import AppAlert from '../shared/AppAlert';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface ScheduleCalendarModalProps {
   visible: boolean;
@@ -34,6 +35,15 @@ export default function ScheduleCalendarModal({
   const [goal, setGoal] = useState(weekPlan?.goal || '');
   const [sessionToDelete, setSessionToDelete] = useState<ScheduledSession | null>(null);
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: dialogRef,
+  });
 
   useEffect(() => {
     if (weekPlan) {
@@ -62,12 +72,13 @@ export default function ScheduleCalendarModal({
 
   return createPortal(
     <div
+      ref={overlayRef}
       className="uc-overlay schedule-calendar-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="uc-modal schedule-calendar-modal__dialog" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} className="uc-modal schedule-calendar-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="uc-header schedule-calendar-modal__header">
           <div className="schedule-calendar-modal__intro">
             <h2 className="uc-title schedule-calendar-modal__title">{displayWeekPlan.title}</h2>

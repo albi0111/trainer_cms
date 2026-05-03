@@ -4,6 +4,7 @@ import { Measurement, MeasurementConfig } from '../../types';
 import ManageMetricsModal from '../modals/ManageMetricsModal';
 import AddMeasurementModal from '../modals/AddMeasurementModal';
 import { getClientProgress } from '../../services/analytics/analyticsService';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import './AnalyticsSection.css';
 
 interface AnalyticsSectionProps {
@@ -36,6 +37,8 @@ export default function AnalyticsSection({
   const [isManageMetricsOpen, setIsManageMetricsOpen] = useState(false);
   const chartModalCloseTimeoutRef = useRef<number | null>(null);
   const chartModalOpeningTimeoutRef = useRef<number | null>(null);
+  const chartModalOverlayRef = useRef<HTMLDivElement>(null);
+  const chartModalContentRef = useRef<HTMLDivElement>(null);
   const analyticsTabContainerRef = useRef<HTMLDivElement>(null);
   const analyticsTabRefs = useRef<Record<'body' | 'performance', HTMLButtonElement | null>>({
     body: null,
@@ -61,6 +64,13 @@ export default function AnalyticsSection({
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const canOpenChartModal = !isPhone;
+
+  useModalVelocityDismiss({
+    visible: isChartModalOpen,
+    onClose: () => setIsChartModalOpen(false),
+    overlayRef: chartModalOverlayRef,
+    sheetRef: chartModalContentRef,
+  });
 
   useEffect(() => {
     loadData();
@@ -594,12 +604,13 @@ export default function AnalyticsSection({
 
       {isChartModalPresent && typeof document !== 'undefined' && createPortal(
         <div
+          ref={chartModalOverlayRef}
           className="chart-modal-overlay"
           data-state={isChartModalOpen ? 'open' : 'closed'}
           data-opening={isChartModalOpening ? 'true' : 'false'}
           onClick={() => setIsChartModalOpen(false)}
         >
-          <div className="chart-modal-content" onClick={e => e.stopPropagation()}>
+          <div ref={chartModalContentRef} className="chart-modal-content" onClick={e => e.stopPropagation()}>
             <div className="chart-modal-header">
               <h3>TREND OVERVIEW</h3>
               <button className="chart-modal-close" onClick={() => setIsChartModalOpen(false)}>

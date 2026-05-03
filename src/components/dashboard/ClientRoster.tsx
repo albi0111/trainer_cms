@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './ClientRoster.css';
 import Avatar from '../ui/Avatar';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import EmptyState from '../ui/EmptyState';
+import SkeletonClientCard from '../skeletons/SkeletonClientCard';
 import useStaggeredEntrance from '../../hooks/useStaggeredEntrance';
 import type { ClientStatus } from '../../types';
 import { toClientBadgeStatus } from '../../utils/clientStatus';
@@ -96,6 +97,8 @@ export default function ClientRoster({
   onAddClient,
 }: ClientRosterProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const hasLoadedRosterRef = useRef(false);
   const addClientGlyphs = (
     <span className="roster-add-btn__glyphs" aria-hidden="true">
       <span className="roster-add-btn__plus">+</span>
@@ -110,6 +113,44 @@ export default function ClientRoster({
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const filterKey = searchQuery.trim().toLowerCase();
+  const skeletonEntrance = useStaggeredEntrance({
+    itemCount: showLoadingSkeleton ? 3 : 0,
+    once: false,
+  });
+
+  useEffect(() => {
+    if (hasLoadedRosterRef.current || !loading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(true);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    hasLoadedRosterRef.current = true;
+
+    if (!showLoadingSkeleton) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading, showLoadingSkeleton]);
 
   return (
     <div className="client-roster">
@@ -138,14 +179,15 @@ export default function ClientRoster({
         </Button>
       </div>
 
-      <div className="client-roster__count">{filtered.length} clients</div>
+      <div className="client-roster__count">
+        {loading && !hasLoadedRosterRef.current ? 'Loading clients…' : `${filtered.length} clients`}
+      </div>
 
-      {loading ? (
-        <div className="client-roster__loading">
-          <div className="spinner" />
-        </div>
-      ) : (
-        <div className="roster-list">
+      <div className="client-roster__stack">
+        <div
+          className="roster-list client-roster__content"
+          style={{ opacity: loading && !hasLoadedRosterRef.current ? 0 : 1 }}
+        >
           {filtered.length === 0 ? (
             <EmptyState message="No clients found." />
           ) : (
@@ -158,7 +200,29 @@ export default function ClientRoster({
             />
           )}
         </div>
-      )}
+
+        {showLoadingSkeleton ? (
+          <div
+            className="roster-list client-roster__skeleton-list"
+            style={{ opacity: loading ? 1 : 0 }}
+            aria-hidden="true"
+          >
+            {Array.from({ length: 3 }).map((_, index) => {
+              const itemProps = skeletonEntrance.getItemProps(index);
+
+              return (
+                <div
+                  key={`skeleton-client-${index}`}
+                  className={itemProps.className}
+                  style={itemProps.style}
+                >
+                  <SkeletonClientCard />
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

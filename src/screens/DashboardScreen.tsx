@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './DashboardScreen.css';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,8 @@ import StatsCards from '../components/dashboard/StatsCards';
 import TodaySchedule from '../components/dashboard/TodaySchedule';
 import ClientRoster from '../components/dashboard/ClientRoster';
 import ClientModal from '../components/modals/ClientModal';
+import SkeletonScheduleCard from '../components/skeletons/SkeletonScheduleCard';
+import SkeletonStatCard from '../components/skeletons/SkeletonStatCard';
 import DriveConnectAlert from '../components/sync/DriveConnectAlert';
 import SyncIndicator from '../components/sync/SyncIndicator';
 import { type DashboardStats } from '../types';
@@ -33,6 +35,8 @@ export default function DashboardScreen() {
   const [statsAnimationVersion, setStatsAnimationVersion] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
+  const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const hasLoadedDashboardRef = useRef(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -50,6 +54,40 @@ export default function DashboardScreen() {
     void loadDashboard();
     void runSync().then(loadDashboard).catch(() => undefined);
   }, [loadDashboard, runSync]);
+
+  useEffect(() => {
+    if (hasLoadedDashboardRef.current || !loading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(true);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    hasLoadedDashboardRef.current = true;
+
+    if (!showLoadingSkeleton) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading, showLoadingSkeleton]);
 
   useEffect(() => {
     const handleWindowFocus = () => {
@@ -121,12 +159,33 @@ export default function DashboardScreen() {
 
           <div className="dashboard-layout">
             <div className="dashboard-layout__sidebar">
-              <StatsCards 
-                key={statsAnimationVersion}
-                todaySessionCount={stats.todaySessions.length} 
-                activeClientCount={stats.activeClientCount} 
-              />
-              <TodaySchedule sessions={stats.todaySessions} />
+              <div className="dashboard-content-stack">
+                <div
+                  className="dashboard-content-stack__content"
+                  style={{ opacity: loading && !hasLoadedDashboardRef.current ? 0 : 1 }}
+                >
+                  <StatsCards
+                    key={statsAnimationVersion}
+                    todaySessionCount={stats.todaySessions.length}
+                    activeClientCount={stats.activeClientCount}
+                  />
+                  <TodaySchedule sessions={stats.todaySessions} />
+                </div>
+
+                {showLoadingSkeleton ? (
+                  <div
+                    className="dashboard-content-stack__skeleton"
+                    style={{ opacity: loading ? 1 : 0 }}
+                    aria-hidden="true"
+                  >
+                    <div className="stats-row">
+                      <SkeletonStatCard />
+                      <SkeletonStatCard />
+                    </div>
+                    <SkeletonScheduleCard />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="dashboard-layout__main">

@@ -20,7 +20,10 @@ import { type MarkMissedData } from '../components/client/MarkMissedModal';
 import ClientModal, { type ClientModalStep } from '../components/modals/ClientModal';
 import ScheduleCalendarModal from '../components/client/ScheduleCalendarModal';
 import NewSessionModal from '../components/client/NewSessionModal';
+import SkeletonClientProfile from '../components/skeletons/SkeletonClientProfile';
+import SkeletonInfoCard from '../components/skeletons/SkeletonInfoCard';
 import { EMPTY_ASSESSMENT, EMPTY_LIFESTYLE, EMPTY_PROFILE } from '../constants/assessment';
+import useStaggeredEntrance from '../hooks/useStaggeredEntrance';
 import { deleteClient, getClientDetail, updateClient, updateClientOverview } from '../services/client/clientService';
 import { saveDietPlan, updatePlan } from '../services/plan/planService';
 import { checkSessionOverlap, getPlannerScheduleRange } from '../services/schedule/scheduleService';
@@ -131,6 +134,13 @@ export default function ClientScreen() {
   const [postponeMode, setPostponeMode] = useState(false);
   const [deleteClientVisible, setDeleteClientVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const hasLoadedClientRef = useRef(false);
+  const profileSkeletonEntrance = useStaggeredEntrance({
+    itemCount: showLoadingSkeleton ? 3 : 0,
+    once: false,
+  });
 
   const loadCalendarSessions = useCallback(async (anchorDate?: string) => {
     const { startDate, endDate } = getPlannerScheduleRange(anchorDate);
@@ -154,8 +164,11 @@ export default function ClientScreen() {
 
   const loadData = useCallback(async () => {
     if (!clientId) {
+      setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     try {
       await repairDetachedSessionPlanLinks(clientId);
@@ -214,6 +227,8 @@ export default function ClientScreen() {
     } catch (error) {
       console.error('Failed to load client detail', error);
       setErrorMessage('Failed to load client data.');
+    } finally {
+      setLoading(false);
     }
   }, [clientId, hydrateClientDetail, loadCalendarSessions, navigate]);
 
@@ -224,12 +239,48 @@ export default function ClientScreen() {
   }, [clientId, invalidateClientDetail, invalidateDashboard, loadData]);
 
   useEffect(() => {
+    hasLoadedClientRef.current = false;
+    setShowLoadingSkeleton(false);
     setSelectedClientId(clientId || null);
     void loadData();
     return () => {
       setSelectedClientId(null);
     };
   }, [clientId, loadData, setSelectedClientId]);
+
+  useEffect(() => {
+    if (hasLoadedClientRef.current || !loading) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(true);
+    }, 150);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    hasLoadedClientRef.current = true;
+
+    if (!showLoadingSkeleton) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowLoadingSkeleton(false);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [loading, showLoadingSkeleton]);
 
   useEffect(() => {
     if (!newSessionSlot?.date) {
@@ -534,39 +585,71 @@ export default function ClientScreen() {
 
       <PageWrapper>
         <div className="client-content">
-          <ClientHeaderCard
-            name={clientData.name}
-            goal={clientData.goal}
-            age={profileData.age}
-            weight={profileData.initial_weight_kg}
-            height={profileData.height_cm}
-            status={clientData.status}
-          />
+          <div className="client-content-stack">
+            <div
+              className="client-content-stack__content"
+              style={{ opacity: loading && !hasLoadedClientRef.current ? 0 : 1 }}
+            >
+              <ClientHeaderCard
+                name={clientData.name}
+                goal={clientData.goal}
+                age={profileData.age}
+                weight={profileData.initial_weight_kg}
+                height={profileData.height_cm}
+                status={clientData.status}
+              />
 
-          <TabBar tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+              <TabBar tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
 
-          {errorMessage && <div className="client-inline-error">{errorMessage}</div>}
+              {errorMessage && <div className="client-inline-error">{errorMessage}</div>}
 
-          <div className={`tab-content ${previousTab ? 'tab-content--transitioning' : ''}`}>
-            {visibleTabs.map((tabKey) => {
-              const isExiting = previousTab === tabKey;
+              <div className={`tab-content ${previousTab ? 'tab-content--transitioning' : ''}`}>
+                {visibleTabs.map((tabKey) => {
+                  const isExiting = previousTab === tabKey;
 
-              return (
-                <div
-                  key={tabKey}
-                  className={[
-                    'tab-pane',
-                    isExiting
-                      ? `tab-pane--${tabDirection}-exit`
-                      : previousTab
-                        ? `tab-pane--${tabDirection}-enter`
-                        : 'tab-pane--current',
-                  ].join(' ')}
-                >
-                  {renderTabPanel(tabKey)}
+                  return (
+                    <div
+                      key={tabKey}
+                      className={[
+                        'tab-pane',
+                        isExiting
+                          ? `tab-pane--${tabDirection}-exit`
+                          : previousTab
+                            ? `tab-pane--${tabDirection}-enter`
+                            : 'tab-pane--current',
+                      ].join(' ')}
+                    >
+                      {renderTabPanel(tabKey)}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {showLoadingSkeleton ? (
+              <div
+                className="client-content-stack__skeleton"
+                style={{ opacity: loading ? 1 : 0 }}
+                aria-hidden="true"
+              >
+                <SkeletonClientProfile />
+                <div className="client-profile-skeleton-list">
+                  {Array.from({ length: 3 }).map((_, index) => {
+                    const itemProps = profileSkeletonEntrance.getItemProps(index);
+
+                    return (
+                      <div
+                        key={`client-profile-skeleton-${index}`}
+                        className={itemProps.className}
+                        style={itemProps.style}
+                      >
+                        <SkeletonInfoCard />
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ) : null}
           </div>
         </div>
       </PageWrapper>

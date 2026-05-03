@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './AppAlert.css';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 type AppAlertVariant = 'danger' | 'info' | 'warning' | 'success';
 
@@ -69,6 +70,8 @@ export default function AppAlert({
   children,
 }: AppAlertProps) {
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const resolvedIcon = icon || DEFAULT_ICONS[variant];
   const handleCancel = () => {
@@ -77,6 +80,13 @@ export default function AppAlert({
     }
     onCancel();
   };
+
+  useModalVelocityDismiss({
+    visible,
+    onClose: handleCancel,
+    overlayRef,
+    sheetRef: modalRef,
+  });
 
   useEffect(() => {
     if (!visible) {
@@ -96,12 +106,13 @@ export default function AppAlert({
 
   return createPortal(
     <div
+      ref={overlayRef}
       className="aa-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={handleCancel}
     >
-      <div className="aa-modal" onClick={e => e.stopPropagation()}>
+      <div ref={modalRef} className="aa-modal" onClick={e => e.stopPropagation()}>
         <div className="aa-icon-container">
           <div className={`aa-icon-circle ${variant}`}>
             {resolvedIcon}

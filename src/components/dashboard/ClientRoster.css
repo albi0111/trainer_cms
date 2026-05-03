@@ -77,6 +77,22 @@
   gap: 12px;
 }
 
+.client-roster__stack {
+  position: relative;
+  min-height: 240px;
+}
+
+.client-roster__content,
+.client-roster__skeleton-list {
+  transition: opacity 200ms ease;
+}
+
+.client-roster__skeleton-list {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .client-card-item {
   background-color: var(--color-bg-elevated);
   border-radius: var(--radius-3xl);
@@ -138,25 +154,6 @@
   font-size: 15px;
 }
 
-.client-roster__loading {
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--color-primary-dim);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 @media (max-width: 900px) {
   .client-roster__search-row {
     margin-bottom: 16px;
@@ -166,6 +163,10 @@
     padding: 16px;
     gap: 14px;
     border-radius: 14px;
+  }
+
+  .client-roster__stack {
+    min-height: 216px;
   }
 
   .client-card-item__name {
@@ -215,5 +216,9 @@
 
   .client-card-item__actions {
     gap: 8px;
+  }
+
+  .client-roster__stack {
+    min-height: 198px;
   }
 }

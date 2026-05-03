@@ -53,6 +53,21 @@
   min-width: 0;
 }
 
+.dashboard-content-stack {
+  position: relative;
+}
+
+.dashboard-content-stack__content,
+.dashboard-content-stack__skeleton {
+  transition: opacity 200ms ease;
+}
+
+.dashboard-content-stack__skeleton {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 /* ── Top Nav Right ───────────────────────────────────────────────────────── */
 .top-nav-right {
   display: flex;

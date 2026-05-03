@@ -3,8 +3,9 @@
 // Reference: user screenshots
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './ManageSessionModal.css';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface ManageSessionModalProps {
   visible: boolean;
@@ -23,6 +24,15 @@ export default function ManageSessionModal({
 }: ManageSessionModalProps) {
   const [loadingComplete, setLoadingComplete] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: boxRef,
+  });
 
   useEffect(() => {
     if (!visible) setLoadingComplete(false);
@@ -61,12 +71,13 @@ export default function ManageSessionModal({
 
   return (
     <div
+      ref={overlayRef}
       className="manage-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="manage-modal__box" onClick={e => e.stopPropagation()}>
+      <div ref={boxRef} className="manage-modal__box" onClick={e => e.stopPropagation()}>
         <div className="manage-modal__header">
           <span className="manage-modal__title">Manage Session</span>
           <button className="manage-modal__close" onClick={onClose}>

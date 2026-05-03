@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface AppTimePickerProps {
   value: string; // 'HH:MM'
@@ -15,6 +16,8 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
   const [visible, setVisible] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   const [selectedHour, setHour] = useState(value?.split(':')[0] || '08');
   const [selectedMinute, setMinute] = useState(value?.split(':')[1] || '00');
@@ -78,6 +81,13 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
     setVisible(false);
   };
 
+  useModalVelocityDismiss({
+    visible,
+    onClose: () => setVisible(false),
+    overlayRef,
+    sheetRef: modalRef,
+  });
+
   return (
     <>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -105,6 +115,7 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
 
       {typeof document !== 'undefined' && createPortal(
         <div
+          ref={overlayRef}
           style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0, 0, 0, 0.45)',
@@ -125,6 +136,7 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
           onClick={() => setVisible(false)}
         >
           <div
+            ref={modalRef}
             style={{
               width: '300px', backgroundColor: '#1A1A1A', borderRadius: '24px',
               padding: '24px', border: '1px solid #333',

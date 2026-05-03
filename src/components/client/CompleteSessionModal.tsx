@@ -3,9 +3,10 @@
 // Reference: user screenshots
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './CompleteSessionModal.css';
 import { useHaptic } from '../../hooks/useHaptic';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 export interface CompleteSessionData {
   difficulty: number;
@@ -30,7 +31,16 @@ export default function CompleteSessionModal({
   const [energy, setEnergy] = useState('3');
   const [notes, setNotes] = useState('');
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: boxRef,
+  });
 
   // Reset on open
   useEffect(() => {
@@ -75,12 +85,13 @@ export default function CompleteSessionModal({
 
   return (
     <div
+      ref={overlayRef}
       className="complete-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="complete-modal__box" onClick={e => e.stopPropagation()}>
+      <div ref={boxRef} className="complete-modal__box" onClick={e => e.stopPropagation()}>
         <div className="complete-modal__header">
           <span className="complete-modal__title">
             {sessionFocus ? `Complete Session` : 'Complete Session'}

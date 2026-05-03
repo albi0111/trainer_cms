@@ -23,6 +23,27 @@
   padding: 0 0 32px;
 }
 
+.client-content-stack {
+  position: relative;
+}
+
+.client-content-stack__content,
+.client-content-stack__skeleton {
+  transition: opacity 200ms ease;
+}
+
+.client-content-stack__skeleton {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.client-profile-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ── Section container ───────────────────────────────────────────────────── */
 .section-container {
   margin-top: 16px;

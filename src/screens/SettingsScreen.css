@@ -42,6 +42,110 @@
   border: 1px solid var(--color-border-container) !important;
 }
 
+.settings-about-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-about-card__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.settings-about-card__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: var(--color-primary);
+  color: var(--color-text-dark);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.settings-about-card__name {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.settings-about-card__version {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.settings-about-card__divider {
+  height: 1px;
+  background: var(--color-border-container);
+}
+
+.settings-about-card__credits,
+.settings-about-card__dedication {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.settings-about-card__eyebrow {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.settings-about-card__builder {
+  color: var(--color-primary);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0;
+}
+
+.settings-about-card__trainer {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-builder-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translate3d(-50%, 18px, 0);
+  opacity: 0;
+  pointer-events: none;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 215, 0, 0.22);
+  background: rgba(19, 19, 19, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.32);
+  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms ease;
+  z-index: 2200;
+  white-space: nowrap;
+}
+
+.settings-builder-toast--visible {
+  transform: translate3d(-50%, 0, 0);
+  opacity: 1;
+}
+
 /* ── Sync Status ─────────────────────────────────────────────────────────── */
 .sync-status {
   display: flex;
@@ -176,5 +280,28 @@
   .setting-item {
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .settings-about-card {
+    gap: 20px;
+  }
+
+  .settings-about-card__logo {
+    min-width: 64px;
+    padding: 12px 18px;
+    font-size: 20px;
+  }
+
+  .settings-about-card__name {
+    font-size: 20px;
+  }
+
+  .settings-about-card__builder {
+    font-size: 22px;
+  }
+
+  .settings-builder-toast {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    font-size: 12px;
   }
 }

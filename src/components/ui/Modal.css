@@ -30,8 +30,8 @@
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  opacity: 0;
-  transition: opacity 200ms ease-out;
+  opacity: var(--modal-backdrop-opacity, 0);
+  transition: var(--modal-backdrop-transition, opacity 200ms ease-out);
 }
 
 .modal[data-state='open']::backdrop {
@@ -72,12 +72,13 @@
   position: absolute;
   top: 10px;
   left: 50%;
-  width: 42px;
+  width: var(--sheet-handle-width, 36px);
   height: 5px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
   transform: translateX(-50%);
   pointer-events: none;
+  transition: width 180ms ease;
 }
 
 .modal[data-state='open'] .modal__content {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { MeasurementConfig, MeasurementCategory } from '../../types';
 import { DEFAULT_METRICS } from '../../constants/metrics';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../../services/measurement/measurementService';
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import './ManageMetricsModal.css';
 
 interface ManageMetricsModalProps {
@@ -40,8 +41,17 @@ export default function ManageMetricsModal({
   const [errorMessage, setErrorMessage] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
   const { playConfirm, playDelete, playError } = useSoundFeedback();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: containerRef,
+  });
 
   useEffect(() => {
     if (visible) {
@@ -161,12 +171,13 @@ export default function ManageMetricsModal({
 
   return (
     <div
+      ref={overlayRef}
       className="manage-metrics-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="manage-metrics-container" onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="manage-metrics-container" onClick={e => e.stopPropagation()}>
         <div className="manage-metrics-header">
           <h2>{isEditing ? (editingConfig.updated_at ? 'EDIT METRIC' : 'CREATE METRIC') : 'MANAGE METRICS'}</h2>
           <button className="manage-metrics-close" onClick={isEditing ? () => setIsEditing(false) : onClose}>

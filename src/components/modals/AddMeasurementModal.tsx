@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MeasurementConfig } from '../../types';
 import ManageMetricsModal from './ManageMetricsModal';
 import DatePicker from '../ui/DatePicker';
@@ -8,6 +8,7 @@ import {
 } from '../../services/measurement/measurementService';
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import './AddMeasurementModal.css';
 
 interface AddMeasurementModalProps {
@@ -35,8 +36,17 @@ export default function AddMeasurementModal({
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [isOpening, setIsOpening] = useState(false);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
+
+  useModalVelocityDismiss({
+    visible,
+    onClose,
+    overlayRef,
+    sheetRef: containerRef,
+  });
 
   useEffect(() => {
     if (visible) {
@@ -111,12 +121,13 @@ export default function AddMeasurementModal({
 
   return (
     <div
+      ref={overlayRef}
       className="add-measurement-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       onClick={onClose}
     >
-      <div className="add-measurement-container" onClick={e => e.stopPropagation()}>
+      <div ref={containerRef} className="add-measurement-container" onClick={e => e.stopPropagation()}>
         <div className="add-measurement-header">
           <h2>LOG PROGRESS</h2>
           <button className="add-measurement-close" onClick={onClose}>
