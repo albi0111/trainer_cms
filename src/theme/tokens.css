@@ -10,17 +10,19 @@
   --color-surface:        #262626;
   --color-surface-dark:   #1E1E1E;
   --color-surface-light:  #2A2A2A;
-  --color-surface-accent: #2A2500;
+  --color-surface-accent: #2B2A10;
   --color-overlay:        rgba(0, 0, 0, 0.88);
   --color-card:           #111111;
   --color-card-nested:    #161616;
   --color-card-exercise:  #1F1F1F;
 
   /* ── Brand / Accent ───────────────────────────────────────────────────── */
-  --color-primary:        #FFD700;
-  --color-primary-dim:    rgba(255, 215, 0, 0.25);
-  --color-primary-bg:     #2A2400;
-  --color-primary-border: #4A4000;
+  --color-primary:        #FEF959;
+  --color-primary-rgb:    254, 249, 89;
+  --color-primary-dim:    rgba(var(--color-primary-rgb), 0.25);
+  --color-primary-bg:     #2B2A10;
+  --color-primary-border: #4C4A1B;
+  --color-primary-deep:   #BEBB43;
   --color-error:          #FF5252;
   --color-success:        #4CAF50;
   --color-success-text:   #3DCC88;
@@ -49,7 +51,7 @@
   --color-border-light:   #444444;
   --color-border-container: #1F1F1F;
   --color-border-card:    #2A2A2A;
-  --color-border-primary: #FFD700;
+  --color-border-primary: #FEF959;
 
   /* ── Spacing (from reference/theme/theme.ts) ───────────────────────────── */
   --space-xs:   4px;
@@ -124,7 +126,7 @@
   --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.15);
+  --shadow-glow: 0 0 20px rgba(var(--color-primary-rgb), 0.15);
 
   /* ── Layout shell ─────────────────────────────────────────────────────── */
   --page-max-width: 1280px;

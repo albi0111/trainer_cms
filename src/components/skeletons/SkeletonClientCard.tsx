@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import SkeletonBase from './SkeletonBase';
 
-export default function SkeletonClientCard() {
+const SkeletonClientCard = memo(function SkeletonClientCard() {
   return (
     <div
       style={{
@@ -22,4 +23,6 @@ export default function SkeletonClientCard() {
       <SkeletonBase width={18} height={18} radius={999} />
     </div>
   );
-}
+});
+
+export default SkeletonClientCard;

@@ -73,7 +73,15 @@ function PlanTitlePressArea({
       ].filter(Boolean).join(' ')}
       {...handlers}
     >
-      <h3 className="plan-card__title" style={titleStyle}>{title}</h3>
+      <h3
+        className={[
+          'plan-card__title',
+          isHolding ? 'plan-card__title--holding' : '',
+        ].filter(Boolean).join(' ')}
+        style={titleStyle}
+      >
+        {title}
+      </h3>
       <div className="plan-card__tags">
         {goal && <Tag variant="yellow">{goal}</Tag>}
         {type && <Tag variant="gray">{type}</Tag>}
@@ -101,8 +109,8 @@ function DayBlockPressArea({
 
     return {
       transform: `scale(${1 - (progress * 0.014)})`,
-      borderColor: `rgba(255, 215, 0, ${borderOpacity})`,
-      boxShadow: `0 0 0 ${1.5 * progress}px rgba(255, 215, 0, ${glowOpacity}), 0 0 18px ${3 * progress}px rgba(255, 215, 0, ${glowOpacity * 0.75})`,
+      borderColor: `rgba(var(--color-primary-rgb), ${borderOpacity})`,
+      boxShadow: `0 0 0 ${1.5 * progress}px rgba(var(--color-primary-rgb), ${glowOpacity}), 0 0 18px ${3 * progress}px rgba(var(--color-primary-rgb), ${glowOpacity * 0.75})`,
       backgroundColor: `rgba(16, 16, 16, ${1 - (progress * 0.08)})`,
     };
   }, [isHolding, progress]);

@@ -103,6 +103,20 @@ export function getSessionDurationMinutes(
   return session.duration_minutes || 60;
 }
 
+export function getSessionEndMillis(
+  session: Pick<Session, 'date' | 'start_time' | 'end_time' | 'duration_minutes'>,
+): number {
+  if (session.end_time) {
+    return compareDateTimes(session.date, session.end_time);
+  }
+
+  if (session.start_time) {
+    return compareDateTimes(session.date, session.start_time) + getSessionDurationMinutes(session) * 60 * 1000;
+  }
+
+  return compareDateTimes(session.date);
+}
+
 export function partitionPlannedSessions(sessions: Session[]): {
   upcoming: Session[];
   pending: Session[];
@@ -116,9 +130,7 @@ export function partitionPlannedSessions(sessions: Session[]): {
       continue;
     }
 
-    const endTime = session.end_time || session.start_time;
-    const endsAt = endTime ? compareDateTimes(session.date, endTime) : compareDateTimes(session.date);
-    if (endsAt < now) {
+    if (getSessionEndMillis(session) < now) {
       pending.push(session);
     } else {
       upcoming.push(session);

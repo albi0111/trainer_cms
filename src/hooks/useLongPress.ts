@@ -310,6 +310,24 @@ export function useLongPress({ onLongPress, duration = DEFAULT_DURATION_MS }: Us
     clearProgressReset();
   }, [cancelLongPressInternal, clearProgressReset]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cancelLongPressInternal();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cancelLongPressInternal]);
+
   return {
     handlers,
     progress,

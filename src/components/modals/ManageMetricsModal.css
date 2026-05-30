@@ -135,7 +135,7 @@
   justify-content: center;
 }
 
-.icon-wrap.client { background: rgba(255, 215, 0, 0.1); color: #FFD700; }
+.icon-wrap.client { background: rgba(var(--color-primary-rgb), 0.1); color: var(--color-primary); }
 .icon-wrap.available { background: rgba(61, 204, 136, 0.1); color: #3DCC88; }
 
 .section-title h3 {
@@ -146,8 +146,8 @@
 }
 
 .count-pill {
-  background: rgba(255, 215, 0, 0.1);
-  color: #FFD700;
+  background: rgba(var(--color-primary-rgb), 0.1);
+  color: var(--color-primary);
   font-size: 10px;
   font-weight: 900;
   padding: 4px 8px;
@@ -222,10 +222,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.action-btn.edit:hover { color: #FFD700; border-color: #FFD700; background: rgba(255, 215, 0, 0.05); }
+.action-btn.edit:hover { color: var(--color-primary); border-color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.05); }
 .action-btn.delete:hover { color: #FF5252; border-color: #FF5252; background: rgba(255, 82, 82, 0.05); }
 .action-btn.add { background: rgba(61, 204, 136, 0.1); color: #3DCC88; border: 1px solid rgba(61, 204, 136, 0.2); }
 .action-btn.add:hover { background: rgba(61, 204, 136, 0.2); }
@@ -269,7 +269,7 @@
   background: transparent;
   border: 1px dashed #222;
   border-radius: 14px;
-  color: #FFD700;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 800;
   display: flex;
@@ -277,11 +277,11 @@
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .create-custom-btn:hover {
-  background: rgba(255, 215, 0, 0.02);
+  background: rgba(var(--color-primary-rgb), 0.02);
   border-color: #444;
 }
 
@@ -358,12 +358,12 @@
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .category-tabs button.active {
   background: #222;
-  color: #FFD700;
+  color: var(--color-primary);
 }
 
 .form-actions {

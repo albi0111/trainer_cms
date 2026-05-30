@@ -21,10 +21,10 @@ const SPRING_FAB_STYLES = `
     border-radius: 22px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.02)),
-      var(--color-primary, #FFD700);
+      var(--color-primary);
     color: #050505;
     box-shadow:
-      0 20px 34px -20px rgba(255, 215, 0, 0.85),
+      0 20px 34px -20px rgba(var(--color-primary-rgb), 0.85),
       inset 0 1px 0 rgba(255, 255, 255, 0.28);
     appearance: none;
     cursor: pointer;

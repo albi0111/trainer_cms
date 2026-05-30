@@ -6,8 +6,8 @@ import SkeletonClientProfile from './components/skeletons/SkeletonClientProfile'
 import SkeletonInfoCard from './components/skeletons/SkeletonInfoCard';
 import SkeletonScheduleCard from './components/skeletons/SkeletonScheduleCard';
 import SkeletonStatCard from './components/skeletons/SkeletonStatCard';
+import DashboardScreen from './screens/DashboardScreen';
 
-const DashboardScreen = lazy(() => import('./screens/DashboardScreen'));
 const ClientScreen = lazy(() => import('./screens/ClientScreen'));
 const ScheduleScreen = lazy(() => import('./screens/ScheduleScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
@@ -60,6 +60,25 @@ function ClientRouteFallback() {
   );
 }
 
+function SecondaryRouteFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        minHeight: '100vh',
+        background: 'var(--color-bg)',
+        padding: 'calc(env(safe-area-inset-top) + 88px) 20px 32px',
+      }}
+    >
+      <div style={{ display: 'grid', gap: '16px', maxWidth: '960px', margin: '0 auto' }}>
+        <SkeletonScheduleCard />
+        <SkeletonInfoCard />
+        <SkeletonInfoCard />
+      </div>
+    </div>
+  );
+}
+
 function PageLoader() {
   const pathname = typeof window === 'undefined' ? '/' : window.location.pathname;
 
@@ -71,7 +90,7 @@ function PageLoader() {
     return <DashboardRouteFallback />;
   }
 
-  return null;
+  return <SecondaryRouteFallback />;
 }
 
 function withSuspense(element: ReactNode) {
@@ -85,7 +104,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: withSuspense(<DashboardScreen />),
+        element: <DashboardScreen />,
       },
       {
         path: 'client/:id',

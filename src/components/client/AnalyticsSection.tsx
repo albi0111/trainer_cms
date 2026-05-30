@@ -75,6 +75,7 @@ export default function AnalyticsSection({
     onClose: () => setIsChartModalOpen(false),
     overlayRef: chartModalOverlayRef,
     sheetRef: chartModalContentRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -409,8 +410,8 @@ export default function AnalyticsSection({
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="analytics-line-chart">
           <defs>
             <linearGradient id={`chartGradient-${isModal}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FFD700" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -429,11 +430,11 @@ export default function AnalyticsSection({
           })}
 
           <path d={fillPath} fill={`url(#chartGradient-${isModal})`} />
-          <path d={pathD} fill="none" stroke="#FFD700" strokeWidth={isModal ? 4 : 3} strokeLinejoin="round" strokeLinecap="round" />
+          <path d={pathD} fill="none" stroke="var(--color-primary)" strokeWidth={isModal ? 4 : 3} strokeLinejoin="round" strokeLinecap="round" />
 
           {points.map((p, i) => (
             <g key={i}>
-              <circle cx={p.x} cy={p.y} r={i === points.length - 1 ? (isModal ? 8 : 6) : (isModal ? 5 : 4)} fill="#FFD700" />
+              <circle cx={p.x} cy={p.y} r={i === points.length - 1 ? (isModal ? 8 : 6) : (isModal ? 5 : 4)} fill="var(--color-primary)" />
               <text x={p.x} y={chartHeight - 5} fill="#666" fontSize={isModal ? 12 : 10} textAnchor="middle">{labels[i]}</text>
             </g>
           ))}
@@ -444,7 +445,22 @@ export default function AnalyticsSection({
 
   const renderBarChart = (isModal = false) => {
     if (perfConfigs.length === 0 || perfMs.length === 0) return null;
-    const maxVal = Math.max(...perfConfigs.map(c => latestM?.values?.[c.key] || 0), 1);
+
+    const comparisonData = perfConfigs.map((config) => {
+      const entries = perfMs.filter((measurement) => measurement.values?.[config.key] !== undefined);
+      const currentEntry = entries[entries.length - 1];
+      const previousEntry = entries.length > 1 ? entries[entries.length - 2] : null;
+
+      return {
+        config,
+        current: currentEntry?.values?.[config.key] || 0,
+        previous: previousEntry?.values?.[config.key],
+      };
+    });
+    const maxVal = Math.max(
+      ...comparisonData.flatMap((item) => [item.current, item.previous || 0]),
+      1,
+    );
     const barMaxHeight = isModal ? 300 : 180;
 
     return (
@@ -457,20 +473,44 @@ export default function AnalyticsSection({
         }}
       >
         <div className="analytics-chart-title">Session Comparison</div>
+        <div className="analytics-bar-legend" aria-hidden="true">
+          <span><i className="analytics-bar-legend__swatch analytics-bar-legend__swatch--previous" />Previous</span>
+          <span><i className="analytics-bar-legend__swatch analytics-bar-legend__swatch--current" />Current</span>
+        </div>
         <div className="analytics-bar-chart" style={{ height: isModal ? '380px' : '260px' }}>
-          {perfConfigs.map(c => {
-            const val = latestM?.values?.[c.key] || 0;
-            const height = Math.max((val / maxVal) * barMaxHeight, 8);
+          {comparisonData.map(({ config, current, previous }) => {
+            const currentHeight = Math.max((current / maxVal) * barMaxHeight, 8);
+            const previousHeight = previous !== undefined ? Math.max((previous / maxVal) * barMaxHeight, 8) : 0;
             return (
-              <div key={c.key} className="analytics-bar-column">
-                <span className="analytics-bar-value" style={{ fontSize: isModal ? '14px' : '12px' }}>{val}</span>
-                <div className="analytics-bar" style={{ 
-                  height, 
-                  width: isModal ? '48px' : '32px',
-                  background: 'linear-gradient(180deg, #FFD700 0%, #B8960F 100%)' 
-                }} />
+              <div key={config.key} className="analytics-bar-column">
+                <div className="analytics-bar-group" style={{ height: barMaxHeight + 28 }}>
+                  {previous !== undefined ? (
+                    <div className="analytics-bar-slot">
+                      <span className="analytics-bar-value" style={{ fontSize: isModal ? '12px' : '10px' }}>{previous}</span>
+                      <div
+                        className="analytics-bar analytics-bar--previous"
+                        style={{
+                          height: previousHeight,
+                          width: isModal ? '34px' : '22px',
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="analytics-bar-slot analytics-bar-slot--empty" aria-hidden="true" />
+                  )}
+                  <div className="analytics-bar-slot">
+                    <span className="analytics-bar-value" style={{ fontSize: isModal ? '14px' : '12px' }}>{current}</span>
+                    <div
+                      className="analytics-bar analytics-bar--current"
+                      style={{
+                        height: currentHeight,
+                        width: isModal ? '38px' : '26px',
+                      }}
+                    />
+                  </div>
+                </div>
                 <span className="analytics-bar-label" style={{ fontSize: isModal ? '12px' : '10px' }}>
-                  {isPhone ? c.label.charAt(0) : c.label}
+                  {isPhone ? config.label.charAt(0) : config.label}
                 </span>
               </div>
             );
@@ -523,7 +563,7 @@ export default function AnalyticsSection({
             );
           })}
           {[0.25, 0.5, 0.75, 1].map(r => <circle key={r} cx={center} cy={center} r={radius * r} fill="none" stroke="#222" strokeWidth="1" />)}
-          <polygon points={polygonPoints} fill="rgba(255, 215, 0, 0.3)" stroke="#FFD700" strokeWidth="2" />
+          <polygon points={polygonPoints} fill="rgba(var(--color-primary-rgb), 0.3)" stroke="var(--color-primary)" strokeWidth="2" />
         </svg>
       </div>
     );
@@ -581,7 +621,11 @@ export default function AnalyticsSection({
             </button>
           </div>
 
-          <button className="analytics-manage-btn" onClick={() => setIsManageMetricsOpen(true)}>
+          <button
+            className="analytics-manage-btn"
+            onClick={() => setIsManageMetricsOpen(true)}
+            aria-label="Manage analytics metrics"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
               <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
@@ -685,12 +729,15 @@ export default function AnalyticsSection({
           className="chart-modal-overlay"
           data-state={isChartModalOpen ? 'open' : 'closed'}
           data-opening={isChartModalOpening ? 'true' : 'false'}
-          onClick={() => setIsChartModalOpen(false)}
         >
           <div ref={chartModalContentRef} className="chart-modal-content" onClick={e => e.stopPropagation()}>
             <div className="chart-modal-header">
               <h3>TREND OVERVIEW</h3>
-              <button className="chart-modal-close" onClick={() => setIsChartModalOpen(false)}>
+              <button
+                className="chart-modal-close"
+                onClick={() => setIsChartModalOpen(false)}
+                aria-label="Close trend overview"
+              >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
@@ -710,6 +757,7 @@ export default function AnalyticsSection({
       <AddMeasurementModal 
         visible={isLogProgressOpen}
         clientId={clientId}
+        initialCategory={activeTab}
         onClose={() => setIsLogProgressOpen(false)}
         onSuccess={() => { setIsLogProgressOpen(false); loadData(); }}
       />

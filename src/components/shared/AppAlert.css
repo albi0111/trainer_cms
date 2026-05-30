@@ -94,8 +94,8 @@
 }
 
 .aa-icon-circle.warning {
-  background-color: rgba(255, 215, 0, 0.14);
-  color: #FFD700;
+  background-color: rgba(var(--color-primary-rgb), 0.14);
+  color: var(--color-primary);
 }
 
 .aa-icon-circle.success {
@@ -136,7 +136,11 @@
   font-weight: 700;
   cursor: pointer;
   border: none;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    opacity 0.2s ease;
   font-family: inherit;
   position: relative;
   display: inline-flex;
@@ -174,7 +178,7 @@
 }
 
 .aa-btn--primary.warning {
-  background-color: #FFD700;
+  background-color: var(--color-primary);
   color: #111;
 }
 

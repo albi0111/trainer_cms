@@ -40,7 +40,7 @@
 /* Pending = yellow border, gold meta text */
 .session-list-item--pending {
   border-color: var(--color-primary);
-  background-color: rgba(255, 215, 0, 0.03);
+  background-color: rgba(var(--color-primary-rgb), 0.03);
 }
 
 .session-list-item__content {
@@ -72,7 +72,7 @@
 }
 
 .session-list-item__meta--pending {
-  color: rgba(255, 215, 0, 0.7);
+  color: rgba(var(--color-primary-rgb), 0.7);
 }
 
 /* ── Session Badge (blue pill — WEEK 1, WEEK 2) ──────────────────────────── */
@@ -104,7 +104,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
   flex-shrink: 0;
 }
 

@@ -1,25 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './ClientScreen.css';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import TopNavBar from '../components/layout/TopNavBar';
 import PageWrapper from '../components/layout/PageWrapper';
 import TabBar from '../components/ui/TabBar';
-import AppAlert from '../components/shared/AppAlert';
 import ClientHeaderCard from '../components/client/ClientHeaderCard';
 import OverviewSection from '../components/client/OverviewSection';
-import MedicationSection from '../components/client/MedicationSection';
 import SessionsSection from '../components/client/SessionsSection';
-import WorkoutPlanSection from '../components/client/WorkoutPlanSection';
-import DietPlanSection from '../components/client/DietPlanSection';
-import AnalyticsSection from '../components/client/AnalyticsSection';
-import ProfileSection from '../components/client/ProfileSection';
 import RecentActivitySection, { type ActivityEntry } from '../components/client/RecentActivitySection';
-import { type CompleteSessionData } from '../components/client/CompleteSessionModal';
-import { type MarkMissedData } from '../components/client/MarkMissedModal';
-import ClientModal, { type ClientModalStep } from '../components/modals/ClientModal';
-import ScheduleCalendarModal from '../components/client/ScheduleCalendarModal';
-import NewSessionModal from '../components/client/NewSessionModal';
+import type { CompleteSessionData } from '../components/client/CompleteSessionModal';
+import type { MarkMissedData } from '../components/client/MarkMissedModal';
+import type { ClientModalStep } from '../components/modals/ClientModal';
 import SkeletonClientProfile from '../components/skeletons/SkeletonClientProfile';
 import SkeletonInfoCard from '../components/skeletons/SkeletonInfoCard';
 import { EMPTY_ASSESSMENT, EMPTY_LIFESTYLE, EMPTY_PROFILE } from '../constants/assessment';
@@ -55,6 +47,16 @@ import type {
   ScheduledSession,
   Session,
 } from '../types';
+
+const AppAlert = lazy(() => import('../components/shared/AppAlert'));
+const AnalyticsSection = lazy(() => import('../components/client/AnalyticsSection'));
+const ClientModal = lazy(() => import('../components/modals/ClientModal'));
+const DietPlanSection = lazy(() => import('../components/client/DietPlanSection'));
+const MedicationSection = lazy(() => import('../components/client/MedicationSection'));
+const NewSessionModal = lazy(() => import('../components/client/NewSessionModal'));
+const ProfileSection = lazy(() => import('../components/client/ProfileSection'));
+const ScheduleCalendarModal = lazy(() => import('../components/client/ScheduleCalendarModal'));
+const WorkoutPlanSection = lazy(() => import('../components/client/WorkoutPlanSection'));
 
 const TABS = [
   { key: 'overview', label: 'Overview',
@@ -92,6 +94,16 @@ const EMPTY_CLIENT = {
 type ClientScreenProfileState = Omit<ClientProfile, 'client_id' | 'updated_at'>;
 type ClientScreenLifestyleState = Omit<ClientLifestyle, 'client_id' | 'updated_at'>;
 type ClientScreenAssessmentState = Omit<ClientAssessment, 'client_id' | 'updated_at'>;
+
+function ClientTabFallback() {
+  return (
+    <div className="client-profile-skeleton-list" aria-hidden="true">
+      <SkeletonInfoCard />
+      <SkeletonInfoCard />
+      <SkeletonInfoCard />
+    </div>
+  );
+}
 
 export default function ClientScreen() {
   const navigate = useNavigate();
@@ -136,6 +148,10 @@ export default function ClientScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const [hasLoadedDeleteAlert, setHasLoadedDeleteAlert] = useState(false);
+  const [hasLoadedSessionEditor, setHasLoadedSessionEditor] = useState(false);
+  const [hasLoadedCalendarModal, setHasLoadedCalendarModal] = useState(false);
+  const [hasLoadedUpdateModal, setHasLoadedUpdateModal] = useState(false);
   const hasLoadedClientRef = useRef(false);
   const profileSkeletonEntrance = useStaggeredEntrance({
     itemCount: showLoadingSkeleton ? 3 : 0,
@@ -304,6 +320,30 @@ export default function ClientScreen() {
     };
   }, [previousTab]);
 
+  useEffect(() => {
+    if (deleteClientVisible) {
+      setHasLoadedDeleteAlert(true);
+    }
+  }, [deleteClientVisible]);
+
+  useEffect(() => {
+    if (newSessionSlot) {
+      setHasLoadedSessionEditor(true);
+    }
+  }, [newSessionSlot]);
+
+  useEffect(() => {
+    if (calendarWeekPlan) {
+      setHasLoadedCalendarModal(true);
+    }
+  }, [calendarWeekPlan]);
+
+  useEffect(() => {
+    if (isUpdateModalVisible) {
+      setHasLoadedUpdateModal(true);
+    }
+  }, [isUpdateModalVisible]);
+
   const handleCompleteSession = useCallback(async (sessionId: string, data: CompleteSessionData): Promise<boolean> => {
     try {
       await completeSession(sessionId, clientId, {
@@ -440,6 +480,37 @@ export default function ClientScreen() {
     setActiveTab(nextTab);
   }, [activeTab]);
 
+  const upcomingAndPendingSessions = useMemo(
+    () => upcomingSessions.concat(pendingSessions),
+    [pendingSessions, upcomingSessions],
+  );
+
+  useEffect(() => {
+    if (allSessions.length === 0) {
+      return undefined;
+    }
+
+    const refreshSessionBuckets = () => {
+      const { upcoming, pending } = partitionPlannedSessions(allSessions);
+      setUpcomingSessions(upcoming);
+      setPendingSessions(pending);
+    };
+
+    refreshSessionBuckets();
+    const intervalId = window.setInterval(refreshSessionBuckets, 60 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [allSessions]);
+
+  const profileSectionData = useMemo(() => ({
+    client: clientData,
+    profile: profileData,
+    lifestyle: lifestyleData,
+    assessment: assessmentData,
+  }), [assessmentData, clientData, lifestyleData, profileData]);
+
   const renderTabPanel = useCallback((tabKey: string) => {
     if (tabKey === 'overview') {
       return (
@@ -459,6 +530,8 @@ export default function ClientScreen() {
           <RecentActivitySection activities={activities} onRevert={handleRevert} />
 
           <SessionsSection
+            clientId={clientId}
+            clientName={clientData.name}
             upcoming={upcomingSessions}
             pending={pendingSessions}
             onCompleteSession={handleCompleteSession}
@@ -478,25 +551,31 @@ export default function ClientScreen() {
     }
 
     if (tabKey === 'analytics') {
-      return <AnalyticsSection clientId={clientId} />;
+      return (
+        <Suspense fallback={<ClientTabFallback />}>
+          <AnalyticsSection clientId={clientId} />
+        </Suspense>
+      );
     }
 
     if (tabKey === 'plans') {
       return (
         <div className="plans-container">
-          <WorkoutPlanSection
-            clientId={clientId}
-            plans={workoutPlans}
-            sessions={upcomingSessions.concat(pendingSessions)}
-            exercises={exercises}
-            onOpenCalendar={openCalendar}
-            onEditSession={(session) => {
-              setEditingSession(session);
-              setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
-              setPostponeMode(false);
-            }}
-            onPlansChange={refreshPageData}
-          />
+          <Suspense fallback={<ClientTabFallback />}>
+            <WorkoutPlanSection
+              clientId={clientId}
+              plans={workoutPlans}
+              sessions={upcomingAndPendingSessions}
+              exercises={exercises}
+              onOpenCalendar={openCalendar}
+              onEditSession={(session) => {
+                setEditingSession(session);
+                setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
+                setPostponeMode(false);
+              }}
+              onPlansChange={refreshPageData}
+            />
+          </Suspense>
         </div>
       );
     }
@@ -504,50 +583,49 @@ export default function ClientScreen() {
     if (tabKey === 'health') {
       return (
         <div className="health-container">
-          <MedicationSection
-            value={medicationNotes}
-            isEditing={isEditingMed}
-            onValueChange={setMedicationNotes}
-            onToggleEdit={() => setIsEditingMed(!isEditingMed)}
-            onSave={async () => {
-              await updateClient(clientId, {
-                profile: {
-                  medications: medicationNotes,
-                },
-              });
-              setIsEditingMed(false);
-              await refreshPageData();
-            }}
-          />
+          <Suspense fallback={<ClientTabFallback />}>
+            <MedicationSection
+              value={medicationNotes}
+              isEditing={isEditingMed}
+              onValueChange={setMedicationNotes}
+              onToggleEdit={() => setIsEditingMed(!isEditingMed)}
+              onSave={async () => {
+                await updateClient(clientId, {
+                  profile: {
+                    medications: medicationNotes,
+                  },
+                });
+                setIsEditingMed(false);
+                await refreshPageData();
+              }}
+            />
 
-          <DietPlanSection
-            dietPlans={dietPlans}
-            isEditing={isEditingDiet}
-            onToggleEdit={() => setIsEditingDiet(!isEditingDiet)}
-            onSavePlan={async (planData) => {
-              await saveDietPlan(clientId, planData, dietPlans[0]?.id);
-              setIsEditingDiet(false);
-              await refreshPageData();
-            }}
-          />
+            <DietPlanSection
+              dietPlans={dietPlans}
+              isEditing={isEditingDiet}
+              onToggleEdit={() => setIsEditingDiet(!isEditingDiet)}
+              onSavePlan={async (planData) => {
+                await saveDietPlan(clientId, planData, dietPlans[0]?.id);
+                setIsEditingDiet(false);
+                await refreshPageData();
+              }}
+            />
+          </Suspense>
         </div>
       );
     }
 
     return (
-      <ProfileSection
-        data={{
-          client: clientData,
-          profile: profileData,
-          lifestyle: lifestyleData,
-          assessment: assessmentData,
-        }}
-        onEditSection={(section) => {
-          setUpdateModalStep(section);
-          setIsUpdateModalVisible(true);
-        }}
-        onDeleteClient={() => setDeleteClientVisible(true)}
-      />
+      <Suspense fallback={<ClientTabFallback />}>
+        <ProfileSection
+          data={profileSectionData}
+          onEditSection={(section) => {
+            setUpdateModalStep(section);
+            setIsUpdateModalVisible(true);
+          }}
+          onDeleteClient={() => setDeleteClientVisible(true)}
+        />
+      </Suspense>
     );
   }, [
     activities,
@@ -566,9 +644,10 @@ export default function ClientScreen() {
     lifestyleData,
     medicationNotes,
     openCalendar,
+    upcomingAndPendingSessions,
     overviewNotes,
     pendingSessions,
-    profileData,
+    profileSectionData,
     refreshPageData,
     upcomingSessions,
     workoutPlans,
@@ -576,10 +655,13 @@ export default function ClientScreen() {
 
   const visibleTabs = previousTab ? [previousTab, activeTab] : [activeTab];
 
-  const plannerSessions = calendarSessions || allSessions.map((session) => ({
-    ...session,
-    client_name: clientData.name || 'This client',
-  }));
+  const plannerSessions = useMemo(
+    () => calendarSessions || allSessions.map((session) => ({
+      ...session,
+      client_name: clientData.name || 'This client',
+    })),
+    [allSessions, calendarSessions, clientData.name],
+  );
 
   return (
     <div className="client-page">
@@ -603,6 +685,8 @@ export default function ClientScreen() {
                 weight={profileData.initial_weight_kg}
                 height={profileData.height_cm}
                 status={clientData.status}
+                bpSystolic={assessmentData.bp_systolic}
+                bpDiastolic={assessmentData.bp_diastolic}
               />
 
               <TabBar tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
@@ -660,103 +744,119 @@ export default function ClientScreen() {
         </div>
       </PageWrapper>
 
-      <ClientModal
-        open={isUpdateModalVisible}
-        onClose={() => setIsUpdateModalVisible(false)}
-        onSuccess={async () => {
-          setIsUpdateModalVisible(false);
-          await refreshPageData();
-        }}
-        clientId={clientId}
-        initialStep={updateModalStep}
-      />
+      {hasLoadedUpdateModal ? (
+        <Suspense fallback={null}>
+          <ClientModal
+            open={isUpdateModalVisible}
+            onClose={() => setIsUpdateModalVisible(false)}
+            onSuccess={async () => {
+              setIsUpdateModalVisible(false);
+              await refreshPageData();
+            }}
+            clientId={clientId}
+            initialStep={updateModalStep}
+          />
+        </Suspense>
+      ) : null}
 
-      <ScheduleCalendarModal
-        visible={!!calendarWeekPlan}
-        onClose={closeCalendar}
-        weekPlan={calendarWeekPlan}
-        sessions={plannerSessions}
-        activeClientId={clientId}
-        onSlotClick={(date, time) => {
-          setPostponeMode(false);
-          setNewSessionSlot({ date, time });
-          setEditingSession(null);
-        }}
-        onSessionClick={(session) => {
-          setPostponeMode(false);
-          setEditingSession(session);
-          setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
-        }}
-        onGoalChange={async (goal) => {
-          if (!calendarWeekPlan) {
-            return;
-          }
-          await updatePlan(calendarWeekPlan.id, clientId, { goal });
-          await refreshPageData();
-        }}
-        onDeleteSession={async (sessionId) => {
-          await deleteSession(sessionId, clientId);
-          playDelete();
-          haptic.error();
-          await refreshPageData();
-        }}
-        onPasteSession={async (date, hour, sourceId) => {
-          const source = allSessions.find((session) => session.id === sourceId);
-          if (!source) {
-            return;
-          }
+      {hasLoadedCalendarModal ? (
+        <Suspense fallback={null}>
+          <ScheduleCalendarModal
+            visible={!!calendarWeekPlan}
+            onClose={closeCalendar}
+            weekPlan={calendarWeekPlan}
+            sessions={plannerSessions}
+            activeClientId={clientId}
+            onSlotClick={(date, time) => {
+              setPostponeMode(false);
+              setNewSessionSlot({ date, time });
+              setEditingSession(null);
+            }}
+            onSessionClick={(session) => {
+              setPostponeMode(false);
+              setEditingSession(session);
+              setNewSessionSlot({ date: session.date || '', time: session.start_time || '' });
+            }}
+            onGoalChange={async (goal) => {
+              if (!calendarWeekPlan) {
+                return;
+              }
+              await updatePlan(calendarWeekPlan.id, clientId, { goal });
+              await refreshPageData();
+            }}
+            onDeleteSession={async (sessionId) => {
+              await deleteSession(sessionId, clientId);
+              playDelete();
+              haptic.error();
+              await refreshPageData();
+            }}
+            onPasteSession={async (date, hour, sourceId) => {
+              const source = allSessions.find((session) => session.id === sourceId);
+              if (!source) {
+                return;
+              }
 
-          const startTime = `${hour.toString().padStart(2, '0')}:00`;
-          const endTime = source.end_time
-            ? `${String((hour + getSessionDurationMinutes(source) / 60) % 24).padStart(2, '0')}:${source.end_time.split(':')[1] || '00'}`
-            : `${String((hour + 1) % 24).padStart(2, '0')}:00`;
-          const overlap = await checkSessionOverlap(date, startTime, endTime);
+              const startTime = `${hour.toString().padStart(2, '0')}:00`;
+              const endTime = source.end_time
+                ? `${String((hour + getSessionDurationMinutes(source) / 60) % 24).padStart(2, '0')}:${source.end_time.split(':')[1] || '00'}`
+                : `${String((hour + 1) % 24).padStart(2, '0')}:00`;
+              const overlap = await checkSessionOverlap(date, startTime, endTime);
 
-          if (overlap) {
-            setErrorMessage('This slot is already occupied. Please choose another time.');
-            return;
-          }
+              if (overlap) {
+                setErrorMessage('This slot is already occupied. Please choose another time.');
+                return;
+              }
 
-          await duplicateSession(sourceId, clientId, date, startTime, endTime);
-          await refreshPageData();
-        }}
-      />
+              await duplicateSession(sourceId, clientId, date, startTime, endTime);
+              await refreshPageData();
+            }}
+          />
+        </Suspense>
+      ) : null}
 
-      <NewSessionModal
-        visible={!!newSessionSlot}
-        onClose={closeSessionEditor}
-        initialDate={newSessionSlot?.date || ''}
-        initialTime={newSessionSlot?.time || ''}
-        editingSession={editingSession}
-        sessions={plannerSessions}
-        postponeMode={postponeMode}
-        onDelete={async (sessionId) => {
-          await deleteSession(sessionId, clientId);
-          playDelete();
-          haptic.error();
-          closeSessionEditor();
-          await refreshPageData();
-        }}
-        onSave={handleSaveSession}
-      />
+      {hasLoadedSessionEditor ? (
+        <Suspense fallback={null}>
+          <NewSessionModal
+            visible={!!newSessionSlot}
+            onClose={closeSessionEditor}
+            initialDate={newSessionSlot?.date || ''}
+            initialTime={newSessionSlot?.time || ''}
+            editingSession={editingSession}
+            sessions={plannerSessions}
+            postponeMode={postponeMode}
+            onDelete={async (sessionId) => {
+              await deleteSession(sessionId, clientId);
+              playDelete();
+              haptic.error();
+              closeSessionEditor();
+              await refreshPageData();
+            }}
+            onSave={handleSaveSession}
+          />
+        </Suspense>
+      ) : null}
 
-      <AppAlert
-        visible={deleteClientVisible}
-        title="Delete Client"
-        message="Deleting this client will remove it locally after cloud sync confirms the delete."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        onConfirm={async () => {
-          await deleteClient(clientId);
-          playDelete();
-          haptic.error();
-          setDeleteClientVisible(false);
-          invalidateClientDetail(clientId);
-          invalidateDashboard();
-          navigate('/');
-        }}
-        onCancel={() => setDeleteClientVisible(false)}
-      />
+      {hasLoadedDeleteAlert ? (
+        <Suspense fallback={null}>
+          <AppAlert
+            visible={deleteClientVisible}
+            title="Delete Client"
+            message="Deleting this client will remove it locally after cloud sync confirms the delete."
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            onConfirm={async () => {
+              await deleteClient(clientId);
+              playDelete();
+              haptic.error();
+              setDeleteClientVisible(false);
+              invalidateClientDetail(clientId);
+              invalidateDashboard();
+              navigate('/');
+            }}
+            onCancel={() => setDeleteClientVisible(false)}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

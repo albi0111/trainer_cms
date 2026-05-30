@@ -61,6 +61,10 @@ function playSequence(steps: ToneStep[]): void {
 
       oscillator.connect(gain);
       gain.connect(audioContext.destination);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
 
       oscillator.start(cursor);
       oscillator.stop(cursor + durationSeconds + 0.02);

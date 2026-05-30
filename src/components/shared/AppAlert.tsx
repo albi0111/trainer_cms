@@ -86,6 +86,7 @@ export default function AppAlert({
     onClose: handleCancel,
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -110,7 +111,6 @@ export default function AppAlert({
       className="aa-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={handleCancel}
     >
       <div ref={modalRef} className="aa-modal" onClick={e => e.stopPropagation()}>
         <div className="aa-icon-container">

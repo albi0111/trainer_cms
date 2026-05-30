@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import './DashboardScreen.css';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,13 +10,14 @@ import PageWrapper from '../components/layout/PageWrapper';
 import StatsCards from '../components/dashboard/StatsCards';
 import TodaySchedule from '../components/dashboard/TodaySchedule';
 import ClientRoster from '../components/dashboard/ClientRoster';
-import ClientModal from '../components/modals/ClientModal';
 import SkeletonScheduleCard from '../components/skeletons/SkeletonScheduleCard';
 import SkeletonStatCard from '../components/skeletons/SkeletonStatCard';
-import DriveConnectAlert from '../components/sync/DriveConnectAlert';
 import SyncIndicator from '../components/sync/SyncIndicator';
 import { type DashboardStats } from '../types';
 import { useAppStore } from '../store/useAppStore';
+
+const ClientModal = lazy(() => import('../components/modals/ClientModal'));
+const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAlert'));
 
 const EMPTY_STATS: DashboardStats = {
   clients: [],
@@ -28,6 +29,7 @@ const EMPTY_STATS: DashboardStats = {
 export default function DashboardScreen() {
   const navigate = useNavigate();
   const hydrateDashboard = useAppStore((state) => state.hydrateDashboard);
+  const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
   const runSync = useAppStore((state) => state.runSync);
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
   const [loading, setLoading] = useState(true);
@@ -36,6 +38,8 @@ export default function DashboardScreen() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
+  const [hasLoadedAddModal, setHasLoadedAddModal] = useState(false);
+  const [hasLoadedDrivePrompt, setHasLoadedDrivePrompt] = useState(false);
   const hasLoadedDashboardRef = useRef(false);
   const isForegroundRefreshRunningRef = useRef(false);
 
@@ -50,6 +54,11 @@ export default function DashboardScreen() {
       setLoading(false);
     }
   }, [hydrateDashboard]);
+
+  const reloadDashboard = useCallback(async () => {
+    invalidateDashboard();
+    await loadDashboard();
+  }, [invalidateDashboard, loadDashboard]);
 
   const syncAndLoadDashboard = useCallback(async () => {
     if (isForegroundRefreshRunningRef.current) {
@@ -113,6 +122,18 @@ export default function DashboardScreen() {
       window.clearTimeout(timeoutId);
     };
   }, [loading, showLoadingSkeleton]);
+
+  useEffect(() => {
+    if (isAddModalOpen) {
+      setHasLoadedAddModal(true);
+    }
+  }, [isAddModalOpen]);
+
+  useEffect(() => {
+    if (isDrivePromptOpen) {
+      setHasLoadedDrivePrompt(true);
+    }
+  }, [isDrivePromptOpen]);
 
   useEffect(() => {
     const handleWindowFocus = () => {
@@ -230,17 +251,27 @@ export default function DashboardScreen() {
         </div>
       </PageWrapper>
 
-      <ClientModal 
-        open={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={loadDashboard}
-      />
+      {hasLoadedAddModal ? (
+        <Suspense fallback={null}>
+          <ClientModal
+            open={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onSuccess={() => {
+              void reloadDashboard();
+            }}
+          />
+        </Suspense>
+      ) : null}
 
-      <DriveConnectAlert
-        visible={isDrivePromptOpen}
-        onClose={() => setIsDrivePromptOpen(false)}
-        onConnected={loadDashboard}
-      />
+      {hasLoadedDrivePrompt ? (
+        <Suspense fallback={null}>
+          <DriveConnectAlert
+            visible={isDrivePromptOpen}
+            onClose={() => setIsDrivePromptOpen(false)}
+            onConnected={reloadDashboard}
+          />
+        </Suspense>
+      ) : null}
 
     </div>
   );

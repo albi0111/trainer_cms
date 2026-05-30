@@ -31,6 +31,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-wrap: wrap;
 }
 
 .client-header-name {
@@ -46,6 +47,45 @@
   line-height: 1.4;
   white-space: pre-wrap;
   margin-top: 2px;
+}
+
+.client-header-bp-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.client-header-bp-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.client-header-bp-badge--normal {
+  color: #3DCC88;
+  background-color: rgba(61, 204, 136, 0.1);
+  border-color: rgba(61, 204, 136, 0.22);
+}
+
+.client-header-bp-badge--high {
+  color: #FF6B6B;
+  background-color: rgba(255, 82, 82, 0.1);
+  border-color: rgba(255, 82, 82, 0.24);
+}
+
+.client-header-bp-badge--low {
+  color: #60A5FA;
+  background-color: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.26);
 }
 
 .client-stats-row {
@@ -114,6 +154,10 @@
 
   .client-header-goal {
     font-size: 12px;
+  }
+
+  .client-header-bp-row {
+    margin-bottom: 14px;
   }
 
   .client-stats-row {

@@ -89,6 +89,9 @@ export default function useCountUp({
   easing = DEFAULT_EASING,
 }: UseCountUpArgs): UseCountUpResult {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [isDocumentVisible, setIsDocumentVisible] = useState(() => (
+    typeof document === 'undefined' ? true : document.visibilityState !== 'hidden'
+  ));
   const frameRef = useRef<number | null>(null);
   const delayTimeoutRef = useRef<number | null>(null);
   const currentValueRef = useRef(target === 0 ? 0 : 0);
@@ -98,6 +101,23 @@ export default function useCountUp({
   useEffect(() => {
     currentValueRef.current = current;
   }, [current]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const syncVisibility = () => {
+      setIsDocumentVisible(document.visibilityState !== 'hidden');
+    };
+
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', syncVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     const clearPendingWork = () => {
@@ -113,6 +133,10 @@ export default function useCountUp({
     };
 
     clearPendingWork();
+
+    if (!isDocumentVisible) {
+      return clearPendingWork;
+    }
 
     if (target === 0 || prefersReducedMotion) {
       currentValueRef.current = target;
@@ -165,7 +189,7 @@ export default function useCountUp({
     }
 
     return clearPendingWork;
-  }, [delay, duration, easing, prefersReducedMotion, target]);
+  }, [delay, duration, easing, isDocumentVisible, prefersReducedMotion, target]);
 
   return { current, isComplete };
 }

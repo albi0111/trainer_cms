@@ -165,10 +165,11 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
             <div className="profile-exercises-list">
               {exercisesWithNotes.map((ex, idx) => {
                 const imgSrc = EXERCISE_IMAGES[ex.key] || ASSESSMENT_EXERCISES[idx]?.icon;
+                const imgAlt = ASSESSMENT_EXERCISES.find((exercise) => exercise.key === ex.key)?.label || 'Assessment exercise';
                 return (
                   <div key={ex.key || idx} className="exercise-card">
                     <div className="exercise-card__img-wrap">
-                      <img src={imgSrc} alt={ex.key} className="exercise-card__img" />
+                      <img src={imgSrc} alt={imgAlt} className="exercise-card__img" />
                     </div>
                     <div className="exercise-card__notes">{ex.note}</div>
                   </div>

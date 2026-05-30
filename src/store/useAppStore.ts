@@ -1,10 +1,5 @@
 import { create } from 'zustand';
 import type { ClientDetail, DashboardStats, ScheduledSession } from '../types';
-import { getClientDetail } from '../services/client/clientService';
-import { getDashboardStats } from '../services/analytics/analyticsService';
-import { getMonthSchedule } from '../services/schedule/scheduleService';
-import { getSyncSnapshot, runSyncCycle } from '../services/sync/syncService';
-import { isAuthenticated, signIn, signOut } from '../services/sync/googleAuth';
 
 export type AppSyncStatus = 'idle' | 'syncing' | 'error';
 
@@ -35,9 +30,35 @@ interface AppState {
   invalidateDashboard: () => void;
 }
 
+const DRIVE_TOKEN_KEY = 'fitpersona.google.access_token';
+const DRIVE_EXPIRES_KEY = 'fitpersona.google.expires_at';
+
+function readInitialDriveAuthState(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const token = localStorage.getItem(DRIVE_TOKEN_KEY);
+    const expiresAt = Number(localStorage.getItem(DRIVE_EXPIRES_KEY) || '0');
+
+    if (!token || !expiresAt || Date.now() >= expiresAt) {
+      if (token || expiresAt) {
+        localStorage.removeItem(DRIVE_TOKEN_KEY);
+        localStorage.removeItem(DRIVE_EXPIRES_KEY);
+      }
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   selectedClientId: null,
-  isConnectedToDrive: isAuthenticated(),
+  isConnectedToDrive: readInitialDriveAuthState(),
   syncStatus: 'idle',
   pendingSyncCount: 0,
   lastSyncedAt: null,
@@ -49,6 +70,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedClientId: (id) => set({ selectedClientId: id }),
 
   refreshSyncState: async () => {
+    const [{ getSyncSnapshot }, { isAuthenticated }] = await Promise.all([
+      import('../services/sync/syncService'),
+      import('../services/sync/googleAuth'),
+    ]);
     const snapshot = await getSyncSnapshot();
     const authenticated = isAuthenticated();
     set({
@@ -61,12 +86,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   hydrateDashboard: async () => {
+    const cachedDashboard = get().dashboard;
+    if (cachedDashboard) {
+      return cachedDashboard;
+    }
+
+    const { getDashboardStats } = await import('../services/analytics/analyticsService');
     const dashboard = await getDashboardStats();
     set({ dashboard });
     return dashboard;
   },
 
   hydrateClientDetail: async (clientId: string) => {
+    const cachedDetail = get().clientDetails[clientId];
+    if (cachedDetail) {
+      return cachedDetail;
+    }
+
+    const { getClientDetail } = await import('../services/client/clientService');
     const detail = await getClientDetail(clientId);
     if (detail) {
       set((state) => ({
@@ -86,12 +123,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       return cached.sessions;
     }
 
+    const { getMonthSchedule } = await import('../services/schedule/scheduleService');
     const sessions = await getMonthSchedule(startDate, endDate);
     set({ scheduleCache: { key, sessions } });
     return sessions;
   },
 
   connectDrive: async () => {
+    const { signIn } = await import('../services/sync/googleAuth');
     await signIn();
     set({ isConnectedToDrive: true });
     await get().runSync();
@@ -99,6 +138,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   disconnectDrive: async () => {
+    const { signOut } = await import('../services/sync/googleAuth');
     await signOut();
     set({
       isConnectedToDrive: false,
@@ -111,6 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   runSync: async () => {
     set({ syncStatus: 'syncing' });
     try {
+      const { runSyncCycle } = await import('../services/sync/syncService');
       const changed = await runSyncCycle();
       if (changed) {
         set({

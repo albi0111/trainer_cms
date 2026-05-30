@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { CSSProperties } from 'react';
 
 interface SkeletonBaseProps {
@@ -67,7 +67,7 @@ function ensureSkeletonStyles(): void {
   }
 }
 
-export default function SkeletonBase({
+const SkeletonBase = memo(function SkeletonBase({
   width,
   height,
   radius = 6,
@@ -84,4 +84,6 @@ export default function SkeletonBase({
   }), [height, radius, style, width]);
 
   return <div className={['fp-skeleton-base', className].filter(Boolean).join(' ')} style={mergedStyle} aria-hidden="true" />;
-}
+});
+
+export default SkeletonBase;

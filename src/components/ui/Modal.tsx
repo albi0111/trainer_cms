@@ -29,6 +29,7 @@ export default function Modal({ open, onClose, title, children, footer, classNam
     overlayRef: dialogRef,
     sheetRef: contentRef,
     overlayMode: 'dialog-backdrop',
+    enabled: false,
   });
 
   useEffect(() => {
@@ -104,12 +105,6 @@ export default function Modal({ open, onClose, title, children, footer, classNam
     };
   }, [open]);
 
-  const handleBackdropClick = (event: React.MouseEvent<HTMLDialogElement>) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
   return (
     <dialog
       ref={dialogRef}
@@ -118,9 +113,7 @@ export default function Modal({ open, onClose, title, children, footer, classNam
       data-opening={isOpening ? 'true' : 'false'}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
       }}
-      onClick={handleBackdropClick}
     >
       <div ref={contentRef} className="modal__content">
         {title && (

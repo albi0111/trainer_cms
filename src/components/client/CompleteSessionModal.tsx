@@ -47,7 +47,7 @@ export default function CompleteSessionModal({
     },
     overlayRef,
     sheetRef: boxRef,
-    enabled: canDismiss,
+    enabled: false,
   });
 
   // Reset on open
@@ -73,17 +73,6 @@ export default function CompleteSessionModal({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!visible) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && canDismiss) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [canDismiss, onClose, visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -137,14 +126,18 @@ export default function CompleteSessionModal({
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
       data-success-exit={submitState === 'success' ? 'true' : 'false'}
-      onClick={handleDismiss}
     >
       <div ref={boxRef} className="complete-modal__box" onClick={e => e.stopPropagation()}>
         <div className="complete-modal__header">
           <span className="complete-modal__title">
             {sessionFocus ? `Complete Session` : 'Complete Session'}
           </span>
-          <button className="complete-modal__close" onClick={handleDismiss} disabled={!canDismiss}>
+          <button
+            className="complete-modal__close"
+            onClick={handleDismiss}
+            disabled={!canDismiss}
+            aria-label="Close complete session dialog"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>

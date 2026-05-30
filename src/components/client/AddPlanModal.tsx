@@ -28,6 +28,7 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
     onClose,
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -87,7 +88,6 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
       className="uc-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={modalRef} className="uc-modal" onClick={e => e.stopPropagation()}>
         <div className="uc-header">
@@ -103,14 +103,14 @@ export default function AddPlanModal({ visible, onClose, onSave }: AddPlanModalP
             <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
               <button 
                 type="button"
-                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: type === 'monthly' ? '#FFD700' : '#2A2A2A', color: type === 'monthly' ? '#000' : '#FFF', fontWeight: type === 'monthly' ? 'bold' : 'normal', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: type === 'monthly' ? 'var(--color-primary)' : '#2A2A2A', color: type === 'monthly' ? '#000' : '#FFF', fontWeight: type === 'monthly' ? 'bold' : 'normal', cursor: 'pointer' }}
                 onClick={() => setType('monthly')}
               >
                 Monthly (Auto 4-Weeks)
               </button>
               <button 
                 type="button"
-                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: type === 'weekly' ? '#FFD700' : '#2A2A2A', color: type === 'weekly' ? '#000' : '#FFF', fontWeight: type === 'weekly' ? 'bold' : 'normal', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: type === 'weekly' ? 'var(--color-primary)' : '#2A2A2A', color: type === 'weekly' ? '#000' : '#FFF', fontWeight: type === 'weekly' ? 'bold' : 'normal', cursor: 'pointer' }}
                 onClick={() => setType('weekly')}
               >
                 Standalone Weekly

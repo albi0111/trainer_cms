@@ -31,16 +31,6 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void import('./screens/ClientScreen');
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
-
   return (
     <>
       <AppRouter />

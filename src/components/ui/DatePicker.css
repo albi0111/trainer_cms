@@ -165,7 +165,7 @@
 
 .wheel-item--selected {
   background-color: var(--color-primary-bg); /* #332200 */
-  color: var(--color-primary); /* #FFD700 */
+  color: var(--color-primary); /* var(--color-primary) */
   font-weight: 800;
   border-radius: 8px;
   width: 80%;

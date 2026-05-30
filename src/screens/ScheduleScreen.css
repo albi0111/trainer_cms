@@ -45,15 +45,17 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.3);
-  transition: all var(--transition-fast);
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.3);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
   z-index: 50;
   border: none;
 }
 
 .schedule-fab:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
+  box-shadow: 0 6px 24px rgba(var(--color-primary-rgb), 0.4);
 }
 
 .nav-date {

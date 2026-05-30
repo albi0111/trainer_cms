@@ -17,6 +17,7 @@ const BADGE_DEFAULTS: Record<BadgeVariant, string> = {
 };
 
 let visibilityListenerAttached = false;
+let visibilityListenerRefCount = 0;
 
 function syncBadgeAnimationState(): void {
   if (typeof document === 'undefined') {
@@ -33,8 +34,14 @@ function syncBadgeAnimationState(): void {
   }
 }
 
-function ensureBadgeVisibilityListener(): void {
-  if (visibilityListenerAttached || typeof document === 'undefined') {
+function attachBadgeVisibilityListener(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  visibilityListenerRefCount += 1;
+
+  if (visibilityListenerAttached) {
     return;
   }
 
@@ -43,9 +50,28 @@ function ensureBadgeVisibilityListener(): void {
   visibilityListenerAttached = true;
 }
 
+function detachBadgeVisibilityListener(): void {
+  if (typeof document === 'undefined' || visibilityListenerRefCount === 0) {
+    return;
+  }
+
+  visibilityListenerRefCount -= 1;
+
+  if (visibilityListenerRefCount > 0 || !visibilityListenerAttached) {
+    return;
+  }
+
+  document.removeEventListener('visibilitychange', syncBadgeAnimationState);
+  visibilityListenerAttached = false;
+}
+
 export default function Badge({ variant = 'active', label, children }: BadgeProps) {
   useEffect(() => {
-    ensureBadgeVisibilityListener();
+    attachBadgeVisibilityListener();
+
+    return () => {
+      detachBadgeVisibilityListener();
+    };
   }, []);
 
   return (

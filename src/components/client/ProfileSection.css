@@ -18,7 +18,10 @@
   border: 1px solid #262626;
   border-radius: var(--radius-2xl);
   padding: var(--space-xl);
-  transition: all var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;

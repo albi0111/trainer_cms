@@ -81,7 +81,7 @@
 }
 
 .add-measurement-header h2 {
-  color: #FFD700;
+  color: var(--color-primary);
   font-size: 14px;
   font-weight: 900;
   letter-spacing: 1.5px;
@@ -115,14 +115,14 @@
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tab-btn.active {
-  background-color: #FFD700;
+  background-color: var(--color-primary);
   color: #000;
-  border-color: #FFD700;
-  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .add-measurement-scroll {
@@ -189,17 +189,17 @@
   border: 1px dashed #222;
   border-radius: 14px;
   background: transparent;
-  color: #FFD700;
+  color: var(--color-primary);
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
   height: 60px;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
   margin-top: auto;
 }
 
 .add-metric-inline:hover {
-  background: rgba(255, 215, 0, 0.02);
+  background: rgba(var(--color-primary-rgb), 0.02);
   border-color: #444;
 }
 
@@ -233,7 +233,7 @@
 }
 
 .add-measurement-footer .cancel-btn { background: #1a1a1a; color: #888; }
-.add-measurement-footer .save-btn { background: #FFD700; color: #000; }
+.add-measurement-footer .save-btn { background: var(--color-primary); color: #000; }
 
 .empty-hint {
   color: #333;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import pkg from '../../package.json';
+import BrandMark from './branding/BrandMark';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -160,41 +161,15 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px',
+          gap: '18px',
           transform: 'translateY(0)',
         }}
       >
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '64px',
-            padding: '12px 18px',
-            borderRadius: '14px',
-            background: 'var(--color-primary)',
-            color: 'var(--color-text-dark)',
-            fontSize: '22px',
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            opacity: 1,
-            animation: prefersReducedMotion ? undefined : 'fp-splash-logo 300ms ease-out both',
-          }}
-        >
-          FIT
-        </div>
-        <div
-          style={{
-            color: 'var(--color-primary)',
-            fontSize: '30px',
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            opacity: 1,
-            animation: prefersReducedMotion ? undefined : 'fp-splash-text 300ms ease-out 200ms both',
-          }}
-        >
-          FIT.PERSONA
-        </div>
+        <BrandMark
+          className="fp-splash-mark"
+          decorative
+        />
+        <div className="fp-splash-text">fit.persona</div>
       </div>
 
       <div
@@ -253,6 +228,23 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       </div>
 
       <style>{`
+        .fp-splash-mark {
+          width: min(48vw, 180px);
+          border-radius: 36px;
+          box-shadow: 0 32px 72px rgba(0, 0, 0, 0.32);
+          opacity: 1;
+          animation: ${prefersReducedMotion ? 'none' : 'fp-splash-logo 300ms ease-out both'};
+        }
+
+        .fp-splash-text {
+          color: var(--color-primary);
+          font-size: clamp(24px, 8vw, 30px);
+          font-weight: 900;
+          letter-spacing: -0.04em;
+          opacity: 1;
+          animation: ${prefersReducedMotion ? 'none' : 'fp-splash-text 300ms ease-out 200ms both'};
+        }
+
         @keyframes fp-splash-logo {
           from {
             opacity: 0;

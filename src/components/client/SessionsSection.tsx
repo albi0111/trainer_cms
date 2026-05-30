@@ -14,8 +14,11 @@ import CompleteSessionModal, { type CompleteSessionData } from './CompleteSessio
 import MarkMissedModal, { type MarkMissedData } from './MarkMissedModal';
 import { Session } from '../../types';
 import { toDayName } from '../../services/shared/date';
+import { notifyPendingLogSessions } from '../../services/notification/sessionNotificationService';
 
 interface SessionsSectionProps {
+  clientId: string;
+  clientName: string;
   upcoming: Session[];
   pending: Session[];
   onCompleteSession: (id: string, data: CompleteSessionData) => Promise<boolean>;
@@ -29,6 +32,8 @@ let hasPlayedPendingSessionsEntrance = false;
 let hasPlayedUpcomingSessionsEntrance = false;
 
 export default function SessionsSection({
+  clientId,
+  clientName,
   upcoming,
   pending,
   onCompleteSession,
@@ -60,6 +65,14 @@ export default function SessionsSection({
       hasPlayedUpcomingSessionsEntrance = true;
     }
   }, [displayedUpcoming.length]);
+
+  useEffect(() => {
+    void notifyPendingLogSessions({
+      clientId,
+      clientName,
+      sessions: pending,
+    });
+  }, [clientId, clientName, pending]);
 
   const dotsIcon = (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

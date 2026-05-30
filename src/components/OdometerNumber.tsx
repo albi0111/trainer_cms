@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { usePrefersReducedMotion } from '../hooks/useSwipeGesture';
 
 const ODOMETER_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -209,7 +209,7 @@ function OdometerDigit({
   );
 }
 
-export default function OdometerNumber({
+const OdometerNumber = memo(function OdometerNumber({
   value,
   duration = 500,
   decimals = 0,
@@ -268,4 +268,6 @@ export default function OdometerNumber({
       ) : null}
     </span>
   );
-}
+});
+
+export default OdometerNumber;

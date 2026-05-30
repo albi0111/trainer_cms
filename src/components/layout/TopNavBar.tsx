@@ -1,13 +1,14 @@
 import './TopNavBar.css';
 import { useNavigate } from 'react-router-dom';
 import { useHaptic } from '../../hooks/useHaptic';
+import BrandMark from '../branding/BrandMark';
 
 interface TopNavBarProps {
   /** Content to render on the left side (e.g. back button) */
   leftContent?: React.ReactNode;
   /** Content to render on the right side (e.g. sync indicator) */
   rightContent?: React.ReactNode;
-  /** Show FIT.PERSONA logo in center. Defaults to true. */
+  /** Show fit.persona logo in center. Defaults to true. */
   showLogo?: boolean;
   /** Show back arrow on the left. Overridden by leftContent. */
   showBack?: boolean;
@@ -15,7 +16,7 @@ interface TopNavBarProps {
 
 /**
  * TopNavBar — matches reference exactly.
- * Logo-centered with FIT mark.
+ * Logo-centered with fit.persona mark.
  * Left/right slots for back button, sync indicator, etc.
  */
 export default function TopNavBar({
@@ -58,9 +59,9 @@ export default function TopNavBar({
     <header className="top-nav app-header">
       <div className="top-nav__slot">{leftSlot}</div>
       {showLogo && (
-        <div className="top-nav__logo" aria-label="FIT.PERSONA" role="img">
-          <span className="top-nav__logo-badge">FIT</span>
-          <span className="top-nav__logo-text">FIT.PERSONA</span>
+        <div className="top-nav__logo">
+          <BrandMark className="top-nav__logo-mark" decorative />
+          <span className="top-nav__logo-text">fit.persona</span>
         </div>
       )}
       <div className="top-nav__slot top-nav__slot--right">{rightContent ?? null}</div>

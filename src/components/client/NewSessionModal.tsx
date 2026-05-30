@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import './NewSessionModal.css';
 import AppDatePicker from '../shared/AppDatePicker';
@@ -63,8 +63,16 @@ export default function NewSessionModal({
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [timeInvalid, setTimeInvalid] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const [draggingExerciseId, setDraggingExerciseId] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<{
+    pointerId: number;
+    exerciseId: string;
+    startY: number;
+    active: boolean;
+    timeoutId: number;
+  } | null>(null);
   const haptic = useHaptic();
   const { playError } = useSoundFeedback();
 
@@ -73,6 +81,7 @@ export default function NewSessionModal({
     onClose,
     overlayRef,
     sheetRef: dialogRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -113,19 +122,6 @@ export default function NewSessionModal({
   }, [initialDate, initialTime, visible, editingSession]);
 
   useEffect(() => {
-    if (!visible) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [visible, onClose]);
-
-  useEffect(() => {
     if (!visible) {
       setIsOpening(false);
       return;
@@ -163,6 +159,94 @@ export default function NewSessionModal({
   const removeExercise = (id: string) => {
     setExercises(exercises.filter(e => e.id !== id));
   };
+
+  const reorderExercise = useCallback((draggedId: string, targetId: string) => {
+    if (draggedId === targetId) {
+      return;
+    }
+
+    setExercises((current) => {
+      const fromIndex = current.findIndex((exercise) => exercise.id === draggedId);
+      const toIndex = current.findIndex((exercise) => exercise.id === targetId);
+
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+        return current;
+      }
+
+      const next = [...current];
+      const [dragged] = next.splice(fromIndex, 1);
+      if (!dragged) {
+        return current;
+      }
+      next.splice(toIndex, 0, dragged);
+      return next;
+    });
+  }, []);
+
+  const finishExerciseDrag = useCallback(() => {
+    const dragState = dragHandleRef.current;
+    if (dragState) {
+      window.clearTimeout(dragState.timeoutId);
+    }
+    dragHandleRef.current = null;
+    setDraggingExerciseId(null);
+  }, []);
+
+  const handleExerciseDragStart = useCallback((exerciseId: string, event: PointerEvent<HTMLButtonElement>) => {
+    if (exercises.length < 2) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const timeoutId = window.setTimeout(() => {
+      if (dragHandleRef.current?.pointerId !== event.pointerId) {
+        return;
+      }
+
+      dragHandleRef.current.active = true;
+      setDraggingExerciseId(exerciseId);
+      haptic.light();
+    }, 140);
+
+    dragHandleRef.current = {
+      pointerId: event.pointerId,
+      exerciseId,
+      startY: event.clientY,
+      active: false,
+      timeoutId,
+    };
+  }, [exercises.length, haptic]);
+
+  const handleExerciseDragMove = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    const dragState = dragHandleRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (!dragState.active && Math.abs(event.clientY - dragState.startY) > 8) {
+      window.clearTimeout(dragState.timeoutId);
+      dragState.active = true;
+      setDraggingExerciseId(dragState.exerciseId);
+      haptic.light();
+    }
+
+    if (!dragState.active) {
+      return;
+    }
+
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-session-exercise-id]');
+    const targetId = target?.dataset.sessionExerciseId;
+
+    if (!targetId || targetId === dragState.exerciseId) {
+      return;
+    }
+
+    reorderExercise(dragState.exerciseId, targetId);
+  }, [haptic, reorderExercise]);
 
 
   const handleSave = async () => {
@@ -220,7 +304,6 @@ export default function NewSessionModal({
       className="session-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={dialogRef} className="session-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="session-modal__header">
@@ -302,7 +385,28 @@ export default function NewSessionModal({
                   </div>
                 )}
                 {exercises.map(ex => (
-                  <div key={ex.id} className="session-modal__exercise-row">
+                  <div
+                    key={ex.id}
+                    className={`session-modal__exercise-row ${draggingExerciseId === ex.id ? 'is-dragging' : ''}`}
+                    data-session-exercise-id={ex.id}
+                  >
+                    <button
+                      type="button"
+                      className="session-modal__drag-handle"
+                      aria-label={`Reorder ${ex.name || 'exercise'}`}
+                      title="Reorder exercise"
+                      onPointerDown={(event) => handleExerciseDragStart(ex.id, event)}
+                      onPointerMove={handleExerciseDragMove}
+                      onPointerUp={finishExerciseDrag}
+                      onPointerCancel={finishExerciseDrag}
+                    >
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                      <span aria-hidden="true" />
+                    </button>
                     <input
                       className="session-modal__input session-modal__exercise-name"
                       type="text"

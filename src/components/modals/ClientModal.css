@@ -31,7 +31,10 @@
   border: none;
   cursor: pointer;
   z-index: 1;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .cm-tab-icon {
@@ -136,7 +139,7 @@
   font-size: 14px;
   font-weight: 600;
   outline: none;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .cm-input--compact {
@@ -333,7 +336,12 @@
   font-weight: 800;
   cursor: pointer;
   border: none;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    filter var(--transition-fast),
+    opacity var(--transition-fast);
 }
 
 .cm-btn--secondary {

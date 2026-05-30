@@ -51,6 +51,7 @@ export default function ManageMetricsModal({
     onClose,
     overlayRef,
     sheetRef: containerRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -175,7 +176,6 @@ export default function ManageMetricsModal({
       className="manage-metrics-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={containerRef} className="manage-metrics-container" onClick={e => e.stopPropagation()}>
         <div className="manage-metrics-header">

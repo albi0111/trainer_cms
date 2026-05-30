@@ -32,18 +32,12 @@ export default function ManageSessionModal({
     onClose,
     overlayRef,
     sheetRef: boxRef,
+    enabled: false,
   });
 
   useEffect(() => {
     if (!visible) setLoadingComplete(false);
   }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [visible, onClose]);
 
   useEffect(() => {
     if (!visible) {
@@ -75,12 +69,11 @@ export default function ManageSessionModal({
       className="manage-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={boxRef} className="manage-modal__box" onClick={e => e.stopPropagation()}>
         <div className="manage-modal__header">
           <span className="manage-modal__title">Manage Session</span>
-          <button className="manage-modal__close" onClick={onClose}>
+          <button className="manage-modal__close" onClick={onClose} aria-label="Close session actions">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -94,7 +87,7 @@ export default function ManageSessionModal({
             {loadingComplete ? (
               <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: '#555' }} />
             ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
             )}
@@ -112,7 +105,7 @@ export default function ManageSessionModal({
         {/* Postpone Session */}
         <button className="manage-modal__item" onClick={onPostpone}>
           <div className="manage-modal__item-icon manage-modal__item-icon--postpone">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>

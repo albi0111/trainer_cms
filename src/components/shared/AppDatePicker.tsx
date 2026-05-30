@@ -101,6 +101,7 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
     onClose: () => setVisible(false),
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
   return (
@@ -113,7 +114,7 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
             backgroundColor: '#1A1A1A',
             borderRadius: '12px',
             padding: '14px',
-            border: visible ? '1px solid #FFD700' : '1px solid #333',
+            border: visible ? '1px solid var(--color-primary)' : '1px solid #333',
             color: '#FFF',
             fontSize: '16px',
             display: 'flex',
@@ -124,7 +125,7 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
           }}
         >
           <span>{value || 'Select Date'}</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={visible ? '#FFD700' : '#666'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={visible ? 'var(--color-primary)' : '#666'} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         </div>
       </div>
 
@@ -148,7 +149,6 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
               : 'opacity 180ms ease-in, visibility 0s linear 180ms',
             willChange: isOpening ? (prefersReducedMotion ? 'opacity' : 'backdrop-filter, opacity') : undefined,
           }}
-          onClick={() => setVisible(false)}
         >
           <div
             ref={modalRef}
@@ -184,7 +184,7 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
             <button
               onClick={handleSave}
               style={{
-                width: '100%', backgroundColor: '#FFD700', padding: '14px',
+                width: '100%', backgroundColor: 'var(--color-primary)', padding: '14px',
                 borderRadius: '12px', border: 'none', color: '#000',
                 fontWeight: '800', fontSize: '16px', marginTop: '24px', cursor: 'pointer'
               }}
@@ -262,7 +262,7 @@ function Wheel({ label, options, selected, onSelect }: { label: string, options:
               }}
             >
               <span style={{ 
-                color: selected === opt ? '#FFD700' : '#666', 
+                color: selected === opt ? 'var(--color-primary)' : '#666', 
                 fontSize: '18px', 
                 fontWeight: selected === opt ? '800' : '600' 
               }}>

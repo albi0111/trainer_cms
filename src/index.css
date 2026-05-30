@@ -224,10 +224,10 @@ body .cm-exercise-row:focus-within,
 body .diet-header-cell:focus-within,
 body .diet-macro-box:has(.diet-macro-input:focus) {
   border-color: var(--color-primary);
-  background-color: rgba(255, 215, 0, 0.06);
+  background-color: rgba(var(--color-primary-rgb), 0.06);
   box-shadow:
-    0 0 0 3px rgba(255, 215, 0, 0.15),
-    0 0 12px rgba(255, 215, 0, 0.08);
+    0 0 0 3px rgba(var(--color-primary-rgb), 0.15),
+    0 0 12px rgba(var(--color-primary-rgb), 0.08);
   outline: none;
 }
 

@@ -14,6 +14,7 @@ import './AddMeasurementModal.css';
 interface AddMeasurementModalProps {
   visible: boolean;
   clientId: string;
+  initialCategory?: 'body' | 'performance';
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -21,10 +22,11 @@ interface AddMeasurementModalProps {
 export default function AddMeasurementModal({
   visible,
   clientId,
+  initialCategory = 'body',
   onClose,
   onSuccess,
 }: AddMeasurementModalProps) {
-  const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
+  const [activeTab, setActiveTab] = useState<'body' | 'performance'>(initialCategory);
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(true);
   const [isManageMetricsVisible, setIsManageMetricsVisible] = useState(false);
@@ -46,14 +48,16 @@ export default function AddMeasurementModal({
     onClose,
     overlayRef,
     sheetRef: containerRef,
+    enabled: false,
   });
 
   useEffect(() => {
     if (visible) {
+      setActiveTab(initialCategory);
       setSaveState('idle');
       loadConfigs();
     }
-  }, [visible, clientId]);
+  }, [visible, clientId, initialCategory]);
 
   useEffect(() => {
     if (!visible) {
@@ -125,7 +129,6 @@ export default function AddMeasurementModal({
       className="add-measurement-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={containerRef} className="add-measurement-container" onClick={e => e.stopPropagation()}>
         <div className="add-measurement-header">

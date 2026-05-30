@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import SkeletonBase from './SkeletonBase';
 
-export default function SkeletonScheduleCard() {
+const SkeletonScheduleCard = memo(function SkeletonScheduleCard() {
   return (
     <div
       style={{
@@ -38,4 +39,6 @@ export default function SkeletonScheduleCard() {
       </div>
     </div>
   );
-}
+});
+
+export default SkeletonScheduleCard;

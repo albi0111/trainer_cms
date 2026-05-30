@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import SkeletonBase from './SkeletonBase';
 
-export default function SkeletonClientProfile() {
+const SkeletonClientProfile = memo(function SkeletonClientProfile() {
   return (
     <div
       style={{
@@ -37,4 +38,6 @@ export default function SkeletonClientProfile() {
       </div>
     </div>
   );
-}
+});
+
+export default SkeletonClientProfile;

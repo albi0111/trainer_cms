@@ -35,6 +35,7 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
     onClose,
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -106,13 +107,12 @@ export default function EditPlanModal({ visible, onClose, plan, onSave }: EditPl
       className="uc-overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
       style={{ zIndex: 1100 }}
     >
       <div ref={modalRef} className="uc-modal" onClick={e => e.stopPropagation()}>
         <div className="uc-header">
           <div>
-            <h2 className="uc-title" style={{ color: '#FFD700' }}>Edit Plan Details</h2>
+            <h2 className="uc-title" style={{ color: 'var(--color-primary)' }}>Edit Plan Details</h2>
           </div>
           <button className="uc-close-btn" onClick={onClose}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

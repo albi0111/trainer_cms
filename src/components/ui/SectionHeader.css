@@ -39,7 +39,11 @@
   text-transform: uppercase;
   letter-spacing: 0.8px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
   box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;

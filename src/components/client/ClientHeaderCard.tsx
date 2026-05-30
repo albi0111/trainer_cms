@@ -4,6 +4,7 @@ import Badge from '../ui/Badge';
 import OdometerNumber from '../OdometerNumber';
 import type { ClientStatus } from '../../types';
 import { toClientBadgeStatus } from '../../utils/clientStatus';
+import { getBpStatus, getBpStatusLabel } from '../../utils/bpStatus';
 
 interface ClientHeaderCardProps {
   name: string;
@@ -12,6 +13,8 @@ interface ClientHeaderCardProps {
   weight: number;
   height: number;
   status: ClientStatus;
+  bpSystolic?: number | null;
+  bpDiastolic?: number | null;
 }
 
 export default function ClientHeaderCard({
@@ -21,7 +24,11 @@ export default function ClientHeaderCard({
   weight,
   height,
   status,
+  bpSystolic,
+  bpDiastolic,
 }: ClientHeaderCardProps) {
+  const bpStatus = getBpStatus(bpSystolic, bpDiastolic);
+
   return (
     <div className="client-header-card">
       <div className="client-header-card__top">
@@ -34,6 +41,14 @@ export default function ClientHeaderCard({
           <p className="client-header-goal">{goal}</p>
         </div>
       </div>
+
+      {bpStatus ? (
+        <div className="client-header-bp-row">
+          <span className={`client-header-bp-badge client-header-bp-badge--${bpStatus}`}>
+            {getBpStatusLabel(bpStatus)}: {bpSystolic}/{bpDiastolic}
+          </span>
+        </div>
+      ) : null}
 
       <div className="client-stats-row">
         <div className="client-stat-item">

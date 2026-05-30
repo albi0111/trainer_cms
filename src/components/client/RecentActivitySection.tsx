@@ -137,7 +137,7 @@ function ActivityItem({
           {isCompleted && (
             <div className="activity-item__stats-pill">
               <div className="activity-stat">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--color-primary)" stroke="var(--color-primary)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 {animateCompletedStats && animationToken !== null ? (
@@ -152,7 +152,7 @@ function ActivityItem({
                 )}
               </div>
               <div className="activity-stat">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8l4 4-4 4M6 8l-4 4 4 4M2 12h20" />
                 </svg>
                 {animateCompletedStats && animationToken !== null ? (
@@ -168,7 +168,7 @@ function ActivityItem({
               </div>
             </div>
           )}
-          <button className="activity-revert-btn" onClick={onRevert}>{revertIcon}</button>
+          <button className="activity-revert-btn" onClick={onRevert} aria-label="Revert session status">{revertIcon}</button>
         </div>
       </div>
 

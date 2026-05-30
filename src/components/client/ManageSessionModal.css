@@ -143,11 +143,11 @@
 }
 
 .manage-modal__item-icon--complete {
-  background-color: rgba(255, 215, 0, 0.15);
+  background-color: rgba(var(--color-primary-rgb), 0.15);
 }
 
 .manage-modal__item-icon--postpone {
-  background-color: rgba(255, 215, 0, 0.15);
+  background-color: rgba(var(--color-primary-rgb), 0.15);
 }
 
 .manage-modal__item-icon--missed {

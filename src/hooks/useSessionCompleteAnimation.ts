@@ -243,7 +243,7 @@ export default function useSessionCompleteAnimation({
       }
     }, COMPLETE_SOUND_DELAY_MS);
 
-    pulseOverlay('rgba(255, 215, 0, 1)', 0.07, 400, 300);
+    pulseOverlay('rgba(var(--color-primary-rgb), 1)', 0.07, 400, 300);
     queuePendingActivityAnimation('completed', COMPLETE_ACTIVITY_DELAY_MS);
   }, [clearScheduledWork, haptic, playSuccess, prefersReducedMotion, pulseOverlay, queuePendingActivityAnimation, resetOverlay, scheduleTimeout]);
 

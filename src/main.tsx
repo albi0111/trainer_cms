@@ -4,27 +4,27 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import SplashScreen from './components/SplashScreen';
 import { ensureDatabaseReady } from './db/db';
+import { useAppStore } from './store/useAppStore';
 import './index.css';
 
 registerSW({ immediate: true });
 
-const SPLASH_STORAGE_KEY = 'fp_splashed';
 const APP_READY_EVENT = 'fp:app-ready';
 
 type GlobalWindowState = Window & {
   __fpAppReady?: boolean;
 };
 
-function getInitialSplashState(): boolean {
-  if (typeof window === 'undefined') {
-    return true;
-  }
+function getCurrentMonthRange(): { startDate: string; endDate: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const format = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-  try {
-    return sessionStorage.getItem(SPLASH_STORAGE_KEY) !== 'true';
-  } catch {
-    return true;
-  }
+  return {
+    startDate: format(start),
+    endDate: format(end),
+  };
 }
 
 function preloadInitialRouteModule(pathname: string): Promise<unknown> {
@@ -40,7 +40,34 @@ function preloadInitialRouteModule(pathname: string): Promise<unknown> {
     return import('./screens/SettingsScreen');
   }
 
-  return import('./screens/DashboardScreen');
+  return Promise.resolve();
+}
+
+async function hydrateInitialRouteData(pathname: string): Promise<void> {
+  const store = useAppStore.getState();
+
+  if (pathname === '/') {
+    await store.hydrateDashboard();
+    return;
+  }
+
+  if (pathname.startsWith('/client/')) {
+    const clientId = pathname.split('/client/')[1]?.split('/')[0];
+    if (clientId) {
+      await store.hydrateClientDetail(decodeURIComponent(clientId));
+    }
+    return;
+  }
+
+  if (pathname.startsWith('/schedule')) {
+    const { startDate, endDate } = getCurrentMonthRange();
+    await store.hydrateSchedule(startDate, endDate);
+    return;
+  }
+
+  if (pathname.startsWith('/settings')) {
+    await store.refreshSyncState();
+  }
 }
 
 function signalAppReady(): void {
@@ -58,17 +85,20 @@ function signalAppReady(): void {
 
 function BootstrapApp() {
   const [isAppReady, setIsAppReady] = useState(false);
-  const [showSplash, setShowSplash] = useState(getInitialSplashState);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     let isCancelled = false;
 
     const bootstrap = async () => {
+      const pathname = window.location.pathname;
+
       try {
-        await Promise.allSettled([
+        await Promise.all([
           ensureDatabaseReady(),
-          preloadInitialRouteModule(window.location.pathname),
+          preloadInitialRouteModule(pathname),
         ]);
+        await hydrateInitialRouteData(pathname);
       } catch (error) {
         console.error('Failed to initialize app', error);
       } finally {
@@ -89,21 +119,11 @@ function BootstrapApp() {
   }, []);
 
   const handleSplashComplete = useCallback(() => {
-    try {
-      sessionStorage.setItem(SPLASH_STORAGE_KEY, 'true');
-    } catch {
-      // Silent fail when sessionStorage is unavailable.
-    }
-
     setShowSplash(false);
   }, []);
 
-  if (showSplash) {
+  if (showSplash || !isAppReady) {
     return <SplashScreen onComplete={handleSplashComplete} />;
-  }
-
-  if (!isAppReady) {
-    return null;
   }
 
   return <App />;

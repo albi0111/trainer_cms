@@ -17,7 +17,7 @@ export default function SyncIndicator({ compact = false, onClick, onLongPress }:
   const color = hasError
     ? '#FF5252'
     : syncStatus === 'syncing'
-      ? '#FFD700'
+      ? 'var(--color-primary)'
       : '#E8E0B8';
 
   const label = hasError

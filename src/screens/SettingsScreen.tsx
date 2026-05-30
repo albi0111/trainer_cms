@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import pkg from '../../package.json';
 import './SettingsScreen.css';
 
 import TopNavBar from '../components/layout/TopNavBar';
 import PageWrapper from '../components/layout/PageWrapper';
+import BrandMark from '../components/branding/BrandMark';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import DriveConnectAlert from '../components/sync/DriveConnectAlert';
 import SyncIndicator from '../components/sync/SyncIndicator';
 import { useSoundFeedback } from '../hooks/useSoundFeedback';
 import { useAppStore } from '../store/useAppStore';
+
+const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAlert'));
 
 export default function SettingsScreen() {
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
@@ -21,6 +23,7 @@ export default function SettingsScreen() {
   const runSync = useAppStore((state) => state.runSync);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [isBuilderToastVisible, setIsBuilderToastVisible] = useState(false);
+  const [hasLoadedDrivePrompt, setHasLoadedDrivePrompt] = useState(false);
   const builderTapCountRef = useRef(0);
   const builderTapResetTimeoutRef = useRef<number | null>(null);
   const builderToastTimeoutRef = useRef<number | null>(null);
@@ -42,6 +45,12 @@ export default function SettingsScreen() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isDrivePromptOpen) {
+      setHasLoadedDrivePrompt(true);
+    }
+  }, [isDrivePromptOpen]);
 
   const handleBuilderTap = () => {
     builderTapCountRef.current += 1;
@@ -135,8 +144,8 @@ export default function SettingsScreen() {
               <h2 className="settings-group-title">ABOUT</h2>
               <Card padding="lg" className="settings-card settings-about-card">
                 <div className="settings-about-card__brand">
-                  <div className="settings-about-card__logo" aria-hidden="true">FIT</div>
-                  <h3 className="settings-about-card__name">FIT.PERSONA</h3>
+                  <BrandMark className="settings-about-card__logo" decorative />
+                  <h3 className="settings-about-card__name">fit.persona</h3>
                   <p className="settings-about-card__version">Version {version}</p>
                 </div>
 
@@ -175,11 +184,15 @@ export default function SettingsScreen() {
         </div>
       </PageWrapper>
 
-      <DriveConnectAlert
-        visible={isDrivePromptOpen}
-        onClose={() => setIsDrivePromptOpen(false)}
-        onConnected={refreshSyncState}
-      />
+      {hasLoadedDrivePrompt ? (
+        <Suspense fallback={null}>
+          <DriveConnectAlert
+            visible={isDrivePromptOpen}
+            onClose={() => setIsDrivePromptOpen(false)}
+            onConnected={refreshSyncState}
+          />
+        </Suspense>
+      ) : null}
 
       <div
         className={`settings-builder-toast ${isBuilderToastVisible ? 'settings-builder-toast--visible' : ''}`}

@@ -87,7 +87,10 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .card__action-btn:hover {
@@ -134,7 +137,9 @@
   font-weight: 700;
   font-family: var(--font-family);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 }
 
 .health-sub-tab:hover {
@@ -156,7 +161,7 @@
 .health-sub-tab--active {
   background-color: var(--color-primary);
   color: #000;
-  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.2);
 }
 
 .health-sub-tab--active:hover {
@@ -175,14 +180,25 @@
 .tab-content {
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tab-content--transitioning {
   min-height: 320px;
 }
 
+.tab-pane {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .tab-pane--current {
   position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tab-pane--forward-enter,

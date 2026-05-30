@@ -43,6 +43,7 @@ export default function ScheduleCalendarModal({
     onClose,
     overlayRef,
     sheetRef: dialogRef,
+    enabled: false,
   });
 
   useEffect(() => {
@@ -76,7 +77,6 @@ export default function ScheduleCalendarModal({
       className="uc-overlay schedule-calendar-modal__overlay"
       data-state={visible ? 'open' : 'closed'}
       data-opening={isOpening ? 'true' : 'false'}
-      onClick={onClose}
     >
       <div ref={dialogRef} className="uc-modal schedule-calendar-modal__dialog" onClick={e => e.stopPropagation()}>
         <div className="uc-header schedule-calendar-modal__header">
@@ -95,7 +95,7 @@ export default function ScheduleCalendarModal({
                 placeholder="Goal / Focus"
               />
             </div>
-            <button className="uc-close-btn schedule-calendar-modal__close" onClick={onClose}>
+            <button className="uc-close-btn schedule-calendar-modal__close" onClick={onClose} aria-label="Close schedule calendar">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
           </div>

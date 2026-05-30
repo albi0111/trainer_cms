@@ -12,7 +12,7 @@ interface AvatarProps {
 
 /**
  * Avatar — matches reference AvatarCircle exactly.
- * Default: Gold background (#FFD700) with black text.
+ * Default: Gold background (var(--color-primary)) with black text.
  * Dark: Dark background (#262626) with gold text and border.
  */
 export default function Avatar({ name, src, size = 'md', variant = 'default' }: AvatarProps) {

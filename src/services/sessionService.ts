@@ -20,7 +20,12 @@ import { enqueueClientUpdate } from './sync/syncQueueService';
 import { scheduleBackgroundSync } from './sync/syncService';
 
 export type { SessionActivityEntry } from '../types';
-export { buildRecentActivities, getSessionDurationMinutes, partitionPlannedSessions } from './shared/clientSnapshotMapper';
+export {
+  buildRecentActivities,
+  getSessionDurationMinutes,
+  getSessionEndMillis,
+  partitionPlannedSessions,
+} from './shared/clientSnapshotMapper';
 
 export interface SessionExerciseDraft {
   id?: string;

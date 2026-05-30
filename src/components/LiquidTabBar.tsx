@@ -64,10 +64,10 @@ const LIQUID_TAB_BAR_STYLES = `
     left: 4px;
     width: calc((100% - 8px) / var(--liquid-tab-count));
     border-radius: 999px;
-    background: rgba(255, 215, 0, 0.15);
+    background: rgba(var(--color-primary-rgb), 0.15);
     box-shadow:
-      inset 0 0 0 1px rgba(255, 215, 0, 0.2),
-      0 10px 24px -20px rgba(255, 215, 0, 0.65);
+      inset 0 0 0 1px rgba(var(--color-primary-rgb), 0.2),
+      0 10px 24px -20px rgba(var(--color-primary-rgb), 0.65);
     pointer-events: none;
     z-index: 0;
     opacity: 1;
@@ -108,7 +108,7 @@ const LIQUID_TAB_BAR_STYLES = `
   }
 
   .liquid-tab-bar__tab--active {
-    color: var(--color-primary, #FFD700);
+    color: var(--color-primary);
   }
 
   .liquid-tab-bar__icon {

@@ -33,6 +33,7 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
     onClose: () => setIsOpen(false),
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
 
@@ -116,7 +117,6 @@ export default function DatePicker({ value, onChange, label, error }: DatePicker
           className="picker-overlay"
           data-state={isOpen ? 'open' : 'closed'}
           data-opening={isOpening ? 'true' : 'false'}
-          onClick={() => setIsOpen(false)}
         >
           <div ref={modalRef} className="picker-modal" onClick={(event) => event.stopPropagation()}>
             <div className="picker-modal__header">

@@ -86,6 +86,7 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
     onClose: () => setVisible(false),
     overlayRef,
     sheetRef: modalRef,
+    enabled: false,
   });
 
   return (
@@ -98,7 +99,7 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
             backgroundColor: '#1A1A1A',
             borderRadius: '12px',
             padding: '14px',
-            border: visible ? '1px solid #FFD700' : '1px solid #333',
+            border: visible ? '1px solid var(--color-primary)' : '1px solid #333',
             color: '#FFF',
             fontSize: '16px',
             display: 'flex',
@@ -109,7 +110,7 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
           }}
         >
           <span>{value || 'Select Time'}</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={visible ? '#FFD700' : '#666'} strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={visible ? 'var(--color-primary)' : '#666'} strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
         </div>
       </div>
 
@@ -133,7 +134,6 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
               : 'opacity 180ms ease-in, visibility 0s linear 180ms',
             willChange: isOpening ? (prefersReducedMotion ? 'opacity' : 'backdrop-filter, opacity') : undefined,
           }}
-          onClick={() => setVisible(false)}
         >
           <div
             ref={modalRef}
@@ -162,14 +162,14 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
 
             <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
               <Wheel label="HOUR" options={HOURS} selected={selectedHour} onSelect={setHour} />
-              <span style={{ color: '#FFD700', fontSize: '24px', fontWeight: '800', marginTop: '24px' }}>:</span>
+              <span style={{ color: 'var(--color-primary)', fontSize: '24px', fontWeight: '800', marginTop: '24px' }}>:</span>
               <Wheel label="MINUTE" options={MINUTES} selected={selectedMinute} onSelect={setMinute} />
             </div>
 
             <button
               onClick={handleSave}
               style={{
-                width: '100%', backgroundColor: '#FFD700', padding: '14px',
+                width: '100%', backgroundColor: 'var(--color-primary)', padding: '14px',
                 borderRadius: '12px', border: 'none', color: '#000',
                 fontWeight: '800', fontSize: '16px', marginTop: '24px', cursor: 'pointer'
               }}
@@ -247,7 +247,7 @@ function Wheel({ label, options, selected, onSelect }: { label: string, options:
               }}
             >
               <span style={{ 
-                color: selected === opt ? '#FFD700' : '#666', 
+                color: selected === opt ? 'var(--color-primary)' : '#666', 
                 fontSize: '18px', 
                 fontWeight: selected === opt ? '800' : '600' 
               }}>
