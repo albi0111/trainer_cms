@@ -47,6 +47,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        importScripts: ['/notification-click-handler.js'],
         maximumFileSizeToCacheInBytes: 7 * 1024 * 1024,
         runtimeCaching: [
           {

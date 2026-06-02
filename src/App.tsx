@@ -31,6 +31,30 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const runReminderCheck = () => {
+      void import('./services/notification/sessionNotificationService')
+        .then(({ notifyScheduledMeasurementReminders }) => notifyScheduledMeasurementReminders())
+        .catch(() => undefined);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runReminderCheck();
+      }
+    };
+
+    runReminderCheck();
+    const intervalId = window.setInterval(runReminderCheck, 15 * 60 * 1000);
+    window.addEventListener('focus', runReminderCheck);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', runReminderCheck);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   return (
     <>
       <AppRouter />
