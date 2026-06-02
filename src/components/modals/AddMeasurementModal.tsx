@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MeasurementConfig } from '../../types';
 import ManageMetricsModal from './ManageMetricsModal';
 import DatePicker from '../ui/DatePicker';
@@ -123,7 +124,7 @@ export default function AddMeasurementModal({
 
   const filteredConfigs = configs.filter(c => c.category === activeTab);
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       className="add-measurement-overlay"
@@ -223,4 +224,10 @@ export default function AddMeasurementModal({
       />
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }

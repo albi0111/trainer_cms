@@ -118,7 +118,11 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
         <div
           ref={overlayRef}
           style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            position: 'fixed',
+            top: 'var(--app-visible-offset-top, 0px)',
+            left: 0,
+            right: 0,
+            height: 'var(--app-visible-height, 100dvh)',
             background: 'rgba(0, 0, 0, 0.45)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
@@ -138,7 +142,10 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
           <div
             ref={modalRef}
             style={{
-              width: '300px', backgroundColor: '#1A1A1A', borderRadius: '24px',
+              width: 'var(--app-picker-modal-width, 300px)',
+              maxWidth: '100vw',
+              backgroundColor: '#1A1A1A',
+              borderRadius: 'var(--app-modal-sheet-radius, 24px)',
               padding: '24px', border: '1px solid #333',
               overflow: 'hidden',
               transform: prefersReducedMotion ? 'none' : (visible ? 'translateY(0)' : 'translateY(100%)'),

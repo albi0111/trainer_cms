@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MeasurementConfig, MeasurementCategory } from '../../types';
 import { DEFAULT_METRICS } from '../../constants/metrics';
 import {
@@ -170,7 +171,7 @@ export default function ManageMetricsModal({
   const bodyAvailable = availableMetrics.filter(m => m.category === 'body');
   const perfAvailable = availableMetrics.filter(m => m.category === 'performance');
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       className="manage-metrics-overlay"
@@ -355,8 +356,15 @@ export default function ManageMetricsModal({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
           )}
-        </div>
       </div>
-    );
+    </div>
+  );
+
   }
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }

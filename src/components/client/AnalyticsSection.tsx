@@ -16,9 +16,11 @@ interface AnalyticsSectionProps {
 
 type DeltaMode = 'previous' | 'initial';
 type PillStyle = { width: number; x: number; ready: boolean };
+type ChartRange = '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
 const CHART_MODAL_OPENING_MS = 200;
 const CHART_MODAL_CLOSING_MS = 280;
+const CHART_RANGES: ChartRange[] = ['1M', '3M', '6M', '1Y', 'ALL'];
 
 export default function AnalyticsSection({
   clientId
@@ -26,13 +28,15 @@ export default function AnalyticsSection({
   const [viewportWidth, setViewportWidth] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1024,
   );
-  const isCompact = viewportWidth < 768;
   const isPhone = viewportWidth < 480;
 
   const [activeTab, setActiveTab] = useState<'body' | 'performance'>('body');
-  const [deltaMode, setDeltaMode] = useState<DeltaMode>('previous');
+  const deltaMode: DeltaMode = 'previous';
   const [performanceView, setPerformanceView] = useState<'bar' | 'radar'>('bar');
   const [selectedBodyMetric, setSelectedBodyMetric] = useState<string>('weight_kg');
+  const [selectedPerformanceMetric, setSelectedPerformanceMetric] = useState<string>('');
+  const [chartRange, setChartRange] = useState<ChartRange>('3M');
+  const [hoveredChartPoint, setHoveredChartPoint] = useState<number | null>(null);
   const [isChartModalOpen, setIsChartModalOpen] = useState(false);
   const [isChartModalPresent, setIsChartModalPresent] = useState(false);
   const [isChartModalOpening, setIsChartModalOpening] = useState(false);
@@ -67,7 +71,7 @@ export default function AnalyticsSection({
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
-  const canOpenChartModal = !isPhone;
+  const canOpenChartModal = true;
   const hasLoadedAnalyticsRef = useRef(false);
 
   useModalVelocityDismiss({
@@ -302,6 +306,14 @@ export default function AnalyticsSection({
         const firstBody = progress.measurementConfigs.find((config) => config.category === 'body');
         if (firstBody) setSelectedBodyMetric(firstBody.key);
       }
+
+      if (
+        progress.measurementConfigs.length > 0 &&
+        !progress.measurementConfigs.find((config) => config.key === selectedPerformanceMetric && config.category === 'performance')
+      ) {
+        const firstPerformance = progress.measurementConfigs.find((config) => config.category === 'performance');
+        if (firstPerformance) setSelectedPerformanceMetric(firstPerformance.key);
+      }
     } catch (err) {
       console.error('[AnalyticsSection] Load error:', err);
     } finally {
@@ -333,10 +345,6 @@ export default function AnalyticsSection({
   const initialM = relevantMs[0];
   const previousM = relevantMs.length > 1 ? relevantMs[relevantMs.length - 2] : null;
 
-  const toggleDeltaMode = () => {
-    setDeltaMode(prev => prev === 'previous' ? 'initial' : 'previous');
-  };
-
   const getMetricData = (key: string) => {
     const current = latestM?.values?.[key] as number | undefined;
     const initial = initialM?.values?.[key] as number | undefined;
@@ -355,215 +363,310 @@ export default function AnalyticsSection({
 
   // ── Charts ──────────────────────────────────────────────────────────────────
 
+  const getRangeStartDate = (range: ChartRange, latestDate: string) => {
+    if (range === 'ALL') {
+      return '';
+    }
+
+    const date = new Date(`${latestDate}T12:00:00`);
+    const months = range === '1M' ? 1 : range === '3M' ? 3 : range === '6M' ? 6 : 12;
+    date.setMonth(date.getMonth() - months);
+    return date.toISOString().split('T')[0] || latestDate;
+  };
+
+  const buildCatmullRomPath = (points: Array<{ x: number; y: number }>, tension = 0.4) => {
+    if (points.length === 0) return '';
+    if (points.length === 1) return `M${points[0]!.x},${points[0]!.y}`;
+
+    let path = `M${points[0]!.x},${points[0]!.y}`;
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const p0 = points[Math.max(0, index - 1)]!;
+      const p1 = points[index]!;
+      const p2 = points[index + 1]!;
+      const p3 = points[Math.min(points.length - 1, index + 2)]!;
+      const cp1x = p1.x + ((p2.x - p0.x) / 6) * tension;
+      const cp1y = p1.y + ((p2.y - p0.y) / 6) * tension;
+      const cp2x = p2.x - ((p3.x - p1.x) / 6) * tension;
+      const cp2y = p2.y - ((p3.y - p1.y) / 6) * tension;
+      path += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+
+    return path;
+  };
+
   const renderLineChart = (isModal = false) => {
-    // Only use measurements that actually contain the selected metric
-    const trendData = bodyMs.filter(m => m.values && m.values[selectedBodyMetric] !== undefined);
+    const selectedMetric = activeTab === 'body' ? selectedBodyMetric : selectedPerformanceMetric;
+    const metricConfigs = activeTab === 'body' ? bodyConfigs : perfConfigs;
+    const metricMeasurements = activeTab === 'body' ? bodyMs : perfMs;
+    const config = metricConfigs.find(c => c.key === selectedMetric) || metricConfigs[0];
+
+    if (!config) {
+      return <div className="analytics-chart-placeholder">No metric selected</div>;
+    }
+
+    const fullTrendData = metricMeasurements.filter(m => m.values && m.values[config.key] !== undefined);
+    const latestTrendDate = fullTrendData[fullTrendData.length - 1]?.date;
+    const rangeStart = latestTrendDate ? getRangeStartDate(chartRange, latestTrendDate) : '';
+    const trendData = fullTrendData.filter(m => !rangeStart || m.date >= rangeStart);
 
     if (trendData.length < 2) {
       return <div className="analytics-chart-placeholder">Not enough data for trend chart</div>;
     }
 
-    const data = trendData.map(m => m.values?.[selectedBodyMetric] || 0);
+    const chartId = `analytics-${activeTab}-${config.key}-${isModal ? 'modal' : 'inline'}`;
+    const data = trendData.map(m => Number(m.values?.[config.key] || 0));
     const labels = trendData.map(m => m.date.slice(5));
-    const maxVal = Math.max(...data) * 1.05;
-    const minVal = Math.min(...data) * 0.95;
+    const rawMax = Math.max(...data);
+    const rawMin = Math.min(...data);
+    const topPad = Math.max((rawMax - rawMin) * 0.18, rawMax * 0.04, 1);
+    const bottomPad = Math.max((rawMax - rawMin) * 0.12, rawMin * 0.02, 1);
+    const maxVal = rawMax + topPad;
+    const minVal = Math.max(0, rawMin - bottomPad);
     const range = maxVal - minVal || 1;
 
-    const chartWidth = isModal ? 800 : 600;
-    const chartHeight = isModal ? 400 : 250;
-    const paddingX = 40;
-    const paddingY = 20;
-    const plotWidth = chartWidth - paddingX * 2;
-    const plotHeight = chartHeight - paddingY * 2;
+    const chartWidth = isModal ? 860 : 720;
+    const chartHeight = isModal ? 440 : 320;
+    const paddingLeft = 18;
+    const paddingRight = 58;
+    const paddingTop = 46;
+    const paddingBottom = 42;
+    const plotHeight = chartHeight - paddingTop - paddingBottom;
 
     const points = data.map((val, i) => ({
-      x: paddingX + (i / (data.length - 1)) * plotWidth,
-      y: paddingY + plotHeight - ((val - minVal) / range) * plotHeight,
+      x: paddingLeft + (i / (data.length - 1)) * (chartWidth - paddingLeft - paddingRight),
+      y: paddingTop + plotHeight - ((val - minVal) / range) * plotHeight,
+      value: val,
+      date: trendData[i]?.date || '',
+      label: labels[i] || '',
     }));
 
-    if (!points[0]) return null;
-    let pathD = `M${points[0].x},${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      if (!p0 || !p1) continue;
-      const cp1x = p0.x + (p1.x - p0.x) / 2;
-      pathD += ` C${cp1x},${p0.y} ${cp1x},${p1.y} ${p1.x},${p1.y}`;
-    }
+    const pathD = buildCatmullRomPath(points, 0.4);
 
     const lastPoint = points[points.length - 1];
     if (!lastPoint) return null;
-    const fillPath = `${pathD} L${lastPoint.x},${chartHeight - paddingY} L${points[0].x},${chartHeight - paddingY} Z`;
-    
-    const config = configs.find(c => c.key === selectedBodyMetric);
+    const fillPath = `${pathD} L${lastPoint.x},${chartHeight - paddingBottom} L${points[0]!.x},${chartHeight - paddingBottom} Z`;
+    const tooltipPoint = hoveredChartPoint !== null ? points[hoveredChartPoint] : null;
 
     return (
-      <div 
-        style={{ width: '100%', cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
+      <div
+        className="analytics-chart-panel"
+        style={{ cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
         onClick={() => {
           if (!isModal && canOpenChartModal) {
             setIsChartModalOpen(true);
           }
         }}
+        onMouseLeave={() => setHoveredChartPoint(null)}
       >
-        <div className="analytics-chart-title">{config?.label} Trend</div>
+        <div className="analytics-chart-panel__header">
+          <div className="analytics-chart-panel__title-wrap">
+            <h4 className="analytics-chart-title">{config.label}</h4>
+            {config.unit ? (
+              <span className="analytics-chart-unit"><i />{config.unit}</span>
+            ) : null}
+          </div>
+          <div className="analytics-chart-ranges" onClick={(event) => event.stopPropagation()}>
+            {CHART_RANGES.map((rangeOption) => (
+              <button
+                key={rangeOption}
+                className={`analytics-chart-range ${chartRange === rangeOption ? 'analytics-chart-range--active' : ''}`}
+                type="button"
+                onClick={() => setChartRange(rangeOption)}
+              >
+                {rangeOption}
+              </button>
+            ))}
+          </div>
+        </div>
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="analytics-line-chart">
           <defs>
-            <linearGradient id={`chartGradient-${isModal}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
+            <linearGradient id={`${chartId}-gradient`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(254, 249, 89, 0.18)" />
+              <stop offset="100%" stopColor="rgba(254, 249, 89, 0)" />
             </linearGradient>
           </defs>
 
           {[0, 0.25, 0.5, 0.75, 1].map(p => {
-            const y = paddingY + plotHeight - p * plotHeight;
+            const y = paddingTop + plotHeight - p * plotHeight;
             const val = (minVal + p * range).toFixed(1);
             return (
               <g key={p}>
                 <line 
-                  x1={paddingX} y1={y} x2={chartWidth - paddingX} y2={y} 
-                  stroke="#333" strokeWidth="1" strokeDasharray="4 4" 
+                  x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y}
+                  className="analytics-line-chart__grid"
                 />
-                <text x={paddingX - 10} y={y + 4} fill="#666" fontSize={isModal ? 12 : 10} textAnchor="end">{val}</text>
+                <text x={chartWidth - 8} y={y + 4} className="analytics-line-chart__y-label" textAnchor="end">{val}</text>
               </g>
             );
           })}
 
-          <path d={fillPath} fill={`url(#chartGradient-${isModal})`} />
-          <path d={pathD} fill="none" stroke="var(--color-primary)" strokeWidth={isModal ? 4 : 3} strokeLinejoin="round" strokeLinecap="round" />
+          <path d={fillPath} fill={`url(#${chartId}-gradient)`} />
+          <path d={pathD} className="analytics-line-chart__glow" fill="none" />
+          <path d={pathD} className="analytics-line-chart__line" fill="none" />
 
           {points.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r={i === points.length - 1 ? (isModal ? 8 : 6) : (isModal ? 5 : 4)} fill="var(--color-primary)" />
-              <text x={p.x} y={chartHeight - 5} fill="#666" fontSize={isModal ? 12 : 10} textAnchor="middle">{labels[i]}</text>
+            <g
+              key={i}
+              onMouseEnter={() => setHoveredChartPoint(i)}
+              onClick={(event) => {
+                event.stopPropagation();
+                setHoveredChartPoint(i);
+              }}
+              onPointerDown={(event) => {
+                if (event.pointerType === 'touch') {
+                  event.stopPropagation();
+                  setHoveredChartPoint(i);
+                }
+              }}
+              onTouchStart={(event) => {
+                event.stopPropagation();
+                setHoveredChartPoint(i);
+              }}
+            >
+              <text
+                x={p.x}
+                y={Math.max(14, p.y - 14)}
+                className={`analytics-line-chart__value ${i === points.length - 1 ? 'analytics-line-chart__value--latest' : ''}`}
+                textAnchor="middle"
+              >
+                {Number.isInteger(p.value) ? p.value : p.value.toFixed(1)}
+              </text>
+              <circle cx={p.x} cy={p.y} r="5" className="analytics-line-chart__point-outer" />
+              <circle cx={p.x} cy={p.y} r="2.5" className="analytics-line-chart__point-inner" />
+              <circle cx={p.x} cy={p.y} r="15" fill="transparent" />
+              <text x={p.x} y={chartHeight - 9} className="analytics-line-chart__x-label" textAnchor="middle">{p.label}</text>
             </g>
           ))}
+
+          {tooltipPoint ? (
+            <g
+              className="analytics-chart-tooltip"
+              transform={`translate(${Math.min(Math.max(tooltipPoint.x - 58, 8), chartWidth - 126)}, ${Math.max(tooltipPoint.y - 92, 8)})`}
+              pointerEvents="none"
+            >
+              <rect width="118" height="62" rx="10" />
+              <text x="12" y="20" className="analytics-chart-tooltip__date">{tooltipPoint.date}</text>
+              <text x="12" y="48" className="analytics-chart-tooltip__value">
+                {Number.isInteger(tooltipPoint.value) ? tooltipPoint.value : tooltipPoint.value.toFixed(1)}{config.unit || ''}
+              </text>
+            </g>
+          ) : null}
         </svg>
       </div>
     );
   };
 
-  const renderBarChart = (isModal = false) => {
-    if (perfConfigs.length === 0 || perfMs.length === 0) return null;
-
-    const comparisonData = perfConfigs.map((config) => {
-      const entries = perfMs.filter((measurement) => measurement.values?.[config.key] !== undefined);
-      const currentEntry = entries[entries.length - 1];
-      const previousEntry = entries.length > 1 ? entries[entries.length - 2] : null;
-
-      return {
-        config,
-        current: currentEntry?.values?.[config.key] || 0,
-        previous: previousEntry?.values?.[config.key],
-      };
-    });
-    const maxVal = Math.max(
-      ...comparisonData.flatMap((item) => [item.current, item.previous || 0]),
-      1,
-    );
-    const barMaxHeight = isModal ? 300 : 180;
-
-    return (
-      <div 
-        style={{ width: '100%', cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
-        onClick={() => {
-          if (!isModal && canOpenChartModal) {
-            setIsChartModalOpen(true);
-          }
-        }}
-      >
-        <div className="analytics-chart-title">Session Comparison</div>
-        <div className="analytics-bar-legend" aria-hidden="true">
-          <span><i className="analytics-bar-legend__swatch analytics-bar-legend__swatch--previous" />Previous</span>
-          <span><i className="analytics-bar-legend__swatch analytics-bar-legend__swatch--current" />Current</span>
-        </div>
-        <div className="analytics-bar-chart" style={{ height: isModal ? '380px' : '260px' }}>
-          {comparisonData.map(({ config, current, previous }) => {
-            const currentHeight = Math.max((current / maxVal) * barMaxHeight, 8);
-            const previousHeight = previous !== undefined ? Math.max((previous / maxVal) * barMaxHeight, 8) : 0;
-            return (
-              <div key={config.key} className="analytics-bar-column">
-                <div className="analytics-bar-group" style={{ height: barMaxHeight + 28 }}>
-                  {previous !== undefined ? (
-                    <div className="analytics-bar-slot">
-                      <span className="analytics-bar-value" style={{ fontSize: isModal ? '12px' : '10px' }}>{previous}</span>
-                      <div
-                        className="analytics-bar analytics-bar--previous"
-                        style={{
-                          height: previousHeight,
-                          width: isModal ? '34px' : '22px',
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="analytics-bar-slot analytics-bar-slot--empty" aria-hidden="true" />
-                  )}
-                  <div className="analytics-bar-slot">
-                    <span className="analytics-bar-value" style={{ fontSize: isModal ? '14px' : '12px' }}>{current}</span>
-                    <div
-                      className="analytics-bar analytics-bar--current"
-                      style={{
-                        height: currentHeight,
-                        width: isModal ? '38px' : '26px',
-                      }}
-                    />
-                  </div>
-                </div>
-                <span className="analytics-bar-label" style={{ fontSize: isModal ? '12px' : '10px' }}>
-                  {isPhone ? config.label.charAt(0) : config.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   const renderRadarChart = (isModal = false) => {
-    if (perfConfigs.length === 0 || perfMs.length === 0) return null;
-    const size = isModal ? 400 : (isPhone ? 184 : (isCompact ? 220 : 240));
+    if (perfConfigs.length === 0 || perfMs.length === 0) {
+      return <div className="analytics-chart-placeholder">Not enough data for radar chart</div>;
+    }
+
+    const size = isModal ? 460 : (isPhone ? 280 : 360);
     const center = size / 2;
-    const radius = isModal ? 150 : (isPhone ? 60 : (isCompact ? 74 : 85));
+    const radius = isModal ? 136 : (isPhone ? 78 : 104);
+    const labelRadius = isModal ? 196 : (isPhone ? 118 : 156);
     const angleStep = (Math.PI * 2) / perfConfigs.length;
 
-    const getPoint = (val: number, index: number, max: number = 100) => {
+    const getAngle = (index: number) => index * angleStep - Math.PI / 2;
+
+    const getPoint = (val: number, index: number, max = 100) => {
       const normalized = Math.min((val / max), 1) * radius;
-      const angle = index * angleStep - Math.PI / 2;
-      return { x: center + normalized * Math.cos(angle), y: center + normalized * Math.sin(angle) };
+      const angle = getAngle(index);
+      return {
+        x: center + normalized * Math.cos(angle),
+        y: center + normalized * Math.sin(angle),
+      };
     };
 
-    const points = perfConfigs.map((c, i) => getPoint(latestM?.values?.[c.key] || 0, i, c.target_max || 100));
-    const polygonPoints = points.map(p => `${p.x},${p.y}`).join(' ');
+    const getAxisPoint = (index: number) => {
+      const angle = getAngle(index);
+      return {
+        x: center + radius * Math.cos(angle),
+        y: center + radius * Math.sin(angle),
+      };
+    };
+
+    const getLabelPoint = (index: number) => {
+      const angle = getAngle(index);
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return {
+        x: center + labelRadius * cos,
+        y: center + labelRadius * sin,
+        anchor: (Math.abs(cos) < 0.25 ? 'middle' : cos > 0 ? 'start' : 'end') as 'middle' | 'start' | 'end',
+        dy: Math.abs(sin) > 0.9 ? (sin < 0 ? '-0.2em' : '0.9em') : '0.35em',
+      };
+    };
+
+    const points = perfConfigs.map((config, index) => getPoint(
+      latestM?.values?.[config.key] || 0,
+      index,
+      config.target_max || 100,
+    ));
+    const polygonPoints = points.map(point => `${point.x},${point.y}`).join(' ');
 
     return (
-      <div 
-        style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          cursor: !isModal && canOpenChartModal ? 'pointer' : 'default',
-        }}
+      <div
+        className="analytics-chart-panel analytics-chart-panel--radar"
+        style={{ cursor: !isModal && canOpenChartModal ? 'pointer' : 'default' }}
         onClick={() => {
           if (!isModal && canOpenChartModal) {
             setIsChartModalOpen(true);
           }
         }}
       >
-        <div className="analytics-chart-title">Normalization Radar</div>
-        <svg width={size} height={size}>
-          {perfConfigs.map((c, i) => {
-            const end = getPoint(c.target_max || 100, i, c.target_max || 100);
+        <div className="analytics-chart-panel__header">
+          <div className="analytics-chart-panel__title-wrap">
+            <h4 className="analytics-chart-title">Performance Radar</h4>
+            <span className="analytics-chart-unit"><i />normalized</span>
+          </div>
+        </div>
+        <svg viewBox={`0 0 ${size} ${size}`} className="analytics-radar-chart">
+          {[0.25, 0.5, 0.75, 1].map(ring => (
+            <circle
+              key={ring}
+              cx={center}
+              cy={center}
+              r={radius * ring}
+              className="analytics-radar-chart__ring"
+            />
+          ))}
+          {perfConfigs.map((config, index) => {
+            const axisPoint = getAxisPoint(index);
+            const labelPoint = getLabelPoint(index);
             return (
-              <g key={i}>
-                <line x1={center} y1={center} x2={end.x} y2={end.y} stroke="#333" strokeWidth="1" />
-                <text x={end.x} y={end.y - 8} fill="#666" fontSize={isModal ? '12' : (isPhone ? '8' : '10')} textAnchor="middle">{isPhone ? c.label.charAt(0) : c.label}</text>
+              <g key={config.key}>
+                <line
+                  x1={center}
+                  y1={center}
+                  x2={axisPoint.x}
+                  y2={axisPoint.y}
+                  className="analytics-radar-chart__axis"
+                />
+                <text
+                  x={labelPoint.x}
+                  y={labelPoint.y}
+                  dy={labelPoint.dy}
+                  className="analytics-radar-chart__label"
+                  textAnchor={labelPoint.anchor}
+                >
+                  {isPhone ? config.label.split(' ')[0] : config.label}
+                </text>
               </g>
             );
           })}
-          {[0.25, 0.5, 0.75, 1].map(r => <circle key={r} cx={center} cy={center} r={radius * r} fill="none" stroke="#222" strokeWidth="1" />)}
-          <polygon points={polygonPoints} fill="rgba(var(--color-primary-rgb), 0.3)" stroke="var(--color-primary)" strokeWidth="2" />
+          <polygon points={polygonPoints} className="analytics-radar-chart__area" />
+          <polygon points={polygonPoints} className="analytics-radar-chart__line" />
+          {points.map((point, index) => (
+            <circle
+              key={`${perfConfigs[index]?.key || index}-point`}
+              cx={point.x}
+              cy={point.y}
+              r="4"
+              className="analytics-radar-chart__point"
+            />
+          ))}
         </svg>
       </div>
     );
@@ -633,16 +736,29 @@ export default function AnalyticsSection({
           </button>
         </div>
 
-        <div className="analytics-cards-scroll">
-          <div className="analytics-cards-content">
-            {(activeTab === 'body' ? bodyConfigs : perfConfigs).map(c => {
+        <div className="analytics-cards-grid">
+          {(activeTab === 'body' ? bodyConfigs : perfConfigs).slice(0, 6).map(c => {
               const { current, delta } = getMetricData(c.key);
               const deltaColor = delta > 0 ? '#3DCC88' : delta < 0 ? '#FF5252' : '#666';
-              const deltaSign = delta > 0 ? '+' : '';
-              const isSelected = activeTab === 'body' && c.key === selectedBodyMetric;
+              const deltaArrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '•';
+              const deltaAbs = Math.abs(delta);
+              const isSelected = activeTab === 'body'
+                ? c.key === selectedBodyMetric
+                : c.key === selectedPerformanceMetric;
 
               return (
-                <div key={c.key} className={`analytics-card ${isSelected ? 'analytics-card--active' : ''}`} onClick={() => activeTab === 'body' ? setSelectedBodyMetric(c.key) : toggleDeltaMode()}>
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`analytics-card ${isSelected ? 'analytics-card--active' : ''}`}
+                  onClick={() => {
+                    if (activeTab === 'body') {
+                      setSelectedBodyMetric(c.key);
+                    } else {
+                      setSelectedPerformanceMetric(c.key);
+                    }
+                  }}
+                >
                   <div className="analytics-card__label">{c.label.toUpperCase()}</div>
                   <div className="analytics-card__value-row">
                     {typeof current === 'number' ? (
@@ -658,11 +774,14 @@ export default function AnalyticsSection({
                       <span className="analytics-card__value">—</span>
                     )}
                   </div>
-                  <div className="analytics-card__delta" style={{ color: deltaColor }}>{deltaSign}{delta.toFixed(1)}{c.unit}<span className="analytics-card__delta-mode"> vs {deltaMode}</span></div>
-                </div>
+                  <div className="analytics-card__delta" style={{ color: deltaColor }}>
+                    <span>{deltaArrow}</span>
+                    {deltaAbs.toFixed(1)}{c.unit}
+                    <span className="analytics-card__delta-mode"> vs {deltaMode}</span>
+                  </div>
+                </button>
               );
-            })}
-          </div>
+          })}
         </div>
 
         {activeTab === 'performance' && (
@@ -682,7 +801,7 @@ export default function AnalyticsSection({
               className={`perf-toggle-btn ${performanceView === 'bar' ? 'active' : ''}`}
               onClick={() => setPerformanceView('bar')}
             >
-              {isPhone ? 'Compare' : 'Bar (Compare)'}
+              Trend
             </button>
             <button
               ref={(element) => {
@@ -691,13 +810,13 @@ export default function AnalyticsSection({
               className={`perf-toggle-btn ${performanceView === 'radar' ? 'active' : ''}`}
               onClick={() => setPerformanceView('radar')}
             >
-              {isPhone ? 'Radar' : 'Radar (Overview)'}
+              Radar
             </button>
           </div>
         )}
 
         <div className="analytics-chart-area">
-          {activeTab === 'body' ? renderLineChart() : (performanceView === 'bar' ? renderBarChart() : renderRadarChart())}
+          {activeTab === 'performance' && performanceView === 'radar' ? renderRadarChart() : renderLineChart()}
         </div>
 
         <button className="analytics-add-btn" onClick={() => setIsLogProgressOpen(true)}>
@@ -729,6 +848,7 @@ export default function AnalyticsSection({
           className="chart-modal-overlay"
           data-state={isChartModalOpen ? 'open' : 'closed'}
           data-opening={isChartModalOpening ? 'true' : 'false'}
+          onClick={() => setIsChartModalOpen(false)}
         >
           <div ref={chartModalContentRef} className="chart-modal-content" onClick={e => e.stopPropagation()}>
             <div className="chart-modal-header">
@@ -741,7 +861,7 @@ export default function AnalyticsSection({
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div className="chart-modal-body">{activeTab === 'body' ? renderLineChart(true) : (performanceView === 'bar' ? renderBarChart(true) : renderRadarChart(true))}</div>
+            <div className="chart-modal-body">{activeTab === 'performance' && performanceView === 'radar' ? renderRadarChart(true) : renderLineChart(true)}</div>
           </div>
         </div>,
         document.body

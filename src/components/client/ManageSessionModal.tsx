@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './ManageSessionModal.css';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
@@ -63,7 +64,7 @@ export default function ManageSessionModal({
     }, 400);
   };
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       className="manage-modal__overlay"
@@ -133,4 +134,10 @@ export default function ManageSessionModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }

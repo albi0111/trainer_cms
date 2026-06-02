@@ -70,6 +70,30 @@ async function hydrateInitialRouteData(pathname: string): Promise<void> {
   }
 }
 
+function canRunLocalDemoSeed(): boolean {
+  if (!import.meta.env.DEV) {
+    return false;
+  }
+
+  return ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+}
+
+async function maybeSeedDemoData(): Promise<void> {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('seed') !== 'demo' || !canRunLocalDemoSeed()) {
+    return;
+  }
+
+  const { seedDemoData } = await import('./services/dev/demoSeedService');
+  const result = await seedDemoData();
+  params.delete('seed');
+  const nextSearch = params.toString();
+  const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+  window.history.replaceState(window.history.state, '', nextUrl);
+  useAppStore.getState().invalidateDashboard();
+  console.info('Seeded Fit Persona demo data', result);
+}
+
 function signalAppReady(): void {
   if (typeof window === 'undefined') {
     return;
@@ -98,6 +122,7 @@ function BootstrapApp() {
           ensureDatabaseReady(),
           preloadInitialRouteModule(pathname),
         ]);
+        await maybeSeedDemoData();
         await hydrateInitialRouteData(pathname);
       } catch (error) {
         console.error('Failed to initialize app', error);

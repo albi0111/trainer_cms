@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './Modal.css';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
@@ -105,7 +106,7 @@ export default function Modal({ open, onClose, title, children, footer, classNam
     };
   }, [open]);
 
-  return (
+  const modal = (
     <dialog
       ref={dialogRef}
       className={`modal ${className || ''}`}
@@ -131,4 +132,10 @@ export default function Modal({ open, onClose, title, children, footer, classNam
       </div>
     </dialog>
   );
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }

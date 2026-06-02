@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './MarkMissedModal.css';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useModalVelocityDismiss, usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
@@ -131,7 +132,7 @@ export default function MarkMissedModal({
     }, prefersReducedMotion ? 0 : 420);
   };
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       className="missed-modal__overlay"
@@ -216,4 +217,10 @@ export default function MarkMissedModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }

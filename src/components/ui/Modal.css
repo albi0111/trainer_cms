@@ -108,6 +108,20 @@
   }
 }
 
+@media (max-width: 639px) {
+  .modal[open] {
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .modal--premium .modal__content {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(92dvh, calc(var(--app-visible-height, 100dvh) - 12px));
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  }
+}
+
 .modal__header {
   display: flex;
   align-items: center;

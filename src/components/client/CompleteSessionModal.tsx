@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './CompleteSessionModal.css';
 import { useModalVelocityDismiss, usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
 
@@ -119,7 +120,7 @@ export default function CompleteSessionModal({
     }, prefersReducedMotion ? 0 : 600);
   };
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       className="complete-modal__overlay"
@@ -209,4 +210,10 @@ export default function CompleteSessionModal({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return modal;
+  }
+
+  return createPortal(modal, document.body);
 }
