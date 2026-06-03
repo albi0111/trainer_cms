@@ -278,6 +278,24 @@ export interface SyncQueueEntry {
   updated_at: string;
 }
 
+export type NotificationMutationType = 'create_jobs' | 'cancel_jobs' | 'reschedule_jobs';
+export type NotificationMutationStatus = 'pending' | 'processing' | 'succeeded' | 'failed';
+
+export interface NotificationMutationQueueEntry {
+  id: string;
+  type: NotificationMutationType;
+  google_account_id: string;
+  entity_type: string;
+  entity_id: string;
+  payload_json: string;
+  status: NotificationMutationStatus;
+  attempt_count: number;
+  last_error?: string;
+  next_retry_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LocalSyncMeta {
   id: 'default';
   remote_meta_updated_at?: string;

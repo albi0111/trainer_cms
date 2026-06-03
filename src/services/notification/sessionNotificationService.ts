@@ -1,11 +1,11 @@
 import type { Session } from '../../types';
 import { db } from '../../db/db';
 import { getSessionEndMillis } from '../sessionService';
+import { arePushNotificationsEnabled } from './notificationPreferences';
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const NOTIFICATION_STORAGE_PREFIX = 'fit-persona:pending-log-notice';
 const MEASUREMENT_REMINDER_STORAGE_PREFIX = 'fit-persona:measurement-reminder';
-const PERMISSION_PROMPTED_KEY = 'fit-persona:notifications:permission-prompted';
 const MEASUREMENT_REMINDER_HOUR = 20;
 const PRE_SESSION_MEASUREMENT_REMINDER_MS = 30 * 60 * 1000;
 
@@ -100,29 +100,8 @@ function formatPreSessionMeasurementReminderBody(session: Session, clientName: s
   return `${clientName}'s session starts in 30 minutes. Take progress measurements at ${time}${focus}.`;
 }
 
-async function ensureNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) {
-    return false;
-  }
-
-  if (window.Notification.permission === 'granted') {
-    return true;
-  }
-
-  if (window.Notification.permission === 'denied') {
-    return false;
-  }
-
-  if (window.localStorage.getItem(PERMISSION_PROMPTED_KEY)) {
-    return false;
-  }
-
-  try {
-    window.localStorage.setItem(PERMISSION_PROMPTED_KEY, new Date().toISOString());
-    return await window.Notification.requestPermission() === 'granted';
-  } catch {
-    return false;
-  }
+function hasNotificationPermission(): boolean {
+  return 'Notification' in window && window.Notification.permission === 'granted';
 }
 
 async function showPwaNotification(
@@ -152,7 +131,11 @@ export async function notifyPendingLogSessions({
   clientName,
   sessions,
 }: PendingLogNotificationInput): Promise<void> {
-  if (sessions.length === 0 || !await ensureNotificationPermission()) {
+  if (arePushNotificationsEnabled()) {
+    return;
+  }
+
+  if (sessions.length === 0 || !hasNotificationPermission()) {
     return;
   }
 
@@ -186,7 +169,11 @@ export async function notifyPendingLogSessions({
 }
 
 export async function notifyScheduledMeasurementReminders(): Promise<void> {
-  if (!await ensureNotificationPermission()) {
+  if (arePushNotificationsEnabled()) {
+    return;
+  }
+
+  if (!hasNotificationPermission()) {
     return;
   }
 

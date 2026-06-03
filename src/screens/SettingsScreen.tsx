@@ -10,6 +10,11 @@ import Button from '../components/ui/Button';
 import SyncIndicator from '../components/sync/SyncIndicator';
 import { useSoundFeedback } from '../hooks/useSoundFeedback';
 import { useAppStore } from '../store/useAppStore';
+import {
+  enablePushNotifications,
+  getPushNotificationStatus,
+  type PushNotificationStatus,
+} from '../services/notification/pushNotificationService';
 
 const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAlert'));
 
@@ -24,6 +29,9 @@ export default function SettingsScreen() {
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [isBuilderToastVisible, setIsBuilderToastVisible] = useState(false);
   const [hasLoadedDrivePrompt, setHasLoadedDrivePrompt] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<PushNotificationStatus | null>(null);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [isEnablingNotifications, setIsEnablingNotifications] = useState(false);
   const builderTapCountRef = useRef(0);
   const builderTapResetTimeoutRef = useRef<number | null>(null);
   const builderToastTimeoutRef = useRef<number | null>(null);
@@ -45,6 +53,14 @@ export default function SettingsScreen() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    void getPushNotificationStatus()
+      .then(setNotificationStatus)
+      .catch((error) => {
+        setNotificationError(error instanceof Error ? error.message : 'Failed to read notification state.');
+      });
+  }, [isConnectedToDrive]);
 
   useEffect(() => {
     if (isDrivePromptOpen) {
@@ -87,6 +103,35 @@ export default function SettingsScreen() {
     }, 2500);
   };
 
+  const handleEnableNotifications = async () => {
+    if (isEnablingNotifications || !isConnectedToDrive) {
+      return;
+    }
+
+    setNotificationError(null);
+    setIsEnablingNotifications(true);
+    try {
+      setNotificationStatus(await enablePushNotifications());
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : 'Failed to enable notifications.');
+    } finally {
+      setIsEnablingNotifications(false);
+    }
+  };
+
+  const notificationButtonLabel = (() => {
+    if (!isConnectedToDrive) {
+      return 'Connect Drive First';
+    }
+    if (notificationStatus?.permission === 'denied') {
+      return 'Blocked';
+    }
+    if (notificationStatus?.enabled && notificationStatus.permission === 'granted') {
+      return 'Enabled';
+    }
+    return 'Enable Notifications';
+  })();
+
   return (
     <div className="settings-page">
       <TopNavBar showLogo showBack />
@@ -123,6 +168,34 @@ export default function SettingsScreen() {
                     </Button>
                   </div>
                 </div>
+              </Card>
+            </section>
+
+            <section className="settings-group">
+              <h2 className="settings-group-title">NOTIFICATIONS</h2>
+              <Card padding="md" className="settings-card">
+                <div className="setting-item">
+                  <div>
+                    <span className="setting-item-label">Push Delivery</span>
+                    <span className="setting-item-value">
+                      {notificationStatus?.googleEmail || (isConnectedToDrive ? 'Google account connected' : 'Google Drive required')}
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void handleEnableNotifications()}
+                    disabled={
+                      isEnablingNotifications ||
+                      !isConnectedToDrive ||
+                      notificationStatus?.permission === 'denied' ||
+                      (notificationStatus?.enabled && notificationStatus.permission === 'granted')
+                    }
+                  >
+                    {isEnablingNotifications ? 'Enabling...' : notificationButtonLabel}
+                  </Button>
+                </div>
+                {notificationError && <p className="sync-time sync-time--error">{notificationError}</p>}
               </Card>
             </section>
 

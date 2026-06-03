@@ -55,6 +55,30 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const refreshPushRegistration = () => {
+      void import('./services/notification/pushNotificationService')
+        .then(({ refreshPushNotificationRegistration }) => refreshPushNotificationRegistration())
+        .catch(() => undefined);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshPushRegistration();
+      }
+    };
+
+    refreshPushRegistration();
+    window.addEventListener('focus', refreshPushRegistration);
+    window.addEventListener('online', refreshPushRegistration);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', refreshPushRegistration);
+      window.removeEventListener('online', refreshPushRegistration);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   return (
     <>
       <AppRouter />

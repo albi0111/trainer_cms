@@ -18,6 +18,10 @@ import { nowIsoUtc, toDayName, todayLocalIso } from './shared/date';
 import { validatePlanForSession } from './plan/planService';
 import { enqueueClientUpdate } from './sync/syncQueueService';
 import { scheduleBackgroundSync } from './sync/syncService';
+import {
+  cancelSessionNotificationJobs,
+  reconcileSessionNotificationJobs,
+} from './notification/pushNotificationService';
 
 export type { SessionActivityEntry } from '../types';
 export {
@@ -72,6 +76,18 @@ async function touchClient(clientId: string, now: string): Promise<void> {
     if (client.sync_status !== 'pending_delete') {
       client.sync_status = 'pending';
     }
+  });
+}
+
+async function syncSessionNotificationJobs(sessionId: string): Promise<void> {
+  await reconcileSessionNotificationJobs(sessionId).catch((error) => {
+    console.error('Failed to sync session notification jobs', error);
+  });
+}
+
+async function cancelSessionNotifications(sessionId: string): Promise<void> {
+  await cancelSessionNotificationJobs(sessionId).catch((error) => {
+    console.error('Failed to cancel session notification jobs', error);
   });
 }
 
@@ -180,6 +196,7 @@ export async function createSession(input: CreateSessionInput): Promise<string> 
   });
 
   void scheduleBackgroundSync();
+  await syncSessionNotificationJobs(id);
   return id;
 }
 
@@ -221,6 +238,7 @@ export async function updateSession(
   });
 
   void scheduleBackgroundSync();
+  await syncSessionNotificationJobs(sessionId);
 }
 
 export async function getSessionsByClient(clientId: string): Promise<Session[]> {
@@ -333,6 +351,7 @@ export async function completeSession(sessionId: string, clientId: string, data:
   });
 
   void scheduleBackgroundSync();
+  await cancelSessionNotifications(sessionId);
 }
 
 export async function markSessionMissed(sessionId: string, clientId: string, data: MarkMissedInput): Promise<void> {
@@ -353,6 +372,7 @@ export async function markSessionMissed(sessionId: string, clientId: string, dat
   });
 
   void scheduleBackgroundSync();
+  await cancelSessionNotifications(sessionId);
 }
 
 export async function revertSession(sessionId: string, clientId: string): Promise<void> {
@@ -371,6 +391,7 @@ export async function revertSession(sessionId: string, clientId: string): Promis
   });
 
   void scheduleBackgroundSync();
+  await syncSessionNotificationJobs(sessionId);
 }
 
 export async function deleteSession(sessionId: string, clientId: string): Promise<void> {
@@ -390,6 +411,7 @@ export async function deleteSession(sessionId: string, clientId: string): Promis
   });
 
   void scheduleBackgroundSync();
+  await cancelSessionNotifications(sessionId);
 }
 
 export async function duplicateSession(

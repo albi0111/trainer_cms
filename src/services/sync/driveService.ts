@@ -72,6 +72,58 @@ function escapeDriveQuery(value: string): string {
   return value.replace(/'/g, "\\'");
 }
 
+async function getDriveErrorDetails(response: Response): Promise<string> {
+  const contentType = response.headers.get('content-type') || '';
+
+  try {
+    if (contentType.includes('application/json')) {
+      const data = await response.clone().json() as {
+        error?: {
+          code?: number;
+          message?: string;
+          errors?: Array<{ reason?: string; message?: string }>;
+        };
+      };
+      const reason = data.error?.errors?.[0]?.reason;
+      const message = data.error?.message;
+      const parts = [reason ? `reason=${reason}` : '', message ? `message=${message}` : '']
+        .filter(Boolean);
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+    }
+
+    const text = await response.clone().text();
+    if (text.trim()) {
+      return text.trim().slice(0, 500);
+    }
+  } catch {
+    // Fall through to a generic status string.
+  }
+
+  return response.statusText || 'unknown error';
+}
+
+async function throwDriveError(prefix: string, response: Response): Promise<never> {
+  const details = await getDriveErrorDetails(response);
+  throw new Error(`${prefix}: ${response.status} ${details}`.trim());
+}
+
+async function updateDriveFileContent(fileId: string, bodyBlob: Blob): Promise<void> {
+  const response = await fetch(`${DRIVE_UPLOAD_API}/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: {
+      ...(await getAuthHeaders()),
+      'Content-Type': 'application/json',
+    },
+    body: bodyBlob,
+  });
+
+  if (!response.ok) {
+    await throwDriveError('Drive file update failed', response);
+  }
+}
+
 export async function findDriveFileByName(name: string, parentId?: string, mimeType?: string): Promise<DriveFile | null> {
   const files = await listDriveFilesByName(name, parentId, mimeType);
   return files[0] || null;
@@ -90,7 +142,7 @@ async function listDriveFilesByName(name: string, parentId?: string, mimeType?: 
     `${DRIVE_API}?q=${encodeURIComponent(queryParts.join(' and '))}&fields=files(id,name,mimeType,createdTime,modifiedTime)&pageSize=20&orderBy=modifiedTime desc,createdTime desc`,
   );
   if (!response.ok) {
-    throw new Error(`Drive lookup failed: ${response.status}`);
+    await throwDriveError('Drive lookup failed', response);
   }
 
   const data = await response.json() as { files?: DriveFile[] };
@@ -104,7 +156,7 @@ async function getDriveFile(fileId: string): Promise<DriveFile | null> {
     return null;
   }
   if (!response.ok) {
-    throw new Error(`Drive file fetch failed: ${response.status}`);
+    await throwDriveError('Drive file fetch failed', response);
   }
 
   return response.json() as Promise<DriveFile>;
@@ -129,7 +181,7 @@ async function createFolder(name: string, parentId?: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Drive folder creation failed: ${response.status}`);
+    await throwDriveError('Drive folder creation failed', response);
   }
 
   const data = await response.json() as { id: string };
@@ -141,7 +193,7 @@ export async function listFiles(parentId: string): Promise<DriveFile[]> {
     `${DRIVE_API}?q=${encodeURIComponent(`'${parentId}' in parents and trashed = false`)}&fields=files(id,name,mimeType)`,
   );
   if (!response.ok) {
-    throw new Error(`Drive list failed: ${response.status}`);
+    await throwDriveError('Drive list failed', response);
   }
   const data = await response.json() as { files?: DriveFile[] };
   return data.files || [];
@@ -154,7 +206,7 @@ export async function downloadFile<T>(fileId: string): Promise<T | null> {
     return null;
   }
   if (!response.ok) {
-    throw new Error(`Drive download failed: ${response.status}`);
+    await throwDriveError('Drive download failed', response);
   }
 
   return response.json() as Promise<T>;
@@ -170,42 +222,43 @@ export async function uploadFile<T>(
   const bodyBlob = new Blob([JSON.stringify(content)], { type: 'application/json' });
 
   if (fileId) {
-    const response = await fetch(`${DRIVE_UPLOAD_API}/${fileId}?uploadType=media`, {
-      method: 'PATCH',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: bodyBlob,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Drive file update failed: ${response.status}`);
-    }
-
+    await updateDriveFileContent(fileId, bodyBlob);
     return fileId;
   }
 
-  const metadata = new Blob([JSON.stringify({
-    name,
-    parents: [parentId],
-    mimeType: 'application/json',
-  })], { type: 'application/json' });
-  const form = new FormData();
-  form.append('metadata', metadata);
-  form.append('file', bodyBlob, name);
-
-  const response = await fetch(`${DRIVE_UPLOAD_API}?uploadType=multipart`, {
+  const response = await fetch(`${DRIVE_API}?fields=id`, {
     method: 'POST',
-    headers,
-    body: form,
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name,
+      parents: [parentId],
+      mimeType: 'application/json',
+    }),
   });
 
   if (!response.ok) {
-    throw new Error(`Drive file upload failed: ${response.status}`);
+    await throwDriveError('Drive file creation failed', response);
   }
 
   const data = await response.json() as { id: string };
+  if (!data.id) {
+    throw new Error('Drive file creation failed: missing file id');
+  }
+
+  try {
+    await updateDriveFileContent(data.id, bodyBlob);
+  } catch (error) {
+    try {
+      await deleteDriveFile(data.id);
+    } catch {
+      // Preserve the upload failure; cleanup is best effort.
+    }
+    throw error;
+  }
+
   return data.id;
 }
 
@@ -215,7 +268,7 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
     headers: await getAuthHeaders(),
   });
   if (!response.ok && response.status !== 404) {
-    throw new Error(`Drive delete failed: ${response.status}`);
+    await throwDriveError('Drive delete failed', response);
   }
 }
 

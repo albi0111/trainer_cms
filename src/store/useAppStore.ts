@@ -133,6 +133,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { signIn } = await import('../services/sync/googleAuth');
     await signIn();
     set({ isConnectedToDrive: true });
+    void import('../services/notification/pushNotificationService')
+      .then(({ refreshPushNotificationRegistration }) => refreshPushNotificationRegistration())
+      .catch(() => undefined);
     await get().runSync();
     await get().refreshSyncState();
   },

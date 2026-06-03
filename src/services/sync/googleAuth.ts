@@ -1,7 +1,14 @@
 const STORAGE_KEYS = {
   accessToken: 'fitpersona.google.access_token',
   expiresAt: 'fitpersona.google.expires_at',
+  accountId: 'fitpersona.google.account_id',
+  email: 'fitpersona.google.email',
 };
+
+export interface GoogleAccountIdentity {
+  google_account_id: string;
+  google_email: string;
+}
 
 declare global {
   interface Window {
@@ -85,9 +92,68 @@ function storeToken(token: string, expiresIn = 3600): void {
   localStorage.setItem(STORAGE_KEYS.expiresAt, String(Date.now() + expiresIn * 1000));
 }
 
+function storeIdentity(identity: GoogleAccountIdentity): void {
+  localStorage.setItem(STORAGE_KEYS.accountId, identity.google_account_id);
+  localStorage.setItem(STORAGE_KEYS.email, identity.google_email);
+}
+
 function clearToken(): void {
   localStorage.removeItem(STORAGE_KEYS.accessToken);
   localStorage.removeItem(STORAGE_KEYS.expiresAt);
+  localStorage.removeItem(STORAGE_KEYS.accountId);
+  localStorage.removeItem(STORAGE_KEYS.email);
+}
+
+export function getStoredGoogleAccountIdentity(): GoogleAccountIdentity | null {
+  const accountId = localStorage.getItem(STORAGE_KEYS.accountId);
+  const email = localStorage.getItem(STORAGE_KEYS.email);
+
+  if (!accountId || !email) {
+    return null;
+  }
+
+  return {
+    google_account_id: accountId,
+    google_email: email,
+  };
+}
+
+export async function fetchGoogleAccountIdentity(token: string): Promise<GoogleAccountIdentity> {
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Google account lookup failed: ${response.status}`);
+  }
+
+  const data = await response.json() as { sub?: string; email?: string };
+  if (!data.sub || !data.email) {
+    throw new Error('Google account lookup did not include account id and email.');
+  }
+
+  const identity = {
+    google_account_id: data.sub,
+    google_email: data.email,
+  };
+  storeIdentity(identity);
+  return identity;
+}
+
+export async function getGoogleAccountIdentity(): Promise<GoogleAccountIdentity | null> {
+  const token = getToken();
+  if (!token) {
+    return null;
+  }
+
+  const stored = getStoredGoogleAccountIdentity();
+  if (stored) {
+    return stored;
+  }
+
+  return fetchGoogleAccountIdentity(token);
 }
 
 export async function initGoogleAuth(): Promise<void> {
@@ -104,15 +170,20 @@ export async function signIn(): Promise<string> {
   return new Promise((resolve, reject) => {
     const tokenClient = window.google?.accounts.oauth2.initTokenClient({
       client_id: getClientId(),
-      scope: 'https://www.googleapis.com/auth/drive.file',
-      callback: (response) => {
+      scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
+      callback: async (response) => {
         if (response.error || !response.access_token) {
           reject(new Error(formatGoogleAuthErrorMessage(response.error || 'unknown')));
           return;
         }
 
-        storeToken(response.access_token, response.expires_in);
-        resolve(response.access_token);
+        try {
+          storeToken(response.access_token, response.expires_in);
+          await fetchGoogleAccountIdentity(response.access_token);
+          resolve(response.access_token);
+        } catch (error) {
+          reject(error);
+        }
       },
       error_callback: (error) => {
         reject(new Error(formatGoogleAuthErrorMessage(error.type)));
