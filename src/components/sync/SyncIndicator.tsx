@@ -9,27 +9,35 @@ interface SyncIndicatorProps {
 
 export default function SyncIndicator({ compact = false, onClick, onLongPress }: SyncIndicatorProps) {
   const syncStatus = useAppStore((state) => state.syncStatus);
-  const pendingSyncCount = useAppStore((state) => state.pendingSyncCount);
-  const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
+  const pendingSyncCount = useAppStore((state) => state.googlePendingSyncCount);
+  const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
+  const googleAuthStatus = useAppStore((state) => state.googleAuthStatus);
   const { cancelLongPress, consumeLongPress, getLongPressHandlers } = useLongPress();
 
-  const hasError = syncStatus === 'error' || !isConnectedToDrive;
+  const requiresConnection = !isGoogleConnected || googleAuthStatus === 'revoked' || googleAuthStatus === 'failed';
+  const hasError = syncStatus === 'error' || requiresConnection;
   const color = hasError
     ? '#FF5252'
     : syncStatus === 'syncing'
       ? 'var(--color-primary)'
       : '#E8E0B8';
 
-  const label = hasError
-    ? 'Drive Error'
+  const label = requiresConnection
+    ? 'Connect Google'
+    : syncStatus === 'error'
+      ? 'Google Sync Error'
     : syncStatus === 'syncing'
-      ? 'Syncing'
+      ? 'Syncing Google'
       : pendingSyncCount > 0
         ? `${pendingSyncCount} Pending`
-        : 'Synced';
+        : 'Google Synced';
 
   const handleClick = () => {
     if (consumeLongPress()) {
+      return;
+    }
+
+    if (syncStatus === 'syncing') {
       return;
     }
 

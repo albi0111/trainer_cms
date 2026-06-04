@@ -6,6 +6,7 @@ import { useAppStore } from './store/useAppStore';
 
 export default function App() {
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
+  const runSync = useAppStore((state) => state.runSync);
   const sessionAnimationOverlayRef = useRef<HTMLDivElement>(null);
   useKeyboardHeight();
 
@@ -36,6 +37,7 @@ export default function App() {
       void import('./services/notification/sessionNotificationService')
         .then(({ notifyScheduledMeasurementReminders }) => notifyScheduledMeasurementReminders())
         .catch(() => undefined);
+      void runSync();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -53,7 +55,7 @@ export default function App() {
       window.removeEventListener('focus', runReminderCheck);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [runSync]);
 
   return (
     <>

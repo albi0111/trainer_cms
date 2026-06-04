@@ -298,6 +298,71 @@ export interface ClientSyncState {
   last_synced_at?: string;
 }
 
+export interface AppSettings {
+  id: 'default';
+  google_calendar_connected: boolean;
+  google_calendar_id: string | null;
+  google_calendar_name: string | null;
+  google_calendar_account_email: string | null;
+  google_calendar_connected_at: string | null;
+  google_calendar_last_sync_at: string | null;
+  google_calendar_last_error: string | null;
+  google_calendar_enabled_on_this_device: boolean;
+}
+
+export type CalendarEventKind =
+  | 'session_main'
+  | 'session_completion_check'
+  | 'session_completion_snooze'
+  | 'measurement_session_note';
+
+export type CalendarEventStatus =
+  | 'pending_create'
+  | 'synced'
+  | 'pending_update'
+  | 'pending_delete'
+  | 'deleted'
+  | 'failed';
+
+export interface CalendarEvent {
+  id: string;
+  local_entity_type: 'session';
+  local_entity_id: string;
+  client_id: string;
+  google_calendar_id: string | null;
+  google_event_id: string | null;
+  event_kind: CalendarEventKind;
+  status: CalendarEventStatus;
+  scheduled_start_at: string;
+  scheduled_end_at: string;
+  title: string;
+  description: string;
+  color_id: string | null;
+  reminder_minutes: number[];
+  last_error: string | null;
+  retry_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CalendarSyncQueueAction = 'create' | 'update' | 'delete';
+export type CalendarSyncQueueStatus = 'pending' | 'processing' | 'done' | 'failed';
+
+export interface CalendarSyncQueueEntry {
+  id: string;
+  calendar_event_local_id: string;
+  local_entity_type: 'session';
+  local_entity_id: string;
+  client_id: string;
+  action: CalendarSyncQueueAction;
+  status: CalendarSyncQueueStatus;
+  retry_count: number;
+  last_error: string | null;
+  next_retry_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DriveMeta {
   version: number;
   updated_at: string;
