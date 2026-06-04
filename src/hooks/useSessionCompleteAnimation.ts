@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useHaptic } from './useHaptic';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 import { useSoundFeedback } from './useSoundFeedback';
 
 type SessionAnimationKind = 'completed' | 'missed';
@@ -50,43 +51,6 @@ function dispatchActivityAnimationEvent(): void {
   } catch {
     // Silent fail when browser events are unavailable.
   }
-}
-
-function usePrefersReducedMotion(): boolean {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
-
-  return prefersReducedMotion;
 }
 
 export function registerSessionAnimationOverlay(element: HTMLDivElement | null): void {

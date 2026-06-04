@@ -7,7 +7,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './MarkMissedModal.css';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
-import { useModalVelocityDismiss, usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 const REASONS = ['sick', 'travel', 'busy', 'no_show', 'other'] as const;
 type Reason = typeof REASONS[number];

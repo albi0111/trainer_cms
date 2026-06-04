@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import pkg from '../../package.json';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import BrandMark from './branding/BrandMark';
 
 interface SplashScreenProps {
@@ -24,44 +25,13 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
     return Boolean((window as GlobalWindowState).__fpAppReady);
   });
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const mountTimeRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
   const fadeStartedRef = useRef(false);
   const completionTriggeredRef = useRef(false);
   const version = useMemo(() => (
     typeof pkg.version === 'string' && pkg.version.trim() ? pkg.version : '1.0.0'
   ), []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

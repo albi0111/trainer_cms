@@ -6,7 +6,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './CompleteSessionModal.css';
-import { useModalVelocityDismiss, usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 export interface CompleteSessionData {
   difficulty: number;

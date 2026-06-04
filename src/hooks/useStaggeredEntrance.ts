@@ -1,4 +1,5 @@
 import { type CSSProperties, useCallback, useEffect, useState } from 'react';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 type UseStaggeredEntranceArgs = {
   itemCount: number;
@@ -113,43 +114,6 @@ function ensureStaggerStyles() {
   } catch {
     // Silent fail when the document head is unavailable.
   }
-}
-
-function usePrefersReducedMotion() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const updatePreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      updatePreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', updatePreference);
-      } else {
-        mediaQuery.addListener(updatePreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', updatePreference);
-        } else {
-          mediaQuery.removeListener(updatePreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
-
-  return prefersReducedMotion;
 }
 
 export default function useStaggeredEntrance({
