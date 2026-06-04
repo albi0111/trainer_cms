@@ -181,6 +181,36 @@
   margin: -2px 0 16px;
 }
 
+.google-feature-list {
+  display: grid;
+  gap: 12px;
+  margin: 6px 0 18px;
+}
+
+.google-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.google-feature-item__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
 .sync-meta {
   display: flex;
   align-items: center;
@@ -196,6 +226,11 @@
 
 .sync-time--error {
   color: #FF5252;
+}
+
+.sync-time--muted {
+  margin-top: 6px;
+  color: #777;
 }
 
 .sync-meta__actions {

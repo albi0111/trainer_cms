@@ -15,7 +15,7 @@ export default function DriveConnectAlert({
   onClose,
   onConnected,
 }: DriveConnectAlertProps) {
-  const connectDrive = useAppStore((state) => state.connectDrive);
+  const connectGoogle = useAppStore((state) => state.connectGoogle);
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const haptic = useHaptic();
@@ -34,14 +34,14 @@ export default function DriveConnectAlert({
 
     try {
       haptic.medium();
-      await connectDrive();
+      await connectGoogle();
       playConfirm();
       await onConnected?.();
       onClose();
     } catch (error) {
       playError();
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect Google Drive.');
-      console.error('Failed to connect Google Drive', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to connect Google.');
+      console.error('Failed to connect Google', error);
     } finally {
       setIsConnecting(false);
     }
@@ -50,9 +50,9 @@ export default function DriveConnectAlert({
   return (
     <AppAlert
       visible={visible}
-      title="Connect Google Drive"
-      message="Cloud sync is not active yet. Connect Google Drive to back up clients, plans, sessions, and media."
-      confirmLabel="Connect Drive"
+      title="Connect Google"
+      message="Connect Google once to back up client data with Drive and create session reminders in Google Calendar."
+      confirmLabel="Connect Google"
       cancelLabel="Not Now"
       variant="warning"
       confirmLoading={isConnecting}

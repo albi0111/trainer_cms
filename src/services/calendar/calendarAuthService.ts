@@ -1,13 +1,11 @@
 import {
   getToken,
-  GOOGLE_CALENDAR_SCOPE,
-  GOOGLE_DRIVE_SCOPE,
   isAuthenticated,
-  signIn,
 } from '../sync/googleAuth';
+import { ensureValidGoogleAccessToken } from '../google/googleAuthService';
 
 export async function connectCalendarAuth(): Promise<string> {
-  return signIn([GOOGLE_DRIVE_SCOPE, GOOGLE_CALENDAR_SCOPE]);
+  return ensureValidGoogleAccessToken();
 }
 
 export function getCalendarToken(): string | null {

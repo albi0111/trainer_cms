@@ -31,7 +31,8 @@ export default function DashboardScreen() {
   const hydrateDashboard = useAppStore((state) => state.hydrateDashboard);
   const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
   const runSync = useAppStore((state) => state.runSync);
-  const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
+  const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
+  const syncStatus = useAppStore((state) => state.syncStatus);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [statsAnimationVersion, setStatsAnimationVersion] = useState(0);
@@ -68,7 +69,7 @@ export default function DashboardScreen() {
     isForegroundRefreshRunningRef.current = true;
 
     try {
-      if (isConnectedToDrive) {
+      if (isGoogleConnected) {
         try {
           await runSync();
         } catch (error) {
@@ -80,14 +81,14 @@ export default function DashboardScreen() {
     } finally {
       isForegroundRefreshRunningRef.current = false;
     }
-  }, [isConnectedToDrive, loadDashboard, runSync]);
+  }, [isGoogleConnected, loadDashboard, runSync]);
 
   useEffect(() => {
     void loadDashboard();
-    if (isConnectedToDrive) {
+    if (isGoogleConnected) {
       void runSync().then(loadDashboard).catch(() => undefined);
     }
-  }, [isConnectedToDrive, loadDashboard, runSync]);
+  }, [isGoogleConnected, loadDashboard, runSync]);
 
   useEffect(() => {
     if (hasLoadedDashboardRef.current || !loading) {
@@ -167,8 +168,12 @@ export default function DashboardScreen() {
   });
 
   const handleSyncIndicatorPress = async () => {
-    if (!isConnectedToDrive) {
+    if (!isGoogleConnected) {
       setIsDrivePromptOpen(true);
+      return;
+    }
+
+    if (syncStatus === 'syncing') {
       return;
     }
 
@@ -176,7 +181,7 @@ export default function DashboardScreen() {
       await runSync();
       await loadDashboard();
     } catch (error) {
-      console.error('Failed to sync dashboard data', error);
+      console.error('Failed to sync Google data', error);
     }
   };
 

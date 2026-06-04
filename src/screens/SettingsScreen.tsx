@@ -7,31 +7,31 @@ import PageWrapper from '../components/layout/PageWrapper';
 import BrandMark from '../components/branding/BrandMark';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import SyncIndicator from '../components/sync/SyncIndicator';
 import { useSoundFeedback } from '../hooks/useSoundFeedback';
 import { useAppStore } from '../store/useAppStore';
 
 const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAlert'));
 
 export default function SettingsScreen() {
-  const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
+  const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
+  const googleAuthStatus = useAppStore((state) => state.googleAuthStatus);
+  const googleAccountEmail = useAppStore((state) => state.googleAccountEmail);
+  const googlePendingSyncCount = useAppStore((state) => state.googlePendingSyncCount);
+  const googleLastSyncedAt = useAppStore((state) => state.googleLastSyncedAt);
+  const googleLastSyncError = useAppStore((state) => state.googleLastSyncError);
+  const syncStatus = useAppStore((state) => state.syncStatus);
   const pendingSyncCount = useAppStore((state) => state.pendingSyncCount);
   const calendarPendingSyncCount = useAppStore((state) => state.calendarPendingSyncCount);
   const lastSyncedAt = useAppStore((state) => state.lastSyncedAt);
   const calendarLastSyncedAt = useAppStore((state) => state.calendarLastSyncedAt);
   const lastSyncError = useAppStore((state) => state.lastSyncError);
   const calendarLastSyncError = useAppStore((state) => state.calendarLastSyncError);
-  const isCalendarConnected = useAppStore((state) => state.isCalendarConnected);
   const isCalendarEnabledOnThisDevice = useAppStore((state) => state.isCalendarEnabledOnThisDevice);
   const calendarName = useAppStore((state) => state.calendarName);
-  const calendarSyncStatus = useAppStore((state) => state.calendarSyncStatus);
-  const disconnectDrive = useAppStore((state) => state.disconnectDrive);
-  const connectCalendar = useAppStore((state) => state.connectCalendar);
-  const disconnectCalendar = useAppStore((state) => state.disconnectCalendar);
+  const connectGoogle = useAppStore((state) => state.connectGoogle);
+  const disconnectGoogle = useAppStore((state) => state.disconnectGoogle);
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
-  const refreshCalendarState = useAppStore((state) => state.refreshCalendarState);
   const runSync = useAppStore((state) => state.runSync);
-  const runCalendarSync = useAppStore((state) => state.runCalendarSync);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [isBuilderToastVisible, setIsBuilderToastVisible] = useState(false);
   const [hasLoadedDrivePrompt, setHasLoadedDrivePrompt] = useState(false);
@@ -43,8 +43,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     void refreshSyncState();
-    void refreshCalendarState();
-  }, [refreshCalendarState, refreshSyncState]);
+  }, [refreshSyncState]);
 
   useEffect(() => {
     return () => {
@@ -109,56 +108,47 @@ export default function SettingsScreen() {
 
           <div className="settings-groups">
             <section className="settings-group">
-              <h2 className="settings-group-title">CLOUD SYNC</h2>
+              <h2 className="settings-group-title">GOOGLE ACCOUNT</h2>
               <Card padding="lg" className="settings-card">
                 <div className="sync-status">
-                  <div className={`sync-status-icon ${isConnectedToDrive ? 'sync-status-icon--active' : ''}`}>
+                  <div className={`sync-status-icon ${isGoogleConnected ? 'sync-status-icon--active' : ''}`}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                       <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
                   </div>
                   <div className="sync-status-info">
-                    <h3 className="sync-status-text">{isConnectedToDrive ? 'Connected to Google Drive' : 'Google Drive not connected'}</h3>
-                    <p className="sync-email">{pendingSyncCount > 0 ? `${pendingSyncCount} changes waiting to sync` : 'Offline-first local storage is active'}</p>
-                  </div>
-                </div>
-                <div className="sync-meta">
-                  <div>
-                    <p className="sync-time">Last synced: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'Never'}</p>
-                    {lastSyncError && <p className="sync-time sync-time--error">{lastSyncError}</p>}
-                  </div>
-                  <div className="sync-meta__actions">
-                    <SyncIndicator />
-                    <Button variant="secondary" size="sm" onClick={() => void runSync()}>
-                      Sync Now
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            </section>
-
-            <section className="settings-group">
-              <h2 className="settings-group-title">CALENDAR REMINDERS</h2>
-              <Card padding="lg" className="settings-card">
-                <div className="sync-status">
-                  <div className={`sync-status-icon ${isCalendarConnected ? 'sync-status-icon--active' : ''}`}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                  </div>
-                  <div className="sync-status-info">
                     <h3 className="sync-status-text">
-                      {isCalendarConnected ? `Connected to ${calendarName || 'Google Calendar'}` : 'Google Calendar not connected'}
+                      {isGoogleConnected ? 'Google connected' : googleAuthStatus === 'expired' ? 'Reconnect Google' : 'Google not connected'}
                     </h3>
                     <p className="sync-email">
-                      {isCalendarConnected && isCalendarEnabledOnThisDevice
-                        ? `${calendarPendingSyncCount} calendar changes waiting`
-                        : 'Calendar reminders are off on this device'}
+                      {googleAccountEmail || (googlePendingSyncCount > 0 ? `${googlePendingSyncCount} Google changes waiting` : 'Backup and reminders are offline-first')}
                     </p>
+                  </div>
+                </div>
+
+                <div className="google-feature-list">
+                  <div className="google-feature-item">
+                    <span className="google-feature-item__check">✓</span>
+                    <div>
+                      <span className="setting-item-label">Backup & Sync</span>
+                      <p className="sync-email">
+                        {pendingSyncCount > 0 ? `${pendingSyncCount} Drive backup changes waiting` : 'Client data syncs through Google Drive'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="google-feature-item">
+                    <span className="google-feature-item__check">✓</span>
+                    <div>
+                      <span className="setting-item-label">Calendar Reminders</span>
+                      <p className="sync-email">
+                        {calendarPendingSyncCount > 0
+                          ? `${calendarPendingSyncCount} Calendar reminder changes waiting`
+                          : isCalendarEnabledOnThisDevice
+                            ? `${calendarName || 'fit.persona Sessions'} manages reminders from this device`
+                          : 'Connect Google to enable session reminders on this device'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -168,32 +158,45 @@ export default function SettingsScreen() {
 
                 <div className="sync-meta">
                   <div>
-                    <p className="sync-time">Last synced: {calendarLastSyncedAt ? new Date(calendarLastSyncedAt).toLocaleString() : 'Never'}</p>
-                    {calendarLastSyncError && <p className="sync-time sync-time--error">{calendarLastSyncError}</p>}
+                    <p className="sync-time">Last synced: {googleLastSyncedAt ? new Date(googleLastSyncedAt).toLocaleString() : 'Never'}</p>
+                    {googleLastSyncError && <p className="sync-time sync-time--error">{googleLastSyncError}</p>}
+                    {(lastSyncError || calendarLastSyncError) && (
+                      <p className="sync-time sync-time--muted">
+                        Drive: {lastSyncError || 'OK'} · Calendar: {calendarLastSyncError || 'OK'}
+                      </p>
+                    )}
+                    <p className="sync-time sync-time--muted">
+                      Drive last: {lastSyncedAt ? new Date(lastSyncedAt).toLocaleString() : 'Never'} · Calendar last: {calendarLastSyncedAt ? new Date(calendarLastSyncedAt).toLocaleString() : 'Never'}
+                    </p>
                   </div>
                   <div className="sync-meta__actions">
-                    {isCalendarConnected ? (
+                    {isGoogleConnected ? (
                       <>
                         <Button
                           variant="secondary"
                           size="sm"
-                          loading={calendarSyncStatus === 'syncing'}
-                          onClick={() => void runCalendarSync()}
+                          loading={syncStatus === 'syncing'}
+                          onClick={() => void runSync()}
                         >
-                          Sync Calendar
+                          Sync with Google
                         </Button>
-                        <Button variant="danger" size="sm" onClick={() => void disconnectCalendar()}>
-                          Disconnect
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={syncStatus === 'syncing'}
+                          onClick={() => void connectGoogle()}
+                        >
+                          Reconnect Google
                         </Button>
                       </>
                     ) : (
                       <Button
                         variant="primary"
                         size="sm"
-                        loading={calendarSyncStatus === 'syncing'}
-                        onClick={() => void connectCalendar()}
+                        loading={syncStatus === 'syncing'}
+                        onClick={() => setIsDrivePromptOpen(true)}
                       >
-                        Connect Calendar
+                        Connect Google
                       </Button>
                     )}
                   </div>
@@ -246,13 +249,13 @@ export default function SettingsScreen() {
               </Card>
             </section>
 
-            {isConnectedToDrive ? (
-              <Button variant="danger" fullWidth size="lg" onClick={() => void disconnectDrive()}>
-                Disconnect Google Drive
+            {isGoogleConnected ? (
+              <Button variant="danger" fullWidth size="lg" onClick={() => void disconnectGoogle()}>
+                Disconnect Google
               </Button>
             ) : (
               <Button variant="primary" fullWidth size="lg" onClick={() => setIsDrivePromptOpen(true)}>
-                Connect Google Drive
+                Connect Google
               </Button>
             )}
           </div>
