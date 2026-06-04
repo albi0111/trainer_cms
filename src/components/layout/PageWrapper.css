@@ -15,7 +15,12 @@
 .page-wrapper--scroll {
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior-y: auto;
+  /*
+   * PWA pull-to-refresh guard:
+   * this is the app's primary scroll surface, so vertical overscroll must not
+   * chain to the browser viewport at scroll boundaries.
+   */
+  overscroll-behavior-y: contain;
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y pinch-zoom;

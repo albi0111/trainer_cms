@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { usePwaPullToRefreshGuard } from '../../hooks/usePwaPullToRefreshGuard';
 import './PageWrapper.css';
 
 interface PageWrapperProps {
@@ -11,8 +13,13 @@ export default function PageWrapper({
   scrollable = true,
   className = '',
 }: PageWrapperProps) {
+  const wrapperRef = useRef<HTMLElement | null>(null);
+
+  usePwaPullToRefreshGuard(wrapperRef, scrollable);
+
   return (
     <main
+      ref={wrapperRef}
       className={[
         'page-wrapper',
         scrollable ? 'page-wrapper--scroll' : '',
