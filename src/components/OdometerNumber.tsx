@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { usePrefersReducedMotion } from '../hooks/useSwipeGesture';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 const ODOMETER_EASING = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const DIGIT_STAGGER_MS = 30;

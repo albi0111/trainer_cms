@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down' | null;
 
@@ -162,43 +163,6 @@ export function findScrollableAncestor(target: EventTarget | null, boundary: HTM
   }
 
   return null;
-}
-
-export function usePrefersReducedMotion(): boolean {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
-
-  return prefersReducedMotion;
 }
 
 export default function useSwipeGesture({

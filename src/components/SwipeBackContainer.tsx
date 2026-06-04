@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useNavigationType, useOutlet } from 'react-router-dom';
-import useSwipeGesture, { findScrollableAncestor, usePrefersReducedMotion } from '../hooks/useSwipeGesture';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import useSwipeGesture, { findScrollableAncestor } from '../hooks/useSwipeGesture';
 
 type Direction = 'forward' | 'back';
 type Phase = 'current' | 'enter' | 'exit';

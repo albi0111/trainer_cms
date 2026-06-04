@@ -5,18 +5,8 @@ import './ScheduleScreen.css';
 import TopNavBar from '../components/layout/TopNavBar';
 import PageWrapper from '../components/layout/PageWrapper';
 import ScheduleCalendarGrid from '../components/schedule/ScheduleCalendarGrid';
+import { getCurrentMonthRange } from '../services/shared/date';
 import { useAppStore } from '../store/useAppStore';
-
-function getMonthRange(): { startDate: string; endDate: string } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const format = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  return {
-    startDate: format(start),
-    endDate: format(end),
-  };
-}
 
 export default function ScheduleScreen() {
   const navigate = useNavigate();
@@ -30,7 +20,7 @@ export default function ScheduleScreen() {
   }), []);
 
   useEffect(() => {
-    const range = getMonthRange();
+    const range = getCurrentMonthRange();
     void hydrateSchedule(range.startDate, range.endDate).then(setSessions);
   }, [hydrateSchedule]);
 

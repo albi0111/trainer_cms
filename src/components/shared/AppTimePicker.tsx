@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface AppTimePickerProps {
@@ -15,7 +16,7 @@ const PICKER_PORTAL_Z_INDEX = 1300;
 export default function AppTimePicker({ value, onChange, label }: AppTimePickerProps) {
   const [visible, setVisible] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -44,37 +45,6 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
       window.clearTimeout(timeout);
     };
   }, [visible]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
 
   const handleSave = () => {
     onChange(`${selectedHour}:${selectedMinute}`);
