@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 
 const pageWrapperCss = readFileSync('src/components/layout/PageWrapper.css', 'utf8');
+const pageWrapper = readFileSync('src/components/layout/PageWrapper.tsx', 'utf8');
+const pullToRefreshGuard = readFileSync('src/hooks/usePwaPullToRefreshGuard.ts', 'utf8');
 const indexCss = readFileSync('src/index.css', 'utf8');
 
 const failures = [];
@@ -33,6 +35,14 @@ if (!bodyRule || !/overscroll-behavior\s*:\s*none\s*;/.test(bodyRule[0])) {
 
 if (!bodyRule || !/overflow\s*:\s*hidden\s*;/.test(bodyRule[0])) {
   failures.push('body must keep overflow: hidden so scrolling stays inside the app surface.');
+}
+
+if (!/usePwaPullToRefreshGuard\(wrapperRef,\s*scrollable\)/.test(pageWrapper)) {
+  failures.push('PageWrapper must keep the iOS/WebKit fallback pull-to-refresh guard attached.');
+}
+
+if (!/addEventListener\('touchmove',\s*handleTouchMove,\s*\{\s*passive:\s*false\s*\}\)/.test(pullToRefreshGuard)) {
+  failures.push('Fallback pull-to-refresh guard must use a non-passive touchmove listener so preventDefault works.');
 }
 
 if (failures.length > 0) {
