@@ -16,6 +16,15 @@ import {
 } from './shared/clientSnapshotMapper';
 import { nowIsoUtc, toDayName, todayLocalIso } from './shared/date';
 import { validatePlanForSession } from './plan/planService';
+import {
+  onSessionCompleted as planCalendarSessionCompleted,
+  onSessionDeleted as planCalendarSessionDeleted,
+  onSessionMissed as planCalendarSessionMissed,
+  onSessionReverted as planCalendarSessionReverted,
+  planForSession as planCalendarSession,
+  replanForSession as replanCalendarSession,
+} from './calendar/calendarReminderPlanner';
+import { scheduleCalendarBackgroundSync } from './calendar/calendarSyncService';
 import { enqueueClientUpdate } from './sync/syncQueueService';
 import { scheduleBackgroundSync } from './sync/syncService';
 
@@ -60,6 +69,16 @@ export interface CompleteSessionInput {
 export interface MarkMissedInput {
   reason: MissedReason;
   note: string;
+}
+
+async function runCalendarReminderSideEffect(operation: () => Promise<boolean>): Promise<void> {
+  try {
+    if (await operation()) {
+      scheduleCalendarBackgroundSync();
+    }
+  } catch (error) {
+    console.warn('Calendar reminder planning failed', error);
+  }
 }
 
 async function touchClient(clientId: string, now: string): Promise<void> {
@@ -180,6 +199,7 @@ export async function createSession(input: CreateSessionInput): Promise<string> 
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSession(id));
   return id;
 }
 
@@ -221,6 +241,7 @@ export async function updateSession(
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => replanCalendarSession(sessionId));
 }
 
 export async function getSessionsByClient(clientId: string): Promise<Session[]> {
@@ -333,6 +354,7 @@ export async function completeSession(sessionId: string, clientId: string, data:
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionCompleted(sessionId));
 }
 
 export async function markSessionMissed(sessionId: string, clientId: string, data: MarkMissedInput): Promise<void> {
@@ -353,6 +375,7 @@ export async function markSessionMissed(sessionId: string, clientId: string, dat
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionMissed(sessionId));
 }
 
 export async function revertSession(sessionId: string, clientId: string): Promise<void> {
@@ -371,6 +394,7 @@ export async function revertSession(sessionId: string, clientId: string): Promis
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionReverted(sessionId));
 }
 
 export async function deleteSession(sessionId: string, clientId: string): Promise<void> {
@@ -390,6 +414,7 @@ export async function deleteSession(sessionId: string, clientId: string): Promis
   });
 
   void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionDeleted(sessionId));
 }
 
 export async function duplicateSession(

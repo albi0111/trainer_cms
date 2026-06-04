@@ -6,12 +6,15 @@ import { useAppStore } from './store/useAppStore';
 
 export default function App() {
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
+  const refreshCalendarState = useAppStore((state) => state.refreshCalendarState);
+  const runCalendarSync = useAppStore((state) => state.runCalendarSync);
   const sessionAnimationOverlayRef = useRef<HTMLDivElement>(null);
   useKeyboardHeight();
 
   useEffect(() => {
     void refreshSyncState();
-  }, [refreshSyncState]);
+    void refreshCalendarState();
+  }, [refreshCalendarState, refreshSyncState]);
 
   useEffect(() => {
     try {
@@ -36,6 +39,7 @@ export default function App() {
       void import('./services/notification/sessionNotificationService')
         .then(({ notifyScheduledMeasurementReminders }) => notifyScheduledMeasurementReminders())
         .catch(() => undefined);
+      void runCalendarSync();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -53,7 +57,7 @@ export default function App() {
       window.removeEventListener('focus', runReminderCheck);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [runCalendarSync]);
 
   return (
     <>

@@ -3,6 +3,11 @@ const STORAGE_KEYS = {
   expiresAt: 'fitpersona.google.expires_at',
 };
 
+export const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+export const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+
+const DEFAULT_GOOGLE_AUTH_SCOPES = [GOOGLE_DRIVE_SCOPE];
+
 declare global {
   interface Window {
     google?: {
@@ -28,7 +33,7 @@ let googleScriptPromise: Promise<void> | null = null;
 function formatGoogleAuthErrorMessage(errorCode: string): string {
   switch (errorCode) {
     case 'access_denied':
-      return 'Google Drive access was denied. Approve the permission request to enable sync.';
+      return 'Google access was denied. Approve the permission request to enable sync and reminders.';
     case 'popup_closed':
     case 'popup_closed_by_user':
       return 'Google sign-in was closed before it finished.';
@@ -37,6 +42,10 @@ function formatGoogleAuthErrorMessage(errorCode: string): string {
     default:
       return 'Google sign-in failed.';
   }
+}
+
+function formatGoogleScopes(scopes: string[]): string {
+  return Array.from(new Set(scopes)).join(' ');
 }
 
 function getClientId(): string {
@@ -98,13 +107,13 @@ export async function initGoogleAuth(): Promise<void> {
   await loadGoogleScript();
 }
 
-export async function signIn(): Promise<string> {
+export async function signIn(scopes: string[] = DEFAULT_GOOGLE_AUTH_SCOPES): Promise<string> {
   await initGoogleAuth();
 
   return new Promise((resolve, reject) => {
     const tokenClient = window.google?.accounts.oauth2.initTokenClient({
       client_id: getClientId(),
-      scope: 'https://www.googleapis.com/auth/drive.file',
+      scope: formatGoogleScopes(scopes),
       callback: (response) => {
         if (response.error || !response.access_token) {
           reject(new Error(formatGoogleAuthErrorMessage(response.error || 'unknown')));

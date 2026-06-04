@@ -16,11 +16,22 @@ const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAler
 export default function SettingsScreen() {
   const isConnectedToDrive = useAppStore((state) => state.isConnectedToDrive);
   const pendingSyncCount = useAppStore((state) => state.pendingSyncCount);
+  const calendarPendingSyncCount = useAppStore((state) => state.calendarPendingSyncCount);
   const lastSyncedAt = useAppStore((state) => state.lastSyncedAt);
+  const calendarLastSyncedAt = useAppStore((state) => state.calendarLastSyncedAt);
   const lastSyncError = useAppStore((state) => state.lastSyncError);
+  const calendarLastSyncError = useAppStore((state) => state.calendarLastSyncError);
+  const isCalendarConnected = useAppStore((state) => state.isCalendarConnected);
+  const isCalendarEnabledOnThisDevice = useAppStore((state) => state.isCalendarEnabledOnThisDevice);
+  const calendarName = useAppStore((state) => state.calendarName);
+  const calendarSyncStatus = useAppStore((state) => state.calendarSyncStatus);
   const disconnectDrive = useAppStore((state) => state.disconnectDrive);
+  const connectCalendar = useAppStore((state) => state.connectCalendar);
+  const disconnectCalendar = useAppStore((state) => state.disconnectCalendar);
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
+  const refreshCalendarState = useAppStore((state) => state.refreshCalendarState);
   const runSync = useAppStore((state) => state.runSync);
+  const runCalendarSync = useAppStore((state) => state.runCalendarSync);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [isBuilderToastVisible, setIsBuilderToastVisible] = useState(false);
   const [hasLoadedDrivePrompt, setHasLoadedDrivePrompt] = useState(false);
@@ -32,7 +43,8 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     void refreshSyncState();
-  }, [refreshSyncState]);
+    void refreshCalendarState();
+  }, [refreshCalendarState, refreshSyncState]);
 
   useEffect(() => {
     return () => {
@@ -121,6 +133,69 @@ export default function SettingsScreen() {
                     <Button variant="secondary" size="sm" onClick={() => void runSync()}>
                       Sync Now
                     </Button>
+                  </div>
+                </div>
+              </Card>
+            </section>
+
+            <section className="settings-group">
+              <h2 className="settings-group-title">CALENDAR REMINDERS</h2>
+              <Card padding="lg" className="settings-card">
+                <div className="sync-status">
+                  <div className={`sync-status-icon ${isCalendarConnected ? 'sync-status-icon--active' : ''}`}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <div className="sync-status-info">
+                    <h3 className="sync-status-text">
+                      {isCalendarConnected ? `Connected to ${calendarName || 'Google Calendar'}` : 'Google Calendar not connected'}
+                    </h3>
+                    <p className="sync-email">
+                      {isCalendarConnected && isCalendarEnabledOnThisDevice
+                        ? `${calendarPendingSyncCount} calendar changes waiting`
+                        : 'Calendar reminders are off on this device'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="calendar-owner-note">
+                  Calendar reminders are managed from this device. Use only one device for Calendar reminders to avoid duplicate Google Calendar events.
+                </p>
+
+                <div className="sync-meta">
+                  <div>
+                    <p className="sync-time">Last synced: {calendarLastSyncedAt ? new Date(calendarLastSyncedAt).toLocaleString() : 'Never'}</p>
+                    {calendarLastSyncError && <p className="sync-time sync-time--error">{calendarLastSyncError}</p>}
+                  </div>
+                  <div className="sync-meta__actions">
+                    {isCalendarConnected ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={calendarSyncStatus === 'syncing'}
+                          onClick={() => void runCalendarSync()}
+                        >
+                          Sync Calendar
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => void disconnectCalendar()}>
+                          Disconnect
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        loading={calendarSyncStatus === 'syncing'}
+                        onClick={() => void connectCalendar()}
+                      >
+                        Connect Calendar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
