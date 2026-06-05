@@ -22,7 +22,7 @@
 
 .schedule-calendar-grid-v2__canvas {
   position: relative;
-  min-width: calc(var(--calendar-date-col-width) + var(--calendar-grid-width));
+  min-width: calc(var(--calendar-date-col-width) + var(--calendar-time-area-width));
   width: max-content;
 }
 
@@ -31,7 +31,7 @@
   top: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: var(--calendar-date-col-width) var(--calendar-grid-width);
+  grid-template-columns: var(--calendar-date-col-width) var(--calendar-time-area-width);
   background: #111;
   border-bottom: 1px solid #222;
 }
@@ -49,20 +49,44 @@
 }
 
 .schedule-calendar-grid-v2__hours-row {
-  display: grid;
-  grid-template-columns: repeat(19, var(--calendar-cell-width));
+  position: relative;
+  width: var(--calendar-time-area-width);
+  height: var(--calendar-header-height);
 }
 
 .schedule-calendar-grid-v2__hour-cell {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   height: var(--calendar-header-height);
-  border-right: 1px solid #222;
+  width: 52px;
   color: #aaa;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  text-align: center;
+  pointer-events: none;
+}
+
+.schedule-calendar-grid-v2__hour-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  left: 50%;
+  width: 1px;
+  background: #222;
+  transform: translateX(-0.5px);
+}
+
+.schedule-calendar-grid-v2__hour-cell span {
+  position: relative;
+  z-index: 1;
+  padding: 0 4px;
+  background: #111;
 }
 
 .schedule-calendar-grid-v2__weeks {
@@ -79,7 +103,7 @@
 
 .schedule-calendar-grid-v2__day-row {
   display: grid;
-  grid-template-columns: var(--calendar-date-col-width) var(--calendar-grid-width);
+  grid-template-columns: var(--calendar-date-col-width) var(--calendar-time-area-width);
   height: var(--calendar-row-height);
 }
 
@@ -132,8 +156,6 @@
 
 .schedule-calendar-grid-v2__time-row {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(19, var(--calendar-cell-width));
   height: var(--calendar-row-height);
   background: #0f0f0f;
 }
@@ -146,6 +168,15 @@
   pointer-events: none;
 }
 
+.schedule-calendar-grid-v2__slot-track {
+  position: absolute;
+  inset-block: 0;
+  left: var(--calendar-axis-gutter);
+  display: grid;
+  grid-template-columns: repeat(18, var(--calendar-cell-width));
+  width: var(--calendar-grid-width);
+}
+
 .schedule-calendar-grid-v2__slot {
   position: relative;
   z-index: 1;
@@ -155,6 +186,10 @@
   cursor: pointer;
   transition: background-color 120ms ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.schedule-calendar-grid-v2__slot:first-child {
+  border-left: 1px solid #1a1a1a;
 }
 
 .schedule-calendar-grid-v2__slot:hover {

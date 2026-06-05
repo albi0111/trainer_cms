@@ -43,6 +43,7 @@ export interface GoogleCalendarEventPayload {
 export interface GoogleCalendarEventResponse {
   id: string;
   summary?: string;
+  status?: string;
 }
 
 export class CalendarApiError extends Error {
@@ -182,4 +183,23 @@ export async function getEvent(calendarId: string, eventId: string): Promise<Goo
   return calendarRequest<GoogleCalendarEventResponse>(
     `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
   );
+}
+
+export async function findEventByPrivateExtendedProperty(
+  calendarId: string,
+  key: string,
+  value: string,
+): Promise<GoogleCalendarEventResponse | null> {
+  const searchParams = new URLSearchParams({
+    maxResults: '10',
+    privateExtendedProperty: `${key}=${value}`,
+    showDeleted: 'false',
+    singleEvents: 'true',
+  });
+
+  const response = await calendarRequest<{ items?: GoogleCalendarEventResponse[] }>(
+    `/calendars/${encodeURIComponent(calendarId)}/events?${searchParams.toString()}`,
+  );
+
+  return response.items?.find((event) => event.status !== 'cancelled') || null;
 }

@@ -5,6 +5,7 @@ import {
   CalendarApiError,
   createEvent,
   deleteEvent,
+  findEventByPrivateExtendedProperty,
   updateEvent,
 } from './calendarApiClient';
 import { toGoogleCalendarEvent } from './calendarEventMapper';
@@ -97,6 +98,16 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, calendarId: strin
   });
 
   if (!event.google_event_id) {
+    const existingEvent = await findEventByPrivateExtendedProperty(
+      calendarId,
+      'local_calendar_event_id',
+      event.id,
+    );
+
+    if (existingEvent?.id) {
+      return (await updateEvent(calendarId, existingEvent.id, eventBody)).id || existingEvent.id;
+    }
+
     return (await createEvent(calendarId, eventBody)).id;
   }
 
@@ -105,6 +116,15 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, calendarId: strin
   } catch (error) {
     if (!isMissingGoogleEvent(error)) {
       throw error;
+    }
+
+    const existingEvent = await findEventByPrivateExtendedProperty(
+      calendarId,
+      'local_calendar_event_id',
+      event.id,
+    );
+    if (existingEvent?.id) {
+      return (await updateEvent(calendarId, existingEvent.id, eventBody)).id || existingEvent.id;
     }
 
     return (await createEvent(calendarId, eventBody)).id;
