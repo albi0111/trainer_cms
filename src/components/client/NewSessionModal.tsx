@@ -10,6 +10,7 @@ import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import { Session } from '../../types';
 import { getSessionExercises } from '../../services/sessionService';
+import { parseTimeToMinutes, validateSessionTimeWindow } from '../../services/shared/inputValidation';
 
 interface ExerciseDraft {
   id: string;
@@ -38,6 +39,17 @@ interface NewSessionModalProps {
   editingSession?: Session | null;
   sessions: Array<Session & { client_name?: string }>;
   postponeMode?: boolean;
+}
+
+const SESSION_MIN_TIME = '05:00';
+const SESSION_END_MIN_TIME = '05:05';
+const SESSION_START_MAX_TIME = '22:55';
+const SESSION_MAX_TIME = '23:00';
+
+function formatMinutesAsTime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 }
 
 export default function NewSessionModal({ 
@@ -106,7 +118,7 @@ export default function NewSessionModal({
       setStartTime(initialTime);
       if (initialTime) {
         const h = parseInt(initialTime.split(':')[0] || '0');
-        setEndTime(`${((h + 1) % 24).toString().padStart(2, '0')}:00`);
+        setEndTime(`${Math.min(h + 1, 23).toString().padStart(2, '0')}:00`);
       } else {
         setEndTime('');
       }
@@ -147,6 +159,14 @@ export default function NewSessionModal({
     : editingSession
       ? 'Update the time, focus, and exercise details.'
       : 'Schedule a session with the right time and workout focus.';
+  const startMinutes = parseTimeToMinutes(startTime);
+  const endMinutes = parseTimeToMinutes(endTime);
+  const startPickerMaxTime = endMinutes === null
+    ? SESSION_START_MAX_TIME
+    : formatMinutesAsTime(Math.max(parseTimeToMinutes(SESSION_MIN_TIME)!, Math.min(endMinutes - 5, parseTimeToMinutes(SESSION_START_MAX_TIME)!)));
+  const endPickerMinTime = startMinutes === null
+    ? SESSION_END_MIN_TIME
+    : formatMinutesAsTime(Math.min(parseTimeToMinutes(SESSION_MAX_TIME)!, Math.max(startMinutes + 5, parseTimeToMinutes(SESSION_END_MIN_TIME)!)));
 
   const addExercise = () => {
     setExercises([...exercises, { id: Math.random().toString(), name: '', reps: '' }]);
@@ -251,9 +271,19 @@ export default function NewSessionModal({
 
   const handleSave = async () => {
     haptic.medium();
-    // Overlap validation
-    const startTimeNum = parseInt(startTime.replace(':', ''));
-    const endTimeNum = parseInt(endTime.replace(':', ''));
+    let startTimeNum = 0;
+    let endTimeNum = 0;
+
+    try {
+      validateSessionTimeWindow(startTime, endTime);
+      startTimeNum = parseInt(startTime.replace(':', ''), 10);
+      endTimeNum = parseInt(endTime.replace(':', ''), 10);
+    } catch (validationError) {
+      playError();
+      setTimeInvalid(true);
+      setError(validationError instanceof Error ? validationError.message : 'Invalid session time.');
+      return;
+    }
 
     const overlappingSession = sessions.find((session) => {
       if (session.date !== date) return false;
@@ -334,12 +364,24 @@ export default function NewSessionModal({
             <div className="session-modal__row">
               <div className="session-modal__field">
                 <div className={timeInvalid ? 'input-shake' : ''}>
-                  <AppTimePicker label="Start Time" value={startTime} onChange={setStartTime} />
+                  <AppTimePicker
+                    label="Start Time"
+                    value={startTime}
+                    onChange={setStartTime}
+                    minTime={SESSION_MIN_TIME}
+                    maxTime={startPickerMaxTime}
+                  />
                 </div>
               </div>
               <div className="session-modal__field">
                 <div className={timeInvalid ? 'input-shake' : ''}>
-                  <AppTimePicker label="End Time" value={endTime} onChange={setEndTime} />
+                  <AppTimePicker
+                    label="End Time"
+                    value={endTime}
+                    onChange={setEndTime}
+                    minTime={endPickerMinTime}
+                    maxTime={SESSION_MAX_TIME}
+                  />
                 </div>
               </div>
             </div>

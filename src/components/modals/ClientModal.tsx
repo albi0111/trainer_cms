@@ -10,6 +10,7 @@ import { ASSESSMENT_EXERCISES, FLEXIBILITY_TESTS } from '../../constants/assessm
 import { useHaptic } from '../../hooks/useHaptic';
 import { useSoundFeedback } from '../../hooks/useSoundFeedback';
 import { createClient, getClientDetail, updateClient } from '../../services/client/clientService';
+import { isValidOptionalEmail, isValidOptionalPhone } from '../../services/shared/inputValidation';
 
 export type ClientModalStep = 'personal' | 'interview' | 'assessment';
 
@@ -27,6 +28,8 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const haptic = useHaptic();
   const { playConfirm, playError } = useSoundFeedback();
 
@@ -59,7 +62,7 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
     setWeightKg(''); setHeightCm(''); setBp(''); setRhr('');
     setExerciseNotes({}); setFlexChecks({}); setFlexNotes({}); setOpenFlexNotes({});
     setCardioTime(''); setCardioDistance(''); setCardioMhr(''); setObjectives('');
-    setNameError('');
+    setNameError(''); setPhoneError(''); setEmailError('');
     setErrorMessage('');
     setSaveState('idle');
     setStep(initialStep);
@@ -141,8 +144,32 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
     return true;
   }, [name, playError]);
 
+  const validateContactFields = useCallback(() => {
+    let valid = true;
+
+    if (!isValidOptionalPhone(phone)) {
+      setPhoneError('Enter a valid phone number.');
+      valid = false;
+    } else {
+      setPhoneError('');
+    }
+
+    if (!isValidOptionalEmail(email)) {
+      setEmailError('Enter a valid email.');
+      valid = false;
+    } else {
+      setEmailError('');
+    }
+
+    if (!valid) {
+      playError();
+    }
+
+    return valid;
+  }, [email, phone, playError]);
+
   const handleSave = async () => {
-    if (!validateName()) {
+    if (!validateName() || !validateContactFields()) {
       return;
     }
 
@@ -236,7 +263,7 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
 
   const handleNext = () => {
     if (step === 'personal') {
-      if (!validateName()) {
+      if (!validateName() || !validateContactFields()) {
         return;
       }
       setStep('interview');
@@ -297,7 +324,7 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
                 className="cm-tab"
                 onClick={() => {
                   const targetIdx = ['personal', 'interview', 'assessment'].indexOf(tab.id);
-                  if (targetIdx > currentIdx && !validateName()) {
+                  if (targetIdx > currentIdx && (!validateName() || !validateContactFields())) {
                     return;
                   }
                   setStep(tab.id);
@@ -355,11 +382,43 @@ export default function ClientModal({ open, onClose, clientId, initialStep = 'pe
               </div>
               <div className="cm-form-group">
                 <label className="cm-label">PHONE</label>
-                <input className="cm-input" type="text" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 ..." />
+                <input
+                  className={`cm-input ${phoneError ? 'cm-input--error input-shake' : ''}`}
+                  type="text"
+                  value={phone}
+                  onChange={e => {
+                    setPhone(e.target.value);
+                    if (phoneError) {
+                      setPhoneError('');
+                    }
+                  }}
+                  placeholder="+91 ..."
+                />
+                {phoneError && (
+                  <div className="cm-field-warning" role="alert">
+                    {phoneError}
+                  </div>
+                )}
               </div>
               <div className="cm-form-group">
                 <label className="cm-label">EMAIL</label>
-                <input className="cm-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="john@example.com" />
+                <input
+                  className={`cm-input ${emailError ? 'cm-input--error input-shake' : ''}`}
+                  type="email"
+                  value={email}
+                  onChange={e => {
+                    setEmail(e.target.value);
+                    if (emailError) {
+                      setEmailError('');
+                    }
+                  }}
+                  placeholder="john@example.com"
+                />
+                {emailError && (
+                  <div className="cm-field-warning" role="alert">
+                    {emailError}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -12,6 +12,7 @@ import { generateId } from '../../utils/id';
 import { normalizeAssessment, normalizeGender } from '../shared/assessmentMapper';
 import { buildClientDetail } from '../shared/clientSnapshotMapper';
 import { nowIsoUtc } from '../shared/date';
+import { normalizeOptionalContactValue, validateOptionalClientContact } from '../shared/inputValidation';
 import { enqueueClientDelete, enqueueClientUpdate } from '../sync/syncQueueService';
 import { scheduleBackgroundSync } from '../sync/syncService';
 
@@ -56,8 +57,8 @@ function buildClientRecord(id: string, input: CreateClientInput, now: string): C
   return {
     id,
     name: input.name.trim(),
-    phone: input.phone?.trim() || '',
-    email: input.email?.trim() || '',
+    phone: normalizeOptionalContactValue(input.phone),
+    email: normalizeOptionalContactValue(input.email),
     goal: input.goal?.trim() || input.assessment?.objectives?.trim() || '',
     overview_notes: '',
     version: 1,
@@ -111,6 +112,10 @@ async function applyClientUpdateRecords(
   now: string,
 ): Promise<void> {
   if (input.core) {
+    validateOptionalClientContact({
+      phone: input.core.phone,
+      email: input.core.email,
+    });
     await db.clients.update(clientId, (client) => {
       if (!client) {
         return;
@@ -119,10 +124,10 @@ async function applyClientUpdateRecords(
         client.name = input.core.name.trim();
       }
       if (typeof input.core?.phone === 'string') {
-        client.phone = input.core.phone.trim();
+        client.phone = normalizeOptionalContactValue(input.core.phone);
       }
       if (typeof input.core?.email === 'string') {
-        client.email = input.core.email.trim();
+        client.email = normalizeOptionalContactValue(input.core.email);
       }
       if (typeof input.core?.goal === 'string') {
         client.goal = input.core.goal.trim();
@@ -187,6 +192,7 @@ async function applyClientUpdateRecords(
 
 export async function createClient(input: CreateClientInput): Promise<string> {
   return withDatabaseRecovery(async () => {
+    validateOptionalClientContact(input);
     const id = generateId();
     const now = nowIsoUtc();
     const client = buildClientRecord(id, input, now);

@@ -35,7 +35,10 @@ type ContextMenuState =
   | { type: 'session'; id: string; x: number; y: number }
   | { type: 'slot'; date: string; hour: number; x: number; y: number };
 
-const HOURS = Array.from({ length: 19 }, (_, index) => index + 5); // 5 AM to 11 PM
+const START_HOUR = 5;
+const END_HOUR = 23;
+const BOUNDARY_HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => index + START_HOUR);
+const SLOT_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, index) => index + START_HOUR);
 const TARGET_WEEK_INDEX = 26;
 const TOTAL_WEEKS = 53;
 
@@ -126,7 +129,9 @@ export default function ScheduleCalendarGrid({
   const HEADER_HEIGHT = isPhone ? 42 : isMobile ? 50 : isTablet ? 56 : 58;
   const ROW_HEIGHT = isPhone ? 52 : isMobile ? 58 : isTablet ? 62 : 76;
   const WEEK_HEIGHT = ROW_HEIGHT * 7;
-  const GRID_WIDTH = HOURS.length * CELL_WIDTH;
+  const AXIS_GUTTER = isPhone ? 28 : isMobile ? 32 : 36;
+  const GRID_WIDTH = SLOT_HOURS.length * CELL_WIDTH;
+  const TIME_AREA_WIDTH = GRID_WIDTH + (AXIS_GUTTER * 2);
   const todayStr = useMemo(() => toLocalIso(new Date()), []);
   const targetDate = scrollToDate || todayStr;
 
@@ -136,10 +141,12 @@ export default function ScheduleCalendarGrid({
     '--calendar-cell-width': `${CELL_WIDTH}px`,
     '--calendar-date-col-width': `${DATE_COL_WIDTH}px`,
     '--calendar-grid-width': `${GRID_WIDTH}px`,
+    '--calendar-time-area-width': `${TIME_AREA_WIDTH}px`,
+    '--calendar-axis-gutter': `${AXIS_GUTTER}px`,
     '--calendar-header-height': `${HEADER_HEIGHT}px`,
     '--calendar-row-height': `${ROW_HEIGHT}px`,
     '--calendar-week-height': `${WEEK_HEIGHT}px`,
-  }) as CSSProperties, [CELL_WIDTH, DATE_COL_WIDTH, GRID_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, WEEK_HEIGHT]);
+  }) as CSSProperties, [AXIS_GUTTER, CELL_WIDTH, DATE_COL_WIDTH, GRID_WIDTH, HEADER_HEIGHT, ROW_HEIGHT, TIME_AREA_WIDTH, WEEK_HEIGHT]);
 
   const sessionsByDate = useMemo(() => {
     const grouped: Record<string, ScheduledSession[]> = {};
@@ -192,9 +199,8 @@ export default function ScheduleCalendarGrid({
       return;
     }
 
-    const [startHour = HOURS[0] || 0, startMinute = 0] = targetSession.start_time.split(':').map(Number);
-    const firstVisibleHour = HOURS[0] || 0;
-    const sessionOffset = (((startHour - firstVisibleHour) + (startMinute / 60)) * CELL_WIDTH) - (CELL_WIDTH * 1.5);
+    const [startHour = START_HOUR, startMinute = 0] = targetSession.start_time.split(':').map(Number);
+    const sessionOffset = AXIS_GUTTER + (((startHour - START_HOUR) + (startMinute / 60)) * CELL_WIDTH) - (CELL_WIDTH * 1.5);
 
     window.requestAnimationFrame(() => {
       scroller.scrollTo({
@@ -202,7 +208,7 @@ export default function ScheduleCalendarGrid({
         behavior: 'smooth',
       });
     });
-  }, [highlightSessionId, sessions, CELL_WIDTH]);
+  }, [AXIS_GUTTER, highlightSessionId, sessions, CELL_WIDTH]);
 
   const openContextMenu = (
     type: ContextMenuState['type'],
@@ -253,12 +259,16 @@ export default function ScheduleCalendarGrid({
           </div>
 
           <div className="schedule-calendar-grid-v2__hours-row">
-            {HOURS.map((hour) => {
+            {BOUNDARY_HOURS.map((hour, index) => {
               const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
               const ampm = hour >= 12 ? 'PM' : 'AM';
 
               return (
-                <div key={`hour-${hour}`} className="schedule-calendar-grid-v2__hour-cell">
+                <div
+                  key={`hour-${hour}`}
+                  className="schedule-calendar-grid-v2__hour-cell"
+                  style={{ left: `calc(var(--calendar-axis-gutter) + (${index} * var(--calendar-cell-width)))` }}
+                >
                   <span>{displayHour} {ampm}</span>
                 </div>
               );
@@ -289,48 +299,50 @@ export default function ScheduleCalendarGrid({
                     </div>
 
                     <div className={`schedule-calendar-grid-v2__time-row ${isToday ? 'is-today' : ''}`}>
-                      {HOURS.map((hour) => {
-                        const slotLongPressHandlers = onPasteSession
-                          ? getLongPressHandlers(() => openContextMenu('slot', { date: dateStr, hour }, longPressPointRef.current))
-                          : null;
+                      <div className="schedule-calendar-grid-v2__slot-track">
+                        {SLOT_HOURS.map((hour) => {
+                          const slotLongPressHandlers = onPasteSession
+                            ? getLongPressHandlers(() => openContextMenu('slot', { date: dateStr, hour }, longPressPointRef.current))
+                            : null;
 
-                        return (
-                          <div
-                            key={`${dateStr}-${hour}`}
-                            className={`schedule-calendar-grid-v2__slot ${isToday ? 'is-today' : ''}`}
-                            onClick={() => {
-                              if (consumeLongPress()) {
-                                return;
-                              }
+                          return (
+                            <div
+                              key={`${dateStr}-${hour}`}
+                              className={`schedule-calendar-grid-v2__slot ${isToday ? 'is-today' : ''}`}
+                              onClick={() => {
+                                if (consumeLongPress()) {
+                                  return;
+                                }
 
-                              if (!contextMenu) {
-                                onSlotPress(dateStr, hour);
-                              }
-                            }}
-                            onTouchStart={(event) => {
-                              const touch = event.touches[0];
-                              if (!touch || !slotLongPressHandlers) {
-                                return;
-                              }
+                                if (!contextMenu) {
+                                  onSlotPress(dateStr, hour);
+                                }
+                              }}
+                              onTouchStart={(event) => {
+                                const touch = event.touches[0];
+                                if (!touch || !slotLongPressHandlers) {
+                                  return;
+                                }
 
-                              longPressPointRef.current = { x: touch.clientX, y: touch.clientY };
-                              slotLongPressHandlers.onTouchStart(event);
-                            }}
-                            onTouchEnd={slotLongPressHandlers?.onTouchEnd}
-                            onTouchCancel={slotLongPressHandlers?.onTouchCancel}
-                            onMouseDown={(event) => {
-                              if (!slotLongPressHandlers) {
-                                return;
-                              }
+                                longPressPointRef.current = { x: touch.clientX, y: touch.clientY };
+                                slotLongPressHandlers.onTouchStart(event);
+                              }}
+                              onTouchEnd={slotLongPressHandlers?.onTouchEnd}
+                              onTouchCancel={slotLongPressHandlers?.onTouchCancel}
+                              onMouseDown={(event) => {
+                                if (!slotLongPressHandlers) {
+                                  return;
+                                }
 
-                              longPressPointRef.current = { x: event.clientX, y: event.clientY };
-                              slotLongPressHandlers.onMouseDown(event);
-                            }}
-                            onMouseUp={slotLongPressHandlers?.onMouseUp}
-                            onMouseLeave={cancelLongPress}
-                          />
-                        );
-                      })}
+                                longPressPointRef.current = { x: event.clientX, y: event.clientY };
+                                slotLongPressHandlers.onMouseDown(event);
+                              }}
+                              onMouseUp={slotLongPressHandlers?.onMouseUp}
+                              onMouseLeave={cancelLongPress}
+                            />
+                          );
+                        })}
+                      </div>
 
                       {daySessions.map((session) => {
                         if (!session.start_time) {
@@ -338,16 +350,14 @@ export default function ScheduleCalendarGrid({
                         }
 
                         const [startHour = 0, startMinute = 0] = session.start_time.split(':').map(Number);
-                        const firstVisibleHour = HOURS[0] || 0;
-                        const lastVisibleHour = HOURS[HOURS.length - 1] || 23;
-                        const startOffsetHours = (startHour - firstVisibleHour) + (startMinute / 60);
+                        const startOffsetHours = (startHour - START_HOUR) + (startMinute / 60);
 
-                        if (startOffsetHours < 0 || startHour > lastVisibleHour) {
+                        if (startOffsetHours < 0 || startHour >= END_HOUR) {
                           return null;
                         }
 
-                        const leftOffset = startOffsetHours * CELL_WIDTH;
-                        const maxWidth = GRID_WIDTH - leftOffset - 4;
+                        const leftOffset = AXIS_GUTTER + (startOffsetHours * CELL_WIDTH);
+                        const maxWidth = (AXIS_GUTTER + GRID_WIDTH) - leftOffset - 4;
                         if (maxWidth <= 0) {
                           return null;
                         }

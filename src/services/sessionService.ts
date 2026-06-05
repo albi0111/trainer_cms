@@ -15,6 +15,7 @@ import {
   getSessionDurationMinutes,
 } from './shared/clientSnapshotMapper';
 import { nowIsoUtc, toDayName, todayLocalIso } from './shared/date';
+import { validateSessionTimeWindow } from './shared/inputValidation';
 import { validatePlanForSession } from './plan/planService';
 import {
   onSessionCompleted as planCalendarSessionCompleted,
@@ -161,6 +162,7 @@ export async function replaceSessionExercises(sessionId: string, exercises: Sess
 export async function createSession(input: CreateSessionInput): Promise<string> {
   const now = nowIsoUtc();
   const id = generateId();
+  validateSessionTimeWindow(input.start_time, input.end_time);
 
   await db.transaction('rw', [db.plans, db.sessions, db.exercises, db.clients, db.syncQueue], async () => {
     const resolvedPlanId = await resolveSessionPlanId(input.client_id, input.date, input.plan_id ?? null);
@@ -207,6 +209,7 @@ export async function updateSession(
   exercises?: SessionExerciseDraft[],
 ): Promise<void> {
   const now = nowIsoUtc();
+  validateSessionTimeWindow(input.start_time, input.end_time);
   await db.transaction('rw', [db.plans, db.sessions, db.exercises, db.clients, db.syncQueue], async () => {
     const existingSession = await db.sessions.get(sessionId);
     if (!existingSession) {
