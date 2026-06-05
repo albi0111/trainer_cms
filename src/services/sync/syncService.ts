@@ -25,6 +25,7 @@ import {
   markQueueEntryProcessing,
   removeQueueEntry,
 } from './syncQueueService';
+import { getAppSettings } from '../calendar/calendarSettingsService';
 
 let activeSync: Promise<boolean> | null = null;
 let scheduledSyncId: number | null = null;
@@ -442,6 +443,11 @@ export async function runSyncCycle(): Promise<boolean> {
 
   activeSync = (async () => {
     try {
+      const settings = await getAppSettings();
+      if (!settings.google_drive_sync_enabled) {
+        return false;
+      }
+
       const uploaded = await syncToCloud();
       const downloaded = await syncFromCloud();
       return uploaded || downloaded;
@@ -456,13 +462,16 @@ export async function runSyncCycle(): Promise<boolean> {
 export async function getSyncSnapshot(): Promise<{
   pendingCount: number;
   isConnected: boolean;
+  enabled: boolean;
   lastSyncAt?: string;
   lastError?: string;
 }> {
   const syncMeta = await readSyncMeta();
+  const settings = await getAppSettings();
   return {
     pendingCount: await db.syncQueue.count(),
     isConnected: Boolean(syncMeta.root_folder_id),
+    enabled: settings.google_drive_sync_enabled,
     lastSyncAt: syncMeta.last_sync_at,
     lastError: syncMeta.last_sync_error,
   };

@@ -300,6 +300,7 @@ export interface ClientSyncState {
 
 export interface AppSettings {
   id: 'default';
+  google_drive_sync_enabled: boolean;
   google_calendar_connected: boolean;
   google_calendar_id: string | null;
   google_calendar_name: string | null;

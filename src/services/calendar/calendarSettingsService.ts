@@ -7,6 +7,7 @@ function normalizeAppSettings(settings?: Partial<AppSettings>): AppSettings {
     ...DEFAULT_APP_SETTINGS,
     ...settings,
     id: APP_SETTINGS_ID,
+    google_drive_sync_enabled: settings?.google_drive_sync_enabled !== false,
     google_calendar_connected: Boolean(settings?.google_calendar_connected),
     google_calendar_id: settings?.google_calendar_id || null,
     google_calendar_name: settings?.google_calendar_name || null,

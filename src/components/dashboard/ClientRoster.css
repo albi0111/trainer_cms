@@ -46,17 +46,21 @@
   border-radius: 12px;
   height: 48px;
   padding: 0 18px;
-  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb), 0.16);
+  box-shadow: var(--shadow-glow-pressed);
 }
 
 .roster-add-btn:hover:not(:disabled) {
-  background-color: var(--color-primary);
-  box-shadow: 0 6px 18px rgba(var(--color-primary-rgb), 0.2);
+  background-color: #FFE147;
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.2) inset,
+    var(--shadow-glow);
 }
 
 .roster-add-btn:active:not(:disabled) {
   background-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.18);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18) inset,
+    var(--shadow-glow-pressed);
 }
 
 .roster-add-btn__glyphs {

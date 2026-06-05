@@ -32,6 +32,7 @@ export default function DashboardScreen() {
   const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
   const runSync = useAppStore((state) => state.runSync);
   const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
+  const googleAuthStatus = useAppStore((state) => state.googleAuthStatus);
   const syncStatus = useAppStore((state) => state.syncStatus);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
@@ -168,7 +169,12 @@ export default function DashboardScreen() {
   });
 
   const handleSyncIndicatorPress = async () => {
-    if (!isGoogleConnected) {
+    if (
+      !isGoogleConnected
+      || googleAuthStatus === 'expired'
+      || googleAuthStatus === 'revoked'
+      || googleAuthStatus === 'failed'
+    ) {
       setIsDrivePromptOpen(true);
       return;
     }
@@ -273,7 +279,6 @@ export default function DashboardScreen() {
           <DriveConnectAlert
             visible={isDrivePromptOpen}
             onClose={() => setIsDrivePromptOpen(false)}
-            onConnected={reloadDashboard}
           />
         </Suspense>
       ) : null}

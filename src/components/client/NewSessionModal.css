@@ -224,7 +224,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: #ffd700;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -269,9 +269,9 @@
 }
 
 .session-modal__exercise-row.is-dragging {
-  background: rgba(255, 215, 0, 0.08);
+  background: rgba(var(--color-primary-rgb), 0.08);
   box-shadow:
-    0 0 0 1px rgba(255, 215, 0, 0.18),
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18),
     0 12px 28px rgba(0, 0, 0, 0.26);
   transform: scale(1.01);
   z-index: 2;
@@ -306,9 +306,9 @@
 
 .session-modal__drag-handle:hover,
 .session-modal__exercise-row.is-dragging .session-modal__drag-handle {
-  color: #ffd700;
-  border-color: rgba(255, 215, 0, 0.24);
-  background: rgba(255, 215, 0, 0.08);
+  color: var(--color-primary);
+  border-color: rgba(var(--color-primary-rgb), 0.24);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .session-modal__drag-handle span {
@@ -372,8 +372,8 @@
 }
 
 .session-modal__checkbox.is-active .session-modal__checkbox-input {
-  background: #ffd700;
-  border-color: #ffd700;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .session-modal__checkbox-label {
@@ -398,7 +398,7 @@
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform 0.18s ease, filter 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .session-modal__delete {
@@ -411,9 +411,9 @@
 .session-modal__save {
   flex: 1;
   border: none;
-  background: #ffd700;
+  background: var(--color-primary);
   color: #111;
-  box-shadow: 0 12px 30px rgba(var(--color-primary-rgb), 0.18);
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.12) inset;
 }
 
 .session-modal__delete:hover,
@@ -422,7 +422,17 @@
 }
 
 .session-modal__save:hover {
-  filter: brightness(1.04);
+  background: #FFE147;
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.2) inset,
+    var(--shadow-glow);
+}
+
+.session-modal__save:active {
+  background: var(--color-primary);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18) inset,
+    var(--shadow-glow-pressed);
 }
 
 @media (max-width: 640px) {

@@ -26,10 +26,20 @@
 .btn--primary {
   background-color: var(--color-primary);
   color: var(--color-text-dark);
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.12) inset;
 }
 .btn--primary:hover:not(:disabled) {
-  background-color: #ffc800;
-  box-shadow: var(--shadow-glow);
+  background-color: #FFE147;
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.2) inset,
+    var(--shadow-glow);
+}
+
+.btn--primary:active:not(:disabled) {
+  background-color: var(--color-primary);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18) inset,
+    var(--shadow-glow-pressed);
 }
 
 .btn--secondary {
@@ -69,8 +79,9 @@
 }
 .btn--outline:hover:not(:disabled) {
   background-color: var(--color-surface-light);
-  border-color: var(--color-primary-dim);
-  color: var(--color-text);
+  border-color: rgba(var(--color-primary-rgb), 0.32);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.08) inset;
 }
 
 /* ── Sizes ───────────────────────────────────────────────────────────────── */

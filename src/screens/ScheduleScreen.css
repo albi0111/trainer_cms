@@ -45,7 +45,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.3);
+  box-shadow: var(--shadow-glow-pressed);
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -55,7 +55,7 @@
 
 .schedule-fab:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 24px rgba(var(--color-primary-rgb), 0.4);
+  box-shadow: var(--shadow-glow);
 }
 
 .nav-date {

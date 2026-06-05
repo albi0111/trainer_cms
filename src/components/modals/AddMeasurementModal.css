@@ -122,7 +122,7 @@
   background-color: var(--color-primary);
   color: #000;
   border-color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.2);
+  box-shadow: var(--shadow-glow-pressed);
 }
 
 .add-measurement-scroll {

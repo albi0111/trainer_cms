@@ -565,7 +565,7 @@ export default function ClientScreen() {
             <WorkoutPlanSection
               clientId={clientId}
               plans={workoutPlans}
-              sessions={upcomingAndPendingSessions}
+              sessions={allSessions}
               exercises={exercises}
               onOpenCalendar={openCalendar}
               onEditSession={(session) => {

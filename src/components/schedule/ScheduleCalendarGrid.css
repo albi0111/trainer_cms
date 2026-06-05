@@ -151,7 +151,7 @@
 .schedule-calendar-grid-v2__date-cell.is-today .schedule-calendar-grid-v2__day-name,
 .schedule-calendar-grid-v2__date-cell.is-today .schedule-calendar-grid-v2__day-number,
 .schedule-calendar-grid-v2__date-cell.is-today .schedule-calendar-grid-v2__month-label {
-  color: #ffd700;
+  color: var(--color-primary);
 }
 
 .schedule-calendar-grid-v2__time-row {
@@ -226,7 +226,7 @@
 }
 
 .schedule-calendar-grid-v2__session.is-owned {
-  background: #ffd700;
+  background: var(--color-primary);
   color: #111;
 }
 
