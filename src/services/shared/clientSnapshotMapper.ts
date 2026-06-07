@@ -203,7 +203,7 @@ function buildDefaultAssessment(client: Client, assessment: ClientAssessment | n
   })!;
 }
 
-export async function getClientSnapshotTables(clientId: string): Promise<{
+export async function getClientSnapshotTables(clientId: string, options: { includeProgressPhotos?: boolean } = {}): Promise<{
   client: Client | undefined;
   profile: ClientProfile | undefined;
   lifestyle: ClientLifestyle | undefined;
@@ -217,6 +217,7 @@ export async function getClientSnapshotTables(clientId: string): Promise<{
   exercises: Exercise[];
   progressPhotos: ProgressPhoto[];
 }> {
+  const includeProgressPhotos = options.includeProgressPhotos ?? true;
   const [
     client,
     rawProfile,
@@ -246,7 +247,9 @@ export async function getClientSnapshotTables(clientId: string): Promise<{
     db.sessions.where('client_id').equals(clientId).primaryKeys().then((sessionIds) =>
       sessionIds.length > 0 ? db.exercises.where('session_id').anyOf(sessionIds as string[]).toArray() : Promise.resolve([]),
     ),
-    db.progressPhotos.where('client_id').equals(clientId).toArray(),
+    includeProgressPhotos
+      ? db.progressPhotos.where('client_id').equals(clientId).toArray()
+      : Promise.resolve([] as ProgressPhoto[]),
   ]);
 
   const profile = client ? buildDefaultProfile(client, rawProfile) : undefined;
@@ -270,7 +273,7 @@ export async function getClientSnapshotTables(clientId: string): Promise<{
 }
 
 export async function buildClientSnapshot(clientId: string): Promise<DriveClientSnapshot | null> {
-  const tables = await getClientSnapshotTables(clientId);
+  const tables = await getClientSnapshotTables(clientId, { includeProgressPhotos: false });
   if (!tables.client || !tables.profile || !tables.lifestyle || !tables.assessment) {
     return null;
   }
@@ -290,7 +293,9 @@ export async function buildClientSnapshot(clientId: string): Promise<DriveClient
     sessions: tables.sessions,
     sessionResults: tables.sessionResults,
     exercises: tables.exercises,
-    progressPhotos: tables.progressPhotos,
+    // Progress images are intentionally excluded from routine Drive snapshots.
+    // They are compressed and managed lazily so normal client sync stays fast.
+    progressPhotos: [],
   };
 }
 
@@ -374,7 +379,6 @@ export async function applyClientSnapshot(snapshot: DriveClientSnapshot): Promis
       db.clientAssessments,
       db.measurements,
       db.measurementConfigs,
-      db.progressPhotos,
       db.plans,
       db.dietPlans,
       db.sessions,
@@ -389,7 +393,6 @@ export async function applyClientSnapshot(snapshot: DriveClientSnapshot): Promis
       await db.clientAssessments.put(normalizeAssessment(snapshot.assessment) || snapshot.assessment);
       await db.measurements.where('client_id').equals(snapshot.client.id).delete();
       await db.measurementConfigs.where('client_id').equals(snapshot.client.id).delete();
-      await db.progressPhotos.where('client_id').equals(snapshot.client.id).delete();
       await db.plans.where('client_id').equals(snapshot.client.id).delete();
       await db.dietPlans.where('client_id').equals(snapshot.client.id).delete();
       const sessionIds = await db.sessions.where('client_id').equals(snapshot.client.id).primaryKeys() as string[];
@@ -404,9 +407,6 @@ export async function applyClientSnapshot(snapshot: DriveClientSnapshot): Promis
       }
       if (snapshot.measurementConfigs.length > 0) {
         await db.measurementConfigs.bulkPut(snapshot.measurementConfigs);
-      }
-      if (snapshot.progressPhotos.length > 0) {
-        await db.progressPhotos.bulkPut(snapshot.progressPhotos);
       }
       if (snapshot.plans.length > 0) {
         await db.plans.bulkPut(snapshot.plans);
