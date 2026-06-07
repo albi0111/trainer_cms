@@ -165,17 +165,28 @@
     color var(--transition-fast),
     border-color var(--transition-fast),
     background-color var(--transition-fast),
-    filter var(--transition-fast),
+    box-shadow var(--transition-fast),
     opacity var(--transition-fast);
 }
 
 .uc-btn--yellow {
   background-color: var(--color-primary);
   color: #000;
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.12) inset;
 }
 
 .uc-btn--yellow:hover {
-  filter: brightness(1.1);
+  background-color: #FFE147;
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.2) inset,
+    var(--shadow-glow);
+}
+
+.uc-btn--yellow:active {
+  background-color: var(--color-primary);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18) inset,
+    var(--shadow-glow-pressed);
 }
 
 .schedule-calendar-modal__overlay {

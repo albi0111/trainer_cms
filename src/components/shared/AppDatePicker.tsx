@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface AppDatePickerProps {
@@ -17,7 +18,7 @@ const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0)
 export default function AppDatePicker({ value, onChange, label }: AppDatePickerProps) {
   const [visible, setVisible] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -52,37 +53,6 @@ export default function AppDatePicker({ value, onChange, label }: AppDatePickerP
       window.clearTimeout(timeout);
     };
   }, [visible]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
 
   const daysInMonth = getDaysInMonth(parseInt(selectedYear), parseInt(selectedMonth));
   const DAYS = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString().padStart(2, '0'));

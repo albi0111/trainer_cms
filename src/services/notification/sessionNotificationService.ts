@@ -1,6 +1,7 @@
 import type { Session } from '../../types';
 import { db } from '../../db/db';
 import { getSessionEndMillis } from '../sessionService';
+import { getAppSettings, isCalendarReminderOwner } from '../calendar/calendarSettingsService';
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const NOTIFICATION_STORAGE_PREFIX = 'fit-persona:pending-log-notice';
@@ -152,6 +153,11 @@ export async function notifyPendingLogSessions({
   clientName,
   sessions,
 }: PendingLogNotificationInput): Promise<void> {
+  const settings = await getAppSettings();
+  if (isCalendarReminderOwner(settings)) {
+    return;
+  }
+
   if (sessions.length === 0 || !await ensureNotificationPermission()) {
     return;
   }
@@ -186,6 +192,11 @@ export async function notifyPendingLogSessions({
 }
 
 export async function notifyScheduledMeasurementReminders(): Promise<void> {
+  const settings = await getAppSettings();
+  if (isCalendarReminderOwner(settings)) {
+    return;
+  }
+
   if (!await ensureNotificationPermission()) {
     return;
   }

@@ -11,7 +11,7 @@ import {
   consumePendingSessionActivityAnimation,
   SESSION_ACTIVITY_ANIMATION_EVENT,
 } from '../../hooks/useSessionCompleteAnimation';
-import { usePrefersReducedMotion } from '../../hooks/useSwipeGesture';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import type { SessionActivityEntry } from '../../services/sessionService';
 
 export type ActivityEntry = SessionActivityEntry;

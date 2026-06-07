@@ -16,7 +16,7 @@ import SkeletonClientProfile from '../components/skeletons/SkeletonClientProfile
 import SkeletonInfoCard from '../components/skeletons/SkeletonInfoCard';
 import { EMPTY_ASSESSMENT, EMPTY_LIFESTYLE, EMPTY_PROFILE } from '../constants/assessment';
 import useStaggeredEntrance from '../hooks/useStaggeredEntrance';
-import { deleteClient, getClientDetail, updateClient, updateClientOverview } from '../services/client/clientService';
+import { archiveClient, deleteClient, getClientDetail, updateClient, updateClientOverview } from '../services/client/clientService';
 import { saveDietPlan, updatePlan } from '../services/plan/planService';
 import { checkSessionOverlap, getPlannerScheduleRange } from '../services/schedule/scheduleService';
 import {
@@ -113,6 +113,7 @@ export default function ClientScreen() {
   const hydrateSchedule = useAppStore((state) => state.hydrateSchedule);
   const invalidateClientDetail = useAppStore((state) => state.invalidateClientDetail);
   const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
+  const refreshDashboard = useAppStore((state) => state.refreshDashboard);
   const setSelectedClientId = useAppStore((state) => state.setSelectedClientId);
   const haptic = useHaptic();
   const { playDelete, playSuccess } = useSoundFeedback();
@@ -144,11 +145,13 @@ export default function ClientScreen() {
   const [newSessionSlot, setNewSessionSlot] = useState<{ date: string; time: string } | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [postponeMode, setPostponeMode] = useState(false);
+  const [archiveClientVisible, setArchiveClientVisible] = useState(false);
   const [deleteClientVisible, setDeleteClientVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
   const [hasLoadedDeleteAlert, setHasLoadedDeleteAlert] = useState(false);
+  const [hasLoadedArchiveAlert, setHasLoadedArchiveAlert] = useState(false);
   const [hasLoadedSessionEditor, setHasLoadedSessionEditor] = useState(false);
   const [hasLoadedCalendarModal, setHasLoadedCalendarModal] = useState(false);
   const [hasLoadedUpdateModal, setHasLoadedUpdateModal] = useState(false);
@@ -319,6 +322,12 @@ export default function ClientScreen() {
       window.clearTimeout(timeoutId);
     };
   }, [previousTab]);
+
+  useEffect(() => {
+    if (archiveClientVisible) {
+      setHasLoadedArchiveAlert(true);
+    }
+  }, [archiveClientVisible]);
 
   useEffect(() => {
     if (deleteClientVisible) {
@@ -565,7 +574,7 @@ export default function ClientScreen() {
             <WorkoutPlanSection
               clientId={clientId}
               plans={workoutPlans}
-              sessions={upcomingAndPendingSessions}
+              sessions={allSessions}
               exercises={exercises}
               onOpenCalendar={openCalendar}
               onEditSession={(session) => {
@@ -623,6 +632,7 @@ export default function ClientScreen() {
             setUpdateModalStep(section);
             setIsUpdateModalVisible(true);
           }}
+          onArchiveClient={() => setArchiveClientVisible(true)}
           onDeleteClient={() => setDeleteClientVisible(true)}
         />
       </Suspense>
@@ -836,6 +846,29 @@ export default function ClientScreen() {
         </Suspense>
       ) : null}
 
+      {hasLoadedArchiveAlert ? (
+        <Suspense fallback={null}>
+          <AppAlert
+            visible={archiveClientVisible}
+            title="Archive Client"
+            message="Archive this client? Their data will stay on this device and Drive, but they will be hidden from the dashboard."
+            confirmLabel="Archive"
+            cancelLabel="Cancel"
+            onConfirm={async () => {
+              await archiveClient(clientId);
+              playDelete();
+              haptic.error();
+              setArchiveClientVisible(false);
+              invalidateClientDetail(clientId);
+              invalidateDashboard();
+              await refreshDashboard();
+              navigate('/');
+            }}
+            onCancel={() => setArchiveClientVisible(false)}
+          />
+        </Suspense>
+      ) : null}
+
       {hasLoadedDeleteAlert ? (
         <Suspense fallback={null}>
           <AppAlert
@@ -851,6 +884,7 @@ export default function ClientScreen() {
               setDeleteClientVisible(false);
               invalidateClientDetail(clientId);
               invalidateDashboard();
+              await refreshDashboard();
               navigate('/');
             }}
             onCancel={() => setDeleteClientVisible(false)}

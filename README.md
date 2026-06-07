@@ -199,9 +199,9 @@ The queue is merged per client and operation, so repeated edits to the same clie
 
 For deletes:
 
-1. Delete the client snapshot file from Drive if it exists.
-2. Delete the client media folder if it exists.
-3. Mark the client as deleted in the remote index.
+1. Retain the client snapshot file in Drive for restore support.
+2. Mark the client as deleted in the remote index.
+3. Keep the deleted client's display name and file ID in the index when available.
 4. Purge local records for that client after the delete is processed.
 
 ### Download
@@ -355,6 +355,12 @@ Build:
 
 ```bash
 npm run build
+```
+
+Run the required local guard:
+
+```bash
+npm run guard
 ```
 
 Deploy:

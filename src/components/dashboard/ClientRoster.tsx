@@ -21,6 +21,8 @@ interface ClientRosterProps {
   loading: boolean;
   onClientPress: (clientId: string) => void;
   onAddClient: () => void;
+  archivedClientCount?: number;
+  onArchivePress?: () => void;
 }
 
 let hasPlayedInitialRosterEntrance = false;
@@ -95,6 +97,8 @@ export default function ClientRoster({
   loading,
   onClientPress,
   onAddClient,
+  archivedClientCount = 0,
+  onArchivePress,
 }: ClientRosterProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
@@ -179,8 +183,25 @@ export default function ClientRoster({
         </Button>
       </div>
 
-      <div className="client-roster__count">
-        {loading && !hasLoadedRosterRef.current ? '' : `${filtered.length} clients`}
+      <div className="client-roster__meta-row">
+        <div className="client-roster__count">
+          {loading && !hasLoadedRosterRef.current ? '' : `${filtered.length} clients`}
+        </div>
+        {onArchivePress ? (
+          <button
+            type="button"
+            className="client-roster__archive-link"
+            aria-label={archivedClientCount > 0 ? `${archivedClientCount} archived clients` : 'Open archived clients'}
+            onClick={onArchivePress}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="4" rx="1" />
+              <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+              <path d="M10 12h4" />
+            </svg>
+            {archivedClientCount > 0 ? <span>{archivedClientCount}</span> : null}
+          </button>
+        ) : null}
       </div>
 
       <div className="client-roster__stack">

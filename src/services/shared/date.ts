@@ -9,6 +9,21 @@ export function todayLocalIso(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
+export function getCurrentMonthRange(date = new Date()): DateRange {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+  return {
+    startDate: todayLocalIso(start),
+    endDate: todayLocalIso(end),
+  };
+}
+
 export function toDayName(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',

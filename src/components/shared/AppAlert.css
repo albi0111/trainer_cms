@@ -140,6 +140,7 @@
     transform 0.2s ease,
     background-color 0.2s ease,
     color 0.2s ease,
+    box-shadow 0.2s ease,
     opacity 0.2s ease;
   font-family: inherit;
   position: relative;
@@ -180,6 +181,7 @@
 .aa-btn--primary.warning {
   background-color: var(--color-primary);
   color: #111;
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.12) inset;
 }
 
 .aa-btn--primary.success {
@@ -200,6 +202,17 @@
 .aa-btn--primary.warning:hover {
   background-color: #FFE147;
   transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.2) inset,
+    var(--shadow-glow);
+}
+
+.aa-btn--primary.warning:active {
+  background-color: var(--color-primary);
+  transform: translateY(0) scale(0.98);
+  box-shadow:
+    0 0 0 1px rgba(var(--color-primary-rgb), 0.18) inset,
+    var(--shadow-glow-pressed);
 }
 
 .aa-btn--primary.success:hover {

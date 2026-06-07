@@ -17,7 +17,7 @@ Do not leave behavior-changing work with only a visual check unless the change i
 
 ## Current Guard Commands
 
-The current production branch has TypeScript and Vite guards. It does not currently have a root test runner installed.
+The current repo has TypeScript, Vite, and a custom scroll-refresh guard. It does not currently have a root test runner installed.
 
 Required before every behavior change:
 
@@ -30,6 +30,12 @@ Equivalent expanded checks:
 ```bash
 npm run typecheck
 npm run build
+```
+
+The production build also runs:
+
+```bash
+npm run check:scroll-refresh
 ```
 
 Use `git diff --check` before commit to catch whitespace or patch formatting issues.

@@ -15,9 +15,18 @@ import {
   getSessionDurationMinutes,
 } from './shared/clientSnapshotMapper';
 import { nowIsoUtc, toDayName, todayLocalIso } from './shared/date';
+import { validateSessionTimeWindow } from './shared/inputValidation';
 import { validatePlanForSession } from './plan/planService';
+import {
+  onSessionCompleted as planCalendarSessionCompleted,
+  onSessionDeleted as planCalendarSessionDeleted,
+  onSessionMissed as planCalendarSessionMissed,
+  onSessionReverted as planCalendarSessionReverted,
+  planForSession as planCalendarSession,
+  replanForSession as replanCalendarSession,
+} from './calendar/calendarReminderPlanner';
+import { scheduleGoogleBackgroundSync } from './google/googleSyncService';
 import { enqueueClientUpdate } from './sync/syncQueueService';
-import { scheduleBackgroundSync } from './sync/syncService';
 
 export type { SessionActivityEntry } from '../types';
 export {
@@ -60,6 +69,14 @@ export interface CompleteSessionInput {
 export interface MarkMissedInput {
   reason: MissedReason;
   note: string;
+}
+
+async function runCalendarReminderSideEffect(operation: () => Promise<boolean>): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    console.warn('Calendar reminder planning failed', error);
+  }
 }
 
 async function touchClient(clientId: string, now: string): Promise<void> {
@@ -145,6 +162,7 @@ export async function replaceSessionExercises(sessionId: string, exercises: Sess
 export async function createSession(input: CreateSessionInput): Promise<string> {
   const now = nowIsoUtc();
   const id = generateId();
+  validateSessionTimeWindow(input.start_time, input.end_time);
 
   await db.transaction('rw', [db.plans, db.sessions, db.exercises, db.clients, db.syncQueue], async () => {
     const resolvedPlanId = await resolveSessionPlanId(input.client_id, input.date, input.plan_id ?? null);
@@ -179,7 +197,8 @@ export async function createSession(input: CreateSessionInput): Promise<string> 
     await enqueueClientUpdate(input.client_id, ['sessions', 'exercises']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSession(id));
+  scheduleGoogleBackgroundSync();
   return id;
 }
 
@@ -190,6 +209,7 @@ export async function updateSession(
   exercises?: SessionExerciseDraft[],
 ): Promise<void> {
   const now = nowIsoUtc();
+  validateSessionTimeWindow(input.start_time, input.end_time);
   await db.transaction('rw', [db.plans, db.sessions, db.exercises, db.clients, db.syncQueue], async () => {
     const existingSession = await db.sessions.get(sessionId);
     if (!existingSession) {
@@ -220,7 +240,8 @@ export async function updateSession(
     await enqueueClientUpdate(clientId, ['sessions', 'exercises']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => replanCalendarSession(sessionId));
+  scheduleGoogleBackgroundSync();
 }
 
 export async function getSessionsByClient(clientId: string): Promise<Session[]> {
@@ -283,7 +304,7 @@ export async function repairDetachedSessionPlanLinks(clientId: string): Promise<
   });
 
   if (repairedCount > 0) {
-    void scheduleBackgroundSync();
+    scheduleGoogleBackgroundSync();
   }
 
   return repairedCount;
@@ -332,7 +353,8 @@ export async function completeSession(sessionId: string, clientId: string, data:
     await enqueueClientUpdate(clientId, ['sessions', 'session_results']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionCompleted(sessionId));
+  scheduleGoogleBackgroundSync();
 }
 
 export async function markSessionMissed(sessionId: string, clientId: string, data: MarkMissedInput): Promise<void> {
@@ -352,7 +374,8 @@ export async function markSessionMissed(sessionId: string, clientId: string, dat
     await enqueueClientUpdate(clientId, ['sessions']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionMissed(sessionId));
+  scheduleGoogleBackgroundSync();
 }
 
 export async function revertSession(sessionId: string, clientId: string): Promise<void> {
@@ -370,7 +393,8 @@ export async function revertSession(sessionId: string, clientId: string): Promis
     await enqueueClientUpdate(clientId, ['sessions', 'session_results']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionReverted(sessionId));
+  scheduleGoogleBackgroundSync();
 }
 
 export async function deleteSession(sessionId: string, clientId: string): Promise<void> {
@@ -389,7 +413,8 @@ export async function deleteSession(sessionId: string, clientId: string): Promis
     await enqueueClientUpdate(clientId, ['sessions', 'session_results', 'exercises']);
   });
 
-  void scheduleBackgroundSync();
+  await runCalendarReminderSideEffect(() => planCalendarSessionDeleted(sessionId));
+  scheduleGoogleBackgroundSync();
 }
 
 export async function duplicateSession(

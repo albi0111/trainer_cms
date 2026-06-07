@@ -162,6 +162,7 @@ export default function WorkoutPlanSection({
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
   const haptic = useHaptic();
   const { playDelete } = useSoundFeedback();
+  const today = todayLocalIso();
   
   // Modal states
   const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false);
@@ -177,6 +178,29 @@ export default function WorkoutPlanSection({
       hasPlayedWorkoutPlansEntrance = true;
     }
   }, [topLevelPlans.length]);
+
+  useEffect(() => {
+    const historyVisiblePlanIds = plans
+      .filter((plan) => plan.type === 'weekly')
+      .filter((plan) => {
+        if (plan.end_date < today) {
+          return true;
+        }
+
+        return sessions.some((session) => session.plan_id === plan.id && session.status !== 'planned');
+      })
+      .map((plan) => plan.id);
+
+    if (historyVisiblePlanIds.length === 0) {
+      return;
+    }
+
+    setExpandedWeeks((current) => {
+      const next = new Set(current);
+      historyVisiblePlanIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  }, [plans, sessions, today]);
 
   const toggleWeek = (id: string) => {
     setExpandedWeeks(prev => 
@@ -289,8 +313,8 @@ export default function WorkoutPlanSection({
                   )}
 
                   <div className="weeks-list">
-                    {childWeeks.map((week) => (
-                      <div key={week.id} className="week-item">
+                      {childWeeks.map((week) => (
+                        <div key={week.id} className="week-item">
                         <div className="week-item__header">
                           <div className="week-item__title-row">
                             <span className="week-badge">{week.title.toUpperCase()}</span>

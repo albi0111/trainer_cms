@@ -243,11 +243,10 @@
   white-space: pre-wrap;
 }
 
-/* ── Danger Zone ──────────────────────────────────────────────────────────── */
+/* ── Archive / Danger Zone ────────────────────────────────────────────────── */
+.archive-zone,
 .danger-zone {
   margin-top: var(--space-xl);
-  border: 1px solid rgba(255, 82, 82, 0.2);
-  background-color: rgba(255, 82, 82, 0.03);
   border-radius: var(--radius-xl);
   padding: var(--space-xl);
   -webkit-user-select: none;
@@ -257,14 +256,33 @@
   touch-action: pan-y;
 }
 
+.archive-zone {
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
+  background-color: rgba(var(--color-primary-rgb), 0.05);
+}
+
+.danger-zone {
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  background-color: rgba(255, 82, 82, 0.03);
+}
+
+.archive-zone__header,
 .danger-zone__header {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  color: #FF5252;
   margin-bottom: var(--space-md);
 }
 
+.archive-zone__header {
+  color: var(--color-primary);
+}
+
+.danger-zone__header {
+  color: #FF5252;
+}
+
+.archive-zone__title,
 .danger-zone__title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-extrabold);
@@ -272,6 +290,7 @@
   letter-spacing: 0.05em;
 }
 
+.archive-zone__desc,
 .danger-zone__desc {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
@@ -279,10 +298,9 @@
   margin-bottom: var(--space-xl);
 }
 
+.archive-client-btn,
 .danger-delete-btn {
   width: 100%;
-  background-color: #FF5252;
-  color: #FFFFFF;
   border: none;
   border-radius: var(--radius-xl);
   padding: var(--space-lg);
@@ -297,6 +315,19 @@
   touch-action: pan-y;
 }
 
+.archive-client-btn {
+  background-color: rgba(var(--color-primary-rgb), 0.14);
+  color: var(--color-primary);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.3);
+  box-shadow: 0 0 18px rgba(var(--color-primary-rgb), 0.08);
+}
+
+.danger-delete-btn {
+  background-color: #FF5252;
+  color: #FFFFFF;
+}
+
+.archive-client-btn:hover,
 .danger-delete-btn:hover {
   opacity: 0.9;
 }

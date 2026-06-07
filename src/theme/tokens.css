@@ -126,7 +126,8 @@
   --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg:  0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(var(--color-primary-rgb), 0.15);
+  --shadow-glow: 0 10px 22px rgba(var(--color-primary-rgb), 0.16);
+  --shadow-glow-pressed: 0 4px 12px rgba(var(--color-primary-rgb), 0.12);
 
   /* ── Layout shell ─────────────────────────────────────────────────────── */
   --page-max-width: 1280px;

@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import SplashScreen from './components/SplashScreen';
 import { ensureDatabaseReady } from './db/db';
+import { getCurrentMonthRange } from './services/shared/date';
 import { useAppStore } from './store/useAppStore';
 import './index.css';
 
@@ -14,18 +15,6 @@ const APP_READY_EVENT = 'fp:app-ready';
 type GlobalWindowState = Window & {
   __fpAppReady?: boolean;
 };
-
-function getCurrentMonthRange(): { startDate: string; endDate: string } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const format = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-  return {
-    startDate: format(start),
-    endDate: format(end),
-  };
-}
 
 function preloadInitialRouteModule(pathname: string): Promise<unknown> {
   if (pathname.startsWith('/client/')) {

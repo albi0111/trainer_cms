@@ -1,33 +1,105 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 
 interface AppTimePickerProps {
   value: string; // 'HH:MM'
   onChange: (val: string) => void;
   label?: string;
+  minTime?: string;
+  maxTime?: string;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const MINUTES = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
 const PICKER_PORTAL_Z_INDEX = 1300;
 
-export default function AppTimePicker({ value, onChange, label }: AppTimePickerProps) {
+function parseTimeToMinutes(value?: string | null): number | null {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [hoursString, minutesString] = value.split(':');
+  const hours = Number(hoursString);
+  const minutes = Number(minutesString);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function formatMinutesAsTime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function clampTimeToRange(value: string, minTime: string, maxTime: string): string {
+  const valueMinutes = parseTimeToMinutes(value) ?? parseTimeToMinutes(minTime) ?? 0;
+  const minMinutes = parseTimeToMinutes(minTime) ?? 0;
+  const maxMinutes = parseTimeToMinutes(maxTime) ?? 23 * 60 + 55;
+  return formatMinutesAsTime(Math.min(Math.max(valueMinutes, minMinutes), maxMinutes));
+}
+
+function buildTimeOptions(minTime: string, maxTime: string): string[] {
+  const minMinutes = parseTimeToMinutes(minTime) ?? 0;
+  const maxMinutes = parseTimeToMinutes(maxTime) ?? 23 * 60 + 55;
+  const options: string[] = [];
+
+  for (let minutes = minMinutes; minutes <= maxMinutes; minutes += 5) {
+    options.push(formatMinutesAsTime(minutes));
+  }
+
+  return options.length > 0 ? options : ['08:00'];
+}
+
+export default function AppTimePicker({
+  value,
+  onChange,
+  label,
+  minTime = '00:00',
+  maxTime = '23:55',
+}: AppTimePickerProps) {
   const [visible, setVisible] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const timeOptions = useMemo(() => buildTimeOptions(minTime, maxTime), [maxTime, minTime]);
+  const hourOptions = useMemo(
+    () => Array.from(new Set(timeOptions.map((option) => option.split(':')[0] || '00'))),
+    [timeOptions],
+  );
 
   const [selectedHour, setHour] = useState(value?.split(':')[0] || '08');
   const [selectedMinute, setMinute] = useState(value?.split(':')[1] || '00');
+  const minuteOptions = useMemo(
+    () => timeOptions
+      .filter((option) => option.startsWith(`${selectedHour}:`))
+      .map((option) => option.split(':')[1] || '00'),
+    [selectedHour, timeOptions],
+  );
 
   useEffect(() => {
     if (value) {
-      setHour(value.split(':')[0] || '08');
-      setMinute(value.split(':')[1] || '00');
+      const clampedValue = clampTimeToRange(value, minTime, maxTime);
+      setHour(clampedValue.split(':')[0] || '08');
+      setMinute(clampedValue.split(':')[1] || '00');
     }
-  }, [value]);
+  }, [maxTime, minTime, value]);
+
+  useEffect(() => {
+    if (hourOptions.length > 0 && !hourOptions.includes(selectedHour)) {
+      setHour(hourOptions[0] || '08');
+    }
+  }, [hourOptions, selectedHour]);
+
+  useEffect(() => {
+    if (minuteOptions.length > 0 && !minuteOptions.includes(selectedMinute)) {
+      setMinute(minuteOptions[0] || '00');
+    }
+  }, [minuteOptions, selectedMinute]);
 
   useEffect(() => {
     if (!visible) {
@@ -45,39 +117,8 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
     };
   }, [visible]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    try {
-      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const syncPreference = () => {
-        setPrefersReducedMotion(mediaQuery.matches);
-      };
-
-      syncPreference();
-
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', syncPreference);
-      } else {
-        mediaQuery.addListener(syncPreference);
-      }
-
-      return () => {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', syncPreference);
-        } else {
-          mediaQuery.removeListener(syncPreference);
-        }
-      };
-    } catch {
-      return;
-    }
-  }, []);
-
   const handleSave = () => {
-    onChange(`${selectedHour}:${selectedMinute}`);
+    onChange(clampTimeToRange(`${selectedHour}:${selectedMinute}`, minTime, maxTime));
     setVisible(false);
   };
 
@@ -168,9 +209,9 @@ export default function AppTimePicker({ value, onChange, label }: AppTimePickerP
             </div>
 
             <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', alignItems: 'center' }}>
-              <Wheel label="HOUR" options={HOURS} selected={selectedHour} onSelect={setHour} />
+              <Wheel label="HOUR" options={hourOptions} selected={selectedHour} onSelect={setHour} />
               <span style={{ color: 'var(--color-primary)', fontSize: '24px', fontWeight: '800', marginTop: '24px' }}>:</span>
-              <Wheel label="MINUTE" options={MINUTES} selected={selectedMinute} onSelect={setMinute} />
+              <Wheel label="MINUTE" options={minuteOptions.length > 0 ? minuteOptions : MINUTES} selected={selectedMinute} onSelect={setMinute} />
             </div>
 
             <button
@@ -202,7 +243,7 @@ function Wheel({ label, options, selected, onSelect }: { label: string, options:
         listRef.current.scrollTop = idx * ITEM_HEIGHT;
       }
     }
-  }, [options]);
+  }, [options, selected]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
