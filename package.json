@@ -9,9 +9,14 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -b",
+    "guard": "npm run typecheck && npm run build",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "deploy": "tsc -b && vite build && firebase deploy"
+    "check:branch:staging": "node scripts/require-branch.mjs staging-fitpersona-pwa",
+    "check:branch:production": "node scripts/require-branch.mjs fitpersona_pwa",
+    "deploy": "npm run deploy:staging",
+    "deploy:staging": "npm run check:branch:staging && npm run guard && npx firebase deploy --only hosting:staging --project staging",
+    "deploy:production": "npm run check:branch:production && npm run guard && npx firebase deploy --only hosting:production --project production"
   },
   "dependencies": {
     "dexie": "^4.0.11",

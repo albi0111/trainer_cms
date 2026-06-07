@@ -1,5 +1,19 @@
 {
   "projects": {
-    "default": "fitpersona-beb36"
+    "default": "fitpersona-beb36",
+    "staging": "fitpersona-beb36",
+    "production": "fitpersona-beb36"
+  },
+  "targets": {
+    "fitpersona-beb36": {
+      "hosting": {
+        "staging": [
+          "fitpersona-beb36"
+        ],
+        "production": [
+          "fitpersona"
+        ]
+      }
+    }
   }
 }

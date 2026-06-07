@@ -261,16 +261,17 @@ Firebase Hosting cache behavior:
 - `sw.js`: no-cache
 - hashed assets under `/assets/**`: long-term immutable cache
 
-The Firebase project is:
+Hosting environments:
+
+| Environment | Branch | Firebase project | Hosting target/site | URL |
+| --- | --- | --- | --- | --- |
+| Staging | `staging-fitpersona-pwa` | `fitpersona-beb36` | `staging` / `fitpersona-beb36` | `https://fitpersona-beb36.web.app` |
+| Production | `fitpersona_pwa` | `fitpersona-beb36` | `production` / `fitpersona` | `https://fitpersona.web.app` |
+
+The default Firebase project alias remains staging:
 
 ```text
 fitpersona-beb36
-```
-
-Hosting URL:
-
-```text
-https://fitpersona-beb36.web.app
 ```
 
 ## PWA Behavior
@@ -361,6 +362,40 @@ Deploy:
 ```bash
 npm run deploy
 ```
+
+Deploy staging:
+
+```bash
+git switch staging-fitpersona-pwa
+git pull --ff-only origin staging-fitpersona-pwa
+npm run deploy:staging
+```
+
+Deploy production:
+
+```bash
+git switch fitpersona_pwa
+git pull --ff-only origin fitpersona_pwa
+npm run deploy:production
+```
+
+The deploy scripts include branch guards. Staging refuses to deploy unless the current branch is `staging-fitpersona-pwa`; production refuses to deploy unless the current branch is `fitpersona_pwa`.
+
+## Testing And Guards
+
+Detailed testing strategy, guard commands, and task completion rules are documented in:
+
+```text
+docs/TESTING_AND_GUARDS.md
+```
+
+Standing development rule:
+
+- Every behavior-changing task must include a test and guard decision.
+- Add or update automated tests when the behavior can be tested locally.
+- If automated tests are not practical yet, document the manual guard or checklist used.
+- Run the relevant guard before reporting completion.
+- In the handoff, state what was tested, what passed, and what risk remains.
 
 ## Branches
 
