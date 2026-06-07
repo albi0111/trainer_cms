@@ -7,6 +7,7 @@ import {
   downloadBlobFile,
   downloadFile,
   findDriveFileByName,
+  getDriveFile,
   getOrCreateMediaFolder,
   uploadBlobFile,
   uploadFile,
@@ -381,10 +382,34 @@ export async function uploadPendingProgressPhotos(clientId: string): Promise<Pro
   for (const photo of localPhotos) {
     if (photo.upload_status === 'uploaded' && photo.drive_file_id) {
       if (!index.photos.some((record) => record.id === photo.id)) {
-        const record = toDriveRecord(photo);
-        if (record) {
-          upsertDriveRecord(index, record);
-          indexChanged = true;
+        // Photo is marked uploaded locally but missing from the Drive index.
+        // Verify the Drive file still exists before re-indexing — it may have
+        // been deleted by another device via removeProgressPhotoDriveKeys.
+        try {
+          const driveFile = await getDriveFile(photo.drive_file_id);
+          if (driveFile) {
+            // File still exists on Drive; safe to re-add the index entry.
+            const record = toDriveRecord(photo);
+            if (record) {
+              upsertDriveRecord(index, record);
+              indexChanged = true;
+            }
+          } else {
+            // File was deleted from Drive — mark the local row as stale so it
+            // falls through to re-upload on the next iteration rather than
+            // resurrecting a broken placeholder.
+            await withDatabaseRecovery(() =>
+              db.progressPhotos.update(photo.id, {
+                upload_status: 'local',
+                drive_file_id: undefined,
+              }),
+            );
+            continue; // skip the early-continue below so it gets re-uploaded
+          }
+        } catch (error) {
+          console.warn('[ProgressPhotoService] Drive file verification failed:', error);
+          // On network error, leave the local row as-is and skip re-indexing
+          // to avoid resurrecting a potentially deleted entry.
         }
       }
       continue;

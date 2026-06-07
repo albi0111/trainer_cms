@@ -97,7 +97,7 @@ async function listDriveFilesByName(name: string, parentId?: string, mimeType?: 
   return data.files || [];
 }
 
-async function getDriveFile(fileId: string): Promise<DriveFile | null> {
+export async function getDriveFile(fileId: string): Promise<DriveFile | null> {
   const response = await driveReadRequest(`${DRIVE_API}/${fileId}?fields=id,name,mimeType,createdTime,modifiedTime`);
 
   if (response.status === 404) {
