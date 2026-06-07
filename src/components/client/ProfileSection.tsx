@@ -29,10 +29,11 @@ interface ProfileSectionProps {
     assessment: ProfileSectionAssessmentData;
   } | null;
   onEditSection: (section: 'personal' | 'interview' | 'assessment') => void;
+  onArchiveClient: () => void;
   onDeleteClient: () => void;
 }
 
-export default function ProfileSection({ data, onEditSection, onDeleteClient }: ProfileSectionProps) {
+export default function ProfileSection({ data, onEditSection, onArchiveClient, onDeleteClient }: ProfileSectionProps) {
   if (!data) return <div className="profile-loading">Loading...</div>;
 
   const { client, profile, lifestyle, assessment } = data;
@@ -76,6 +77,14 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+
+  const archiveIcon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="4" rx="1" />
+      <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+      <path d="M10 12h4" />
     </svg>
   );
 
@@ -223,6 +232,21 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
       </LongPressCard>
 
 
+      {/* ARCHIVE ZONE */}
+      <section className="archive-zone">
+        <div className="archive-zone__header">
+          {archiveIcon}
+          <span className="archive-zone__title">ARCHIVE CLIENT</span>
+        </div>
+        <p className="archive-zone__desc">
+          Hide this client from the dashboard while keeping all assessments, plans, sessions, and Drive backup data.
+        </p>
+        <button className="archive-client-btn" onClick={onArchiveClient}>
+          {archiveIcon}
+          Archive Client
+        </button>
+      </section>
+
       {/* DANGER ZONE */}
       <section className="danger-zone">
         <div className="danger-zone__header">
@@ -234,7 +258,7 @@ export default function ProfileSection({ data, onEditSection, onDeleteClient }: 
           <span className="danger-zone__title">DANGER ZONE</span>
         </div>
         <p className="danger-zone__desc">
-          Deleting this client will remove all their data, including assessments, plans, and session history. This action cannot be undone.
+          Deleting this client will remove all their data after Drive sync confirms the delete.
         </p>
         <button className="danger-delete-btn" onClick={onDeleteClient}>
           {trashIcon}

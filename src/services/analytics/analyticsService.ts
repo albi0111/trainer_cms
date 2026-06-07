@@ -32,13 +32,15 @@ export async function getClientStatus(clientId: string): Promise<ClientStatus> {
 export async function getDashboardStats(): Promise<DashboardStats> {
   return withDatabaseRecovery(async () => {
     const today = todayLocalIso();
-    const [clients, todaySessions, futurePlannedSessions, completedSessions, plans] = await Promise.all([
+    const [allClients, todaySessions, futurePlannedSessions, completedSessions, plans] = await Promise.all([
       db.clients.where('sync_status').notEqual('pending_delete').sortBy('name'),
       db.sessions.where('[status+date]').equals(['planned', today]).toArray(),
       db.sessions.where('status').equals('planned').filter((session) => session.date >= today).toArray(),
       db.sessions.where('status').equals('completed').toArray(),
       db.plans.toArray(),
     ]);
+    const clients = allClients.filter((client) => !client.archived_at);
+    const archivedClientCount = allClients.filter((client) => Boolean(client.archived_at)).length;
 
     const allRelevantSessions = [...futurePlannedSessions, ...completedSessions];
     const sessionsByClient = groupByClient(allRelevantSessions);
@@ -89,6 +91,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       })),
       todaySessions: todaySchedule,
       activeClientCount,
+      archivedClientCount,
       clientDataMap,
     };
   });

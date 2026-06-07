@@ -15,6 +15,7 @@ interface AppState {
   googleAuthStatus: GoogleAuthStatus;
   googleAccountEmail: string | null;
   isConnectedToDrive: boolean;
+  isDriveSyncEnabled: boolean;
   isCalendarConnected: boolean;
   isCalendarEnabledOnThisDevice: boolean;
   syncStatus: AppSyncStatus;
@@ -37,6 +38,7 @@ interface AppState {
   refreshGoogleState: () => Promise<void>;
   refreshCalendarState: () => Promise<void>;
   hydrateDashboard: () => Promise<DashboardStats>;
+  refreshDashboard: () => Promise<DashboardStats>;
   hydrateClientDetail: (clientId: string) => Promise<ClientDetail | null>;
   hydrateSchedule: (startDate: string, endDate: string) => Promise<ScheduledSession[]>;
   connectGoogle: () => Promise<void>;
@@ -76,6 +78,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   googleAuthStatus: initialGoogleAuthState.authStatus,
   googleAccountEmail: null,
   isConnectedToDrive: initialGoogleAuthState.isConnected,
+  isDriveSyncEnabled: true,
   isCalendarConnected: false,
   isCalendarEnabledOnThisDevice: false,
   syncStatus: 'idle',
@@ -109,6 +112,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       googleAuthStatus: snapshot.authStatus,
       googleAccountEmail: snapshot.accountEmail,
       isConnectedToDrive: snapshot.isConnected,
+      isDriveSyncEnabled: snapshot.driveSyncEnabled,
       isCalendarConnected: snapshot.isConnected && Boolean(snapshot.calendarName),
       isCalendarEnabledOnThisDevice: snapshot.calendarEnabledOnThisDevice,
       googlePendingSyncCount: snapshot.pendingCount,
@@ -146,6 +150,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       return cachedDashboard;
     }
 
+    return get().refreshDashboard();
+  },
+
+  refreshDashboard: async () => {
     const { getDashboardStats } = await import('../services/analytics/analyticsService');
     const dashboard = await getDashboardStats();
     set({ dashboard });
@@ -187,21 +195,40 @@ export const useAppStore = create<AppState>((set, get) => ({
   connectGoogle: async () => {
     set({ syncStatus: 'syncing', calendarSyncStatus: 'syncing', googleLastSyncError: null });
     try {
-      const { connectGoogle } = await import('../services/google/googleConnectionService');
-      const result = await connectGoogle();
-      if (result.driveChanged || result.calendarChanged) {
-        set({
-          dashboard: null,
-          clientDetails: {},
-          scheduleCache: null,
-        });
-      }
+      const { connectGoogle, runPostConnectGoogleSync } = await import('../services/google/googleConnectionService');
+      await connectGoogle();
       await get().refreshGoogleState();
       set({
-        syncStatus: result.overallStatus === 'success' ? 'idle' : 'error',
-        calendarSyncStatus: result.calendarStatus === 'success' ? 'idle' : 'error',
-        googleLastSyncError: result.overallStatus === 'success' ? null : 'Google sync partly completed.',
+        syncStatus: 'syncing',
+        calendarSyncStatus: 'syncing',
+        googleLastSyncError: null,
       });
+
+      void (async () => {
+        try {
+          const result = await runPostConnectGoogleSync();
+          if (result.driveChanged || result.calendarChanged) {
+            set({
+              dashboard: null,
+              clientDetails: {},
+              scheduleCache: null,
+            });
+          }
+          await get().refreshGoogleState();
+          set({
+            syncStatus: result.overallStatus === 'success' ? 'idle' : 'error',
+            calendarSyncStatus: result.calendarStatus === 'success' ? 'idle' : 'error',
+            googleLastSyncError: result.overallStatus === 'success' ? null : 'Google sync partly completed.',
+          });
+        } catch (backgroundError) {
+          await get().refreshGoogleState().catch(() => undefined);
+          set({
+            syncStatus: 'error',
+            calendarSyncStatus: 'error',
+            googleLastSyncError: backgroundError instanceof Error ? backgroundError.message : 'Google sync failed.',
+          });
+        }
+      })();
     } catch (error) {
       await get().refreshGoogleState().catch(() => undefined);
       set({
@@ -220,6 +247,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       googleAuthStatus: 'revoked',
       googleAccountEmail: null,
       isConnectedToDrive: false,
+      isDriveSyncEnabled: false,
       isCalendarConnected: false,
       isCalendarEnabledOnThisDevice: false,
       syncStatus: 'idle',
@@ -277,10 +305,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  connectDrive: async () => get().connectGoogle(),
+  connectDrive: async () => {
+    const { patchAppSettings } = await import('../services/calendar/calendarSettingsService');
+    await patchAppSettings({ google_drive_sync_enabled: true });
+    await get().refreshGoogleState();
+    void get().runGoogleSync();
+  },
 
   disconnectDrive: async () => {
-    await get().disconnectGoogle();
+    const { patchAppSettings } = await import('../services/calendar/calendarSettingsService');
+    await patchAppSettings({ google_drive_sync_enabled: false });
+    await get().refreshGoogleState();
+    set({
+      isDriveSyncEnabled: false,
+      syncStatus: 'idle',
+      lastSyncError: null,
+    });
   },
 
   connectCalendar: async () => {
@@ -312,15 +352,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   disconnectCalendar: async () => {
-    const { disconnectFitPersonaCalendar } = await import('../services/calendar/calendarSetupService');
-    await disconnectFitPersonaCalendar();
+    const { setFitPersonaCalendarEnabledOnThisDevice } = await import('../services/calendar/calendarSetupService');
+    await setFitPersonaCalendarEnabledOnThisDevice(false);
+    await get().refreshCalendarState();
     set({
-      isCalendarConnected: false,
       isCalendarEnabledOnThisDevice: false,
-      calendarName: null,
-      calendarLastSyncedAt: null,
       calendarLastSyncError: null,
-      calendarPendingSyncCount: 0,
       calendarSyncStatus: 'idle',
     });
   },

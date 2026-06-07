@@ -7,13 +7,11 @@ import { useAppStore } from '../../store/useAppStore';
 interface DriveConnectAlertProps {
   visible: boolean;
   onClose: () => void;
-  onConnected?: () => Promise<void> | void;
 }
 
 export default function DriveConnectAlert({
   visible,
   onClose,
-  onConnected,
 }: DriveConnectAlertProps) {
   const connectGoogle = useAppStore((state) => state.connectGoogle);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -36,7 +34,6 @@ export default function DriveConnectAlert({
       haptic.medium();
       await connectGoogle();
       playConfirm();
-      await onConnected?.();
       onClose();
     } catch (error) {
       playError();
@@ -60,11 +57,21 @@ export default function DriveConnectAlert({
       onConfirm={() => void handleConfirm()}
       onCancel={onClose}
       icon={(
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 18a4 4 0 1 1 .8-7.92A5.5 5.5 0 0 1 18.5 12a3.5 3.5 0 1 1 .5 6H7z"></path>
-          <path d="M12 8v4"></path>
-          <path d="M12 16h.01"></path>
-        </svg>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--color-primary)',
+            fontSize: 23,
+            fontWeight: 850,
+            lineHeight: 1,
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          }}
+          aria-hidden="true"
+        >
+          G
+        </span>
       )}
     >
       <p style={{ color: '#888', fontSize: 13, lineHeight: 1.6, margin: 0 }}>

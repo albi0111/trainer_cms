@@ -17,6 +17,7 @@ export interface GoogleStatusSnapshot {
   calendarLastError: string | null;
   calendarName: string | null;
   calendarEnabledOnThisDevice: boolean;
+  driveSyncEnabled: boolean;
 }
 
 function latestIso(left?: string | null, right?: string | null): string | null {
@@ -36,14 +37,16 @@ export async function getGoogleStatusSnapshot(): Promise<GoogleStatusSnapshot> {
   ]);
   const authState = getGoogleAuthState();
   const isConnected = isGoogleAuthenticated();
-  const driveError = driveSnapshot.lastError || null;
-  const calendarError = calendarSnapshot.lastError || null;
+  const driveError = driveSnapshot.enabled ? (driveSnapshot.lastError || null) : null;
+  const calendarError = calendarSnapshot.enabledOnThisDevice ? (calendarSnapshot.lastError || null) : null;
+  const activeDrivePendingCount = driveSnapshot.enabled ? driveSnapshot.pendingCount : 0;
+  const activeCalendarPendingCount = calendarSnapshot.enabledOnThisDevice ? calendarSnapshot.pendingCount : 0;
 
   return {
     isConnected,
     authStatus: authState.auth_status,
     accountEmail: authState.account_email,
-    pendingCount: driveSnapshot.pendingCount + calendarSnapshot.pendingCount,
+    pendingCount: activeDrivePendingCount + activeCalendarPendingCount,
     drivePendingCount: driveSnapshot.pendingCount,
     calendarPendingCount: calendarSnapshot.pendingCount,
     lastSyncedAt: latestIso(driveSnapshot.lastSyncAt, calendarSnapshot.lastSyncAt),
@@ -54,5 +57,6 @@ export async function getGoogleStatusSnapshot(): Promise<GoogleStatusSnapshot> {
     calendarLastError: calendarError,
     calendarName: calendarSnapshot.calendarName,
     calendarEnabledOnThisDevice: calendarSnapshot.enabledOnThisDevice,
+    driveSyncEnabled: driveSnapshot.enabled,
   };
 }

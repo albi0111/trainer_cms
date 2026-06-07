@@ -9,6 +9,7 @@ export interface Client {
   email?: string;
   goal: string;
   overview_notes?: string;
+  archived_at?: string;
   version: number;
   sync_status: SyncStatus;
   created_at: string;
@@ -300,6 +301,7 @@ export interface ClientSyncState {
 
 export interface AppSettings {
   id: 'default';
+  google_drive_sync_enabled: boolean;
   google_calendar_connected: boolean;
   google_calendar_id: string | null;
   google_calendar_name: string | null;
@@ -374,6 +376,7 @@ export interface DriveClientIndexEntry {
   updated_at: string;
   deleted: boolean;
   file_id?: string;
+  display_name?: string;
 }
 
 export interface DriveClientsIndex {
@@ -425,6 +428,7 @@ export interface DashboardStats {
   clients: DashboardClient[];
   todaySessions: DashboardScheduleItem[];
   activeClientCount: number;
+  archivedClientCount: number;
   clientDataMap: Record<string, DashboardClientState>;
 }
 
