@@ -511,6 +511,10 @@ export async function onSessionDeleted(sessionId: string): Promise<boolean> {
     return false;
   }
 
+  return deleteCalendarEventsForSession(sessionId, calendarId);
+}
+
+async function deleteCalendarEventsForSession(sessionId: string, calendarId: string): Promise<boolean> {
   let queued = false;
   await db.transaction('rw', [db.calendarEvents, db.calendarSyncQueue], async () => {
     const existingEvents = await db.calendarEvents
@@ -535,12 +539,26 @@ export async function planAllPlannedSessions(): Promise<boolean> {
     return false;
   }
 
-  const sessions = await db.sessions.where('status').equals('planned').toArray();
-  if (sessions.length === 0) {
-    return false;
+  const [plannedSessions, existingCalendarEvents] = await Promise.all([
+    db.sessions.where('status').equals('planned').toArray(),
+    db.calendarEvents
+      .filter((event) => event.status !== 'deleted')
+      .toArray(),
+  ]);
+  const existingSessionIds = Array.from(new Set(existingCalendarEvents.map((event) => event.local_entity_id)));
+  const existingEventSessions = existingSessionIds.length > 0
+    ? (await db.sessions.bulkGet(existingSessionIds)).filter((session): session is Session => Boolean(session))
+    : [];
+  const sessionsById = new Map<string, Session>();
+
+  for (const session of [...plannedSessions, ...existingEventSessions]) {
+    sessionsById.set(session.id, session);
   }
 
-  const clients = await db.clients.bulkGet(Array.from(new Set(sessions.map((session) => session.client_id))));
+  const sessions = Array.from(sessionsById.values());
+  const clients = sessions.length > 0
+    ? await db.clients.bulkGet(Array.from(new Set(sessions.map((session) => session.client_id))))
+    : [];
   const clientsById = new Map<string, Client>();
   for (const client of clients) {
     if (client) {
@@ -549,9 +567,16 @@ export async function planAllPlannedSessions(): Promise<boolean> {
   }
   let queued = false;
 
+  for (const sessionId of existingSessionIds) {
+    if (!sessionsById.has(sessionId)) {
+      queued = await deleteCalendarEventsForSession(sessionId, calendarId) || queued;
+    }
+  }
+
   for (const session of sessions) {
     const client = clientsById.get(session.client_id);
     if (!client) {
+      queued = await deleteCalendarEventsForSession(session.id, calendarId) || queued;
       continue;
     }
     queued = await syncDesiredCalendarEvents(session, client, calendarId) || queued;
