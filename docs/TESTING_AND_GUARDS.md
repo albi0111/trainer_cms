@@ -223,8 +223,36 @@ Before hosting deploy:
 
 ```bash
 npm run guard
-firebase deploy --only hosting
 ```
+
+Staging deploy:
+
+```bash
+git switch staging-fitpersona-pwa
+git pull --ff-only origin staging-fitpersona-pwa
+npm run deploy:staging
+```
+
+Production deploy:
+
+```bash
+git switch fitpersona_pwa
+git pull --ff-only origin fitpersona_pwa
+npm run deploy:production
+```
+
+Environment mapping:
+
+- Staging branch: `staging-fitpersona-pwa`
+- Staging Firebase project: `fitpersona-beb36`
+- Staging Hosting target/site: `staging` / `fitpersona-beb36`
+- Staging URL: `https://fitpersona-beb36.web.app`
+- Production branch: `fitpersona_pwa`
+- Production Firebase project: `fitpersona-beb36`
+- Production Hosting target/site: `production` / `fitpersona`
+- Production URL: `https://fitpersona.web.app`
+
+The deploy scripts include branch guards. Do not bypass them for normal deploys.
 
 Do not deploy functions or Firestore unless those directories/configs exist in the repo and their own tests pass.
 
@@ -279,4 +307,3 @@ A task is done only when:
 - `npm run guard` or the task-specific guard passes
 - known untested risk is stated
 - no unrelated changes are reverted or mixed into the task
-
