@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import pkg from '../../package.json';
 import './SettingsScreen.css';
+import { useSearchParams } from 'react-router-dom';
 
 import TopNavBar from '../components/layout/TopNavBar';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -10,8 +11,15 @@ import Button from '../components/ui/Button';
 import { APP_SETTINGS_ID, DEFAULT_APP_SETTINGS } from '../constants/appSettings';
 import { db } from '../db/db';
 import { useSoundFeedback } from '../hooks/useSoundFeedback';
+import { getArchivedClients, unarchiveClient } from '../services/client/clientService';
 import { nowIsoUtc } from '../services/shared/date';
+import {
+  listDeletedDriveClients,
+  restoreDeletedDriveClient,
+  type DeletedDriveClientSummary,
+} from '../services/sync/syncService';
 import { useAppStore } from '../store/useAppStore';
+import type { Client } from '../types';
 
 const DriveConnectAlert = lazy(() => import('../components/sync/DriveConnectAlert'));
 
@@ -115,6 +123,7 @@ async function putChangedSingleton(table: ImportTable, key: unknown, record: Jso
 }
 
 export default function SettingsScreen() {
+  const [searchParams] = useSearchParams();
   const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
   const googleAuthStatus = useAppStore((state) => state.googleAuthStatus);
   const googleAccountEmail = useAppStore((state) => state.googleAccountEmail);
@@ -138,6 +147,7 @@ export default function SettingsScreen() {
   const disconnectCalendar = useAppStore((state) => state.disconnectCalendar);
   const disconnectGoogle = useAppStore((state) => state.disconnectGoogle);
   const refreshSyncState = useAppStore((state) => state.refreshSyncState);
+  const refreshDashboard = useAppStore((state) => state.refreshDashboard);
   const runSync = useAppStore((state) => state.runSync);
   const [isDrivePromptOpen, setIsDrivePromptOpen] = useState(false);
   const [activeFeatureToggle, setActiveFeatureToggle] = useState<'google' | 'calendar' | null>(null);
@@ -147,10 +157,19 @@ export default function SettingsScreen() {
   const [isExportingData, setIsExportingData] = useState(false);
   const [isImportingData, setIsImportingData] = useState(false);
   const [dataImportMessage, setDataImportMessage] = useState<string | null>(null);
+  const [deletedDriveClients, setDeletedDriveClients] = useState<DeletedDriveClientSummary[]>([]);
+  const [isLoadingDeletedClients, setIsLoadingDeletedClients] = useState(false);
+  const [restoringClientId, setRestoringClientId] = useState<string | null>(null);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const [archivedClients, setArchivedClients] = useState<Client[]>([]);
+  const [isLoadingArchivedClients, setIsLoadingArchivedClients] = useState(false);
+  const [unarchivingClientId, setUnarchivingClientId] = useState<string | null>(null);
+  const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const builderTapCountRef = useRef(0);
   const builderTapResetTimeoutRef = useRef<number | null>(null);
   const builderToastTimeoutRef = useRef<number | null>(null);
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
+  const dataManagementRef = useRef<HTMLElement | null>(null);
   const { playTick } = useSoundFeedback();
   const version = typeof pkg.version === 'string' && pkg.version.trim() ? pkg.version : '1.0.0';
   const requiresGoogleReconnect = !isGoogleConnected
@@ -176,9 +195,8 @@ export default function SettingsScreen() {
     let isMounted = true;
 
     const loadDeviceSummary = async () => {
-      const [clientCount, sessionCount, pendingDriveCount, pendingCalendarCount] = await Promise.all([
+      const [clientCount, pendingDriveCount, pendingCalendarCount] = await Promise.all([
         db.clients.count(),
-        db.sessions.count(),
         db.syncQueue.count(),
         db.calendarSyncQueue.count(),
       ]);
@@ -188,7 +206,7 @@ export default function SettingsScreen() {
       }
 
       const pendingCount = pendingDriveCount + pendingCalendarCount;
-      setDeviceDataSummary(`${clientCount} clients · ${sessionCount} sessions · ${pendingCount} changes waiting`);
+      setDeviceDataSummary(`${clientCount} clients · ${pendingCount} changes waiting`);
     };
 
     void loadDeviceSummary();
@@ -199,14 +217,13 @@ export default function SettingsScreen() {
   }, [googlePendingSyncCount]);
 
   const refreshDeviceDataSummary = async () => {
-    const [clientCount, sessionCount, pendingDriveCount, pendingCalendarCount] = await Promise.all([
+    const [clientCount, pendingDriveCount, pendingCalendarCount] = await Promise.all([
       db.clients.count(),
-      db.sessions.count(),
       db.syncQueue.count(),
       db.calendarSyncQueue.count(),
     ]);
     const pendingCount = pendingDriveCount + pendingCalendarCount;
-    setDeviceDataSummary(`${clientCount} clients · ${sessionCount} sessions · ${pendingCount} changes waiting`);
+    setDeviceDataSummary(`${clientCount} clients · ${pendingCount} changes waiting`);
   };
 
   useEffect(() => {
@@ -226,6 +243,41 @@ export default function SettingsScreen() {
       setHasLoadedDrivePrompt(true);
     }
   }, [isDrivePromptOpen]);
+
+  const handleLoadArchivedClients = async () => {
+    if (isLoadingArchivedClients) {
+      return;
+    }
+
+    setIsLoadingArchivedClients(true);
+    setArchiveMessage(null);
+    try {
+      const clients = await getArchivedClients();
+      setArchivedClients(clients);
+      setArchiveMessage(clients.length > 0
+        ? `${clients.length} archived ${clients.length === 1 ? 'client' : 'clients'} found.`
+        : 'No archived clients found.');
+    } catch (error) {
+      setArchiveMessage(error instanceof Error ? error.message : 'Could not load archived clients.');
+    } finally {
+      setIsLoadingArchivedClients(false);
+    }
+  };
+
+  useEffect(() => {
+    void handleLoadArchivedClients();
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('section') !== 'archive') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      dataManagementRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+    void handleLoadArchivedClients();
+  }, [searchParams]);
 
   const handleBuilderTap = () => {
     builderTapCountRef.current += 1;
@@ -462,6 +514,73 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLoadDeletedDriveClients = async () => {
+    if (isLoadingDeletedClients) {
+      return;
+    }
+
+    if (!isGoogleReady) {
+      setIsDrivePromptOpen(true);
+      return;
+    }
+
+    setIsLoadingDeletedClients(true);
+    setRestoreMessage(null);
+    try {
+      const clients = await listDeletedDriveClients();
+      setDeletedDriveClients(clients);
+      setRestoreMessage(clients.length > 0
+        ? `${clients.length} deleted Drive ${clients.length === 1 ? 'backup' : 'backups'} found.`
+        : 'No deleted Drive backups found.');
+    } catch (error) {
+      setRestoreMessage(error instanceof Error ? error.message : 'Could not read deleted Drive backups.');
+    } finally {
+      setIsLoadingDeletedClients(false);
+    }
+  };
+
+  const handleRestoreDeletedDriveClient = async (client: DeletedDriveClientSummary) => {
+    if (!client.restorable || restoringClientId) {
+      return;
+    }
+
+    setRestoringClientId(client.id);
+    setRestoreMessage(null);
+    try {
+      await restoreDeletedDriveClient(client.id);
+      await refreshDeviceDataSummary();
+      await refreshSyncState();
+      await refreshDashboard();
+      setDeletedDriveClients((clients) => clients.filter((deletedClient) => deletedClient.id !== client.id));
+      setRestoreMessage(`${client.name} restored from Drive.`);
+    } catch (error) {
+      setRestoreMessage(error instanceof Error ? error.message : 'Restore failed.');
+    } finally {
+      setRestoringClientId(null);
+    }
+  };
+
+  const handleUnarchiveClient = async (client: Client) => {
+    if (unarchivingClientId) {
+      return;
+    }
+
+    setUnarchivingClientId(client.id);
+    setArchiveMessage(null);
+    try {
+      await unarchiveClient(client.id);
+      await refreshDeviceDataSummary();
+      await refreshSyncState();
+      await refreshDashboard();
+      setArchivedClients((clients) => clients.filter((archivedClient) => archivedClient.id !== client.id));
+      setArchiveMessage(`${client.name} moved back to active clients.`);
+    } catch (error) {
+      setArchiveMessage(error instanceof Error ? error.message : 'Unarchive failed.');
+    } finally {
+      setUnarchivingClientId(null);
+    }
+  };
+
   return (
     <div className="settings-page">
       <TopNavBar showLogo showBack />
@@ -579,8 +698,8 @@ export default function SettingsScreen() {
               </Card>
             </section>
 
-            <section className="settings-group">
-              <h2 className="settings-group-title">APP & DEVICE</h2>
+            <section className="settings-group" ref={dataManagementRef}>
+              <h2 className="settings-group-title">DATA MANAGEMENT</h2>
               <Card padding="md" className="settings-card">
                 <div className="setting-item">
                   <div>
@@ -621,6 +740,91 @@ export default function SettingsScreen() {
                   </div>
                 </div>
                 {dataImportMessage && <p className="setting-import-status">{dataImportMessage}</p>}
+                <div className="setting-item setting-item--stacked">
+                  <div className="setting-item-main">
+                    <div>
+                      <span className="setting-item-label">Archived Clients</span>
+                      <p className="setting-item-description">Clients hidden from the dashboard but still kept on this device and Drive</p>
+                    </div>
+                    <div className="setting-item-action">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={isLoadingArchivedClients}
+                        onClick={() => void handleLoadArchivedClients()}
+                      >
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+                  {archivedClients.length > 0 && (
+                    <div className="settings-restore-list">
+                      {archivedClients.map((client) => (
+                        <div className="settings-restore-row" key={client.id}>
+                          <div>
+                            <span className="settings-restore-row__name">{client.name}</span>
+                            <p className="settings-restore-row__meta">
+                              Archived: {formatSyncTimestamp(client.archived_at)}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={unarchivingClientId !== null}
+                            loading={unarchivingClientId === client.id}
+                            onClick={() => void handleUnarchiveClient(client)}
+                          >
+                            Unarchive
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {archiveMessage && <p className="setting-import-status">{archiveMessage}</p>}
+                </div>
+                <div className="setting-item setting-item--stacked">
+                  <div className="setting-item-main">
+                    <div>
+                      <span className="setting-item-label">Deleted Client Backups</span>
+                      <p className="setting-item-description">Restore clients that were deleted and retained in Google Drive</p>
+                    </div>
+                    <div className="setting-item-action">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        loading={isLoadingDeletedClients}
+                        onClick={() => void handleLoadDeletedDriveClients()}
+                      >
+                        {isGoogleReady ? 'Check Drive' : 'Connect Google'}
+                      </Button>
+                    </div>
+                  </div>
+                  {deletedDriveClients.length > 0 && (
+                    <div className="settings-restore-list">
+                      {deletedDriveClients.map((client) => (
+                        <div className="settings-restore-row" key={client.id}>
+                          <div>
+                            <span className="settings-restore-row__name">{client.name}</span>
+                            <p className="settings-restore-row__meta">
+                              Deleted backup: {formatSyncTimestamp(client.updated_at)}
+                              {!client.restorable ? ' · backup file unavailable' : ''}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!client.restorable || restoringClientId !== null}
+                            loading={restoringClientId === client.id}
+                            onClick={() => void handleRestoreDeletedDriveClient(client)}
+                          >
+                            Restore
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {restoreMessage && <p className="setting-import-status">{restoreMessage}</p>}
+                </div>
               </Card>
             </section>
 
@@ -644,13 +848,6 @@ export default function SettingsScreen() {
                   >
                     0111
                   </button>
-                </div>
-
-                <div className="settings-about-card__divider" />
-
-                <div className="settings-about-card__dedication">
-                  <span className="settings-about-card__eyebrow">Built with ♥ for</span>
-                  <span className="settings-about-card__trainer">Ajith</span>
                 </div>
               </Card>
             </section>
@@ -678,7 +875,7 @@ export default function SettingsScreen() {
         role="status"
         aria-live="polite"
       >
-        Hello from the builder 👋
+        Hi from 0111
       </div>
     </div>
   );

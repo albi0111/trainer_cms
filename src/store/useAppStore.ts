@@ -38,6 +38,7 @@ interface AppState {
   refreshGoogleState: () => Promise<void>;
   refreshCalendarState: () => Promise<void>;
   hydrateDashboard: () => Promise<DashboardStats>;
+  refreshDashboard: () => Promise<DashboardStats>;
   hydrateClientDetail: (clientId: string) => Promise<ClientDetail | null>;
   hydrateSchedule: (startDate: string, endDate: string) => Promise<ScheduledSession[]>;
   connectGoogle: () => Promise<void>;
@@ -149,6 +150,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       return cachedDashboard;
     }
 
+    return get().refreshDashboard();
+  },
+
+  refreshDashboard: async () => {
     const { getDashboardStats } = await import('../services/analytics/analyticsService');
     const dashboard = await getDashboardStats();
     set({ dashboard });

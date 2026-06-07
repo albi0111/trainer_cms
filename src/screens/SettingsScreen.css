@@ -83,8 +83,7 @@
   background: var(--color-border-container);
 }
 
-.settings-about-card__credits,
-.settings-about-card__dedication {
+.settings-about-card__credits {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -106,12 +105,6 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   padding: 0;
-}
-
-.settings-about-card__trainer {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
 }
 
 .settings-builder-toast {
@@ -366,6 +359,19 @@
   border-bottom: none;
 }
 
+.setting-item--stacked {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setting-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
 .setting-item-label {
   color: #FFF;
   font-size: 15px;
@@ -403,6 +409,36 @@
   color: #777;
   font-size: 12px;
   line-height: 1.4;
+}
+
+.settings-restore-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-restore-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-restore-row__name {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-restore-row__meta {
+  margin-top: 4px;
+  color: #777;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
@@ -464,6 +500,12 @@
   .setting-item {
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .setting-item-main,
+  .settings-restore-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .setting-item-value {

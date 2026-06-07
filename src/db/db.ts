@@ -230,6 +230,28 @@ class FitPersonaDB extends Dexie {
       .upgrade(async (transaction) => {
         await transaction.table('appSettings').put(DEFAULT_APP_SETTINGS);
       });
+
+    this.version(7)
+      .stores({
+        clients: 'id, sync_status, archived_at, updated_at, created_at',
+        clientProfiles: 'client_id',
+        clientLifestyles: 'client_id',
+        clientAssessments: 'client_id',
+        measurements: 'id, client_id, date, [client_id+date]',
+        measurementConfigs: '[client_id+key], client_id, key, category',
+        progressPhotos: 'id, client_id, date, [client_id+date]',
+        plans: 'id, client_id, type, status, parent_plan_id, [client_id+type], [parent_plan_id+order_index]',
+        dietPlans: 'id, client_id',
+        sessions: 'id, client_id, plan_id, status, date, [client_id+date], [client_id+status], [status+date], [plan_id+date]',
+        sessionResults: 'session_id',
+        exercises: 'id, session_id, [session_id+order_index]',
+        syncQueue: 'id, [client_id+operation], status, updated_at',
+        syncMeta: 'id',
+        clientSyncState: 'client_id, remote_updated_at, remote_version, last_synced_at',
+        appSettings: 'id',
+        calendarEvents: 'id, local_entity_id, client_id, event_kind, status, google_calendar_id, google_event_id, [local_entity_id+event_kind], [status+updated_at]',
+        calendarSyncQueue: 'id, calendar_event_local_id, local_entity_id, client_id, action, status, updated_at, next_retry_at, [calendar_event_local_id+action], [status+updated_at]',
+      });
   }
 }
 

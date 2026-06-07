@@ -220,12 +220,23 @@ export async function createClient(input: CreateClientInput): Promise<string> {
 }
 
 export async function getClients(): Promise<Client[]> {
-  return withDatabaseRecovery(() => (
-    db.clients
+  return withDatabaseRecovery(async () => {
+    const clients = await db.clients
       .where('sync_status')
       .notEqual('pending_delete')
-      .sortBy('name')
-  ));
+      .sortBy('name');
+    return clients.filter((client) => !client.archived_at);
+  });
+}
+
+export async function getArchivedClients(): Promise<Client[]> {
+  return withDatabaseRecovery(async () => {
+    const clients = await db.clients
+      .where('sync_status')
+      .notEqual('pending_delete')
+      .sortBy('name');
+    return clients.filter((client) => Boolean(client.archived_at));
+  });
 }
 
 export async function getClientById(clientId: string): Promise<Client | null> {
@@ -262,6 +273,40 @@ export async function updateClientOverview(clientId: string, notes: string): Pro
     core: {
       overview_notes: notes,
     },
+  });
+}
+
+export async function archiveClient(clientId: string): Promise<void> {
+  await withDatabaseRecovery(async () => {
+    const now = nowIsoUtc();
+    await db.clients.update(clientId, (client) => {
+      if (!client || client.sync_status === 'pending_delete') {
+        return;
+      }
+      client.archived_at = now;
+      client.version += 1;
+      client.updated_at = now;
+      client.sync_status = 'pending';
+    });
+    await enqueueClientUpdateSafely(clientId, ['core']);
+    void scheduleBackgroundSync();
+  });
+}
+
+export async function unarchiveClient(clientId: string): Promise<void> {
+  await withDatabaseRecovery(async () => {
+    const now = nowIsoUtc();
+    await db.clients.update(clientId, (client) => {
+      if (!client || client.sync_status === 'pending_delete') {
+        return;
+      }
+      delete client.archived_at;
+      client.version += 1;
+      client.updated_at = now;
+      client.sync_status = 'pending';
+    });
+    await enqueueClientUpdateSafely(clientId, ['core']);
+    void scheduleBackgroundSync();
   });
 }
 

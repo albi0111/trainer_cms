@@ -1,6 +1,7 @@
 import { db } from '../../db/db';
 import { SYNC_CONFIG, SYNC_DOMAINS } from '../../constants/sync';
 import type {
+  Client,
   DriveClientIndexEntry,
   DriveClientsIndex,
   DriveMeta,
@@ -11,8 +12,6 @@ import type {
 import { buildClientSnapshot, applyClientSnapshot, purgeClientRecords } from '../shared/clientSnapshotMapper';
 import { nowIsoUtc } from '../shared/date';
 import {
-  DRIVE_FOLDER_MIME_TYPE,
-  deleteDriveFile,
   downloadFile,
   ensureDriveLayout,
   findDriveFileByName,
@@ -29,6 +28,18 @@ import { getAppSettings } from '../calendar/calendarSettingsService';
 
 let activeSync: Promise<boolean> | null = null;
 let scheduledSyncId: number | null = null;
+let deletedDriveClientListCache: {
+  remoteIndexUpdatedAt: string;
+  items: DeletedDriveClientSummary[];
+} | null = null;
+
+export interface DeletedDriveClientSummary {
+  id: string;
+  name: string;
+  updated_at: string;
+  version: number;
+  restorable: boolean;
+}
 
 function getRetryTime(retryCount: number): string {
   const seconds = SYNC_CONFIG.retryBackoffSeconds[Math.min(retryCount - 1, SYNC_CONFIG.retryBackoffSeconds.length - 1)] || 300;
@@ -174,6 +185,17 @@ function normalizeRemoteSnapshot(snapshot: DriveClientSnapshot): DriveClientSnap
   };
 }
 
+function getClientDisplayName(client: Client | undefined, fallbackId: string): string {
+  const name = client?.name?.trim();
+  return name || `Deleted client ${fallbackId.slice(0, 8)}`;
+}
+
+async function resolveClientFileId(entry: DriveClientIndexEntry, clientsFolderId: string): Promise<string | undefined> {
+  return entry.file_id || (
+    await findDriveFileByName(`${entry.id}.json`, clientsFolderId)
+  )?.id;
+}
+
 async function processUploadQueue(): Promise<boolean> {
   const queue = (await getPendingQueue()).filter(shouldSyncQueueEntry);
   if (queue.length === 0) {
@@ -192,26 +214,40 @@ async function processUploadQueue(): Promise<boolean> {
 
       if (queueEntry.operation === 'delete') {
         const localClient = await db.clients.get(queueEntry.client_id);
+        const deletedSnapshot = localClient ? await buildClientSnapshot(queueEntry.client_id) : null;
         const existingEntry = indexByClientId.get(queueEntry.client_id);
-        const resolvedFileId = existingEntry?.file_id || (
-          await findDriveFileByName(`${queueEntry.client_id}.json`, layout.clientsFolderId)
-        )?.id;
-
-        if (resolvedFileId) {
-          await deleteDriveFile(resolvedFileId);
-        }
-
-        const mediaFolder = await findDriveFileByName(queueEntry.client_id, layout.mediaFolderId, DRIVE_FOLDER_MIME_TYPE);
-        if (mediaFolder) {
-          await deleteDriveFile(mediaFolder.id);
-        }
+        const resolvedFileId = await resolveClientFileId(
+          existingEntry || {
+            id: queueEntry.client_id,
+            version: localClient?.version || 1,
+            updated_at: localClient?.updated_at || now,
+            deleted: false,
+          },
+          layout.clientsFolderId,
+        );
+        const retainedFileId = deletedSnapshot
+          ? await uploadFile(
+            `${queueEntry.client_id}.json`,
+            layout.clientsFolderId,
+            {
+              ...deletedSnapshot,
+              deleted: true,
+              client: {
+                ...deletedSnapshot.client,
+                sync_status: 'pending_delete',
+              },
+            },
+            resolvedFileId,
+          )
+          : resolvedFileId;
 
         const deletedEntry: DriveClientIndexEntry = {
           id: queueEntry.client_id,
           version: localClient?.version || existingEntry?.version || 1,
           updated_at: localClient?.updated_at || now,
           deleted: true,
-          file_id: undefined,
+          file_id: retainedFileId,
+          display_name: localClient?.name || existingEntry?.display_name,
         };
         indexByClientId.set(queueEntry.client_id, deletedEntry);
         await purgeClientRecords(queueEntry.client_id);
@@ -244,6 +280,7 @@ async function processUploadQueue(): Promise<boolean> {
         updated_at: remoteSnapshot.updated_at,
         deleted: false,
         file_id: fileId,
+        display_name: remoteSnapshot.client.name,
       });
 
       await markClientAsSynced(queueEntry.client_id, remoteSnapshot.updated_at, remoteSnapshot.version);
@@ -344,6 +381,147 @@ async function pullChangedClients(index: DriveClientsIndex, clientsFolderId: str
       await applyClientSnapshot(normalizeRemoteSnapshot(snapshot));
     }));
   }
+}
+
+export async function listDeletedDriveClients(forceRefresh = false): Promise<DeletedDriveClientSummary[]> {
+  if (!navigator.onLine) {
+    return [];
+  }
+
+  const layout = await ensureDriveLayout();
+  const remoteIndex = await loadRemoteIndex(layout.clientsIndexFileId);
+  if (
+    !forceRefresh
+    && deletedDriveClientListCache
+    && deletedDriveClientListCache.remoteIndexUpdatedAt === remoteIndex.updated_at
+  ) {
+    return deletedDriveClientListCache.items;
+  }
+
+  const deletedEntries = remoteIndex.clients.filter((entry) => entry.deleted);
+  const cachedById = new Map(deletedDriveClientListCache?.items.map((item) => [item.id, item]) || []);
+
+  const summaries = await Promise.all(deletedEntries.map(async (entry): Promise<DeletedDriveClientSummary> => {
+    const cached = cachedById.get(entry.id);
+    if (!forceRefresh && cached?.updated_at === entry.updated_at && cached.version === entry.version) {
+      return cached;
+    }
+
+    const fileId = await resolveClientFileId(entry, layout.clientsFolderId);
+    if (!fileId) {
+      return {
+        id: entry.id,
+        name: entry.display_name || getClientDisplayName(undefined, entry.id),
+        updated_at: entry.updated_at,
+        version: entry.version,
+        restorable: false,
+      };
+    }
+
+    if (entry.display_name) {
+      return {
+        id: entry.id,
+        name: entry.display_name,
+        updated_at: entry.updated_at,
+        version: entry.version,
+        restorable: true,
+      };
+    }
+
+    const snapshot = await downloadFile<DriveClientSnapshot>(fileId);
+    return {
+      id: entry.id,
+      name: getClientDisplayName(snapshot?.client, entry.id),
+      updated_at: entry.updated_at,
+      version: entry.version,
+      restorable: Boolean(snapshot?.client),
+    };
+  }));
+
+  const sortedSummaries = summaries.sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+  deletedDriveClientListCache = {
+    remoteIndexUpdatedAt: remoteIndex.updated_at,
+    items: sortedSummaries,
+  };
+  return sortedSummaries;
+}
+
+export async function restoreDeletedDriveClient(clientId: string): Promise<void> {
+  if (!navigator.onLine) {
+    throw new Error('Connect to the internet before restoring a Drive backup.');
+  }
+
+  const layout = await ensureDriveLayout();
+  const remoteIndex = await loadRemoteIndex(layout.clientsIndexFileId);
+  const indexByClientId = new Map(remoteIndex.clients.map((entry) => [entry.id, entry]));
+  const remoteEntry = indexByClientId.get(clientId);
+
+  if (!remoteEntry?.deleted) {
+    throw new Error('This client is not marked as deleted in Drive.');
+  }
+
+  const fileId = await resolveClientFileId(remoteEntry, layout.clientsFolderId);
+  if (!fileId) {
+    throw new Error('This deleted client has no Drive backup file to restore.');
+  }
+
+  const deletedSnapshot = await downloadFile<DriveClientSnapshot>(fileId);
+  if (!deletedSnapshot?.client) {
+    throw new Error('This deleted client backup is empty or unreadable.');
+  }
+
+  const restoredAt = nowIsoUtc();
+  const restoredVersion = Math.max(deletedSnapshot.version || 1, remoteEntry.version || 1) + 1;
+  const restoredSnapshot: DriveClientSnapshot = normalizeRemoteSnapshot({
+    ...deletedSnapshot,
+    version: restoredVersion,
+    updated_at: restoredAt,
+    deleted: false,
+    client: {
+      ...deletedSnapshot.client,
+      sync_status: 'synced',
+      version: restoredVersion,
+      updated_at: restoredAt,
+    },
+  });
+
+  const restoredFileId = await uploadFile(`${clientId}.json`, layout.clientsFolderId, restoredSnapshot, fileId);
+  const updatedAt = nowIsoUtc();
+  indexByClientId.set(clientId, {
+    id: clientId,
+    version: restoredVersion,
+    updated_at: restoredAt,
+    deleted: false,
+    file_id: restoredFileId,
+    display_name: restoredSnapshot.client.name,
+  });
+
+  const updatedIndex: DriveClientsIndex = {
+    version: Math.max(1, remoteIndex.version || 1),
+    updated_at: updatedAt,
+    clients: Array.from(indexByClientId.values()).sort((left, right) => left.id.localeCompare(right.id)),
+  };
+  const updatedMeta: DriveMeta = {
+    version: 1,
+    updated_at: updatedAt,
+  };
+
+  await saveRemoteIndex(layout.clientsIndexFileId, layout.rootFolderId, updatedIndex);
+  await saveRemoteMeta(layout.metaFileId, layout.rootFolderId, updatedMeta);
+  await applyClientSnapshot(restoredSnapshot);
+  await db.syncQueue.where('client_id').equals(clientId).delete();
+  if (deletedDriveClientListCache) {
+    deletedDriveClientListCache = {
+      remoteIndexUpdatedAt: updatedAt,
+      items: deletedDriveClientListCache.items.filter((item) => item.id !== clientId),
+    };
+  }
+  await patchSyncMeta({
+    remote_index_updated_at: updatedAt,
+    remote_meta_updated_at: updatedAt,
+    last_sync_at: updatedAt,
+    last_sync_error: '',
+  });
 }
 
 export async function syncFromCloud(): Promise<boolean> {

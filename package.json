@@ -10,6 +10,7 @@
     "dev": "vite",
     "check:scroll-refresh": "node scripts/check-scroll-refresh-guard.mjs",
     "typecheck": "tsc -b",
+    "guard": "npm run typecheck && npm run build",
     "build": "npm run check:scroll-refresh && tsc -b && vite build",
     "preview": "vite preview",
     "deploy": "npm run build && firebase deploy"

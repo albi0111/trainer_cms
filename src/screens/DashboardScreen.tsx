@@ -23,12 +23,14 @@ const EMPTY_STATS: DashboardStats = {
   clients: [],
   todaySessions: [],
   activeClientCount: 0,
+  archivedClientCount: 0,
   clientDataMap: {},
 };
 
 export default function DashboardScreen() {
   const navigate = useNavigate();
   const hydrateDashboard = useAppStore((state) => state.hydrateDashboard);
+  const dashboard = useAppStore((state) => state.dashboard);
   const invalidateDashboard = useAppStore((state) => state.invalidateDashboard);
   const runSync = useAppStore((state) => state.runSync);
   const isGoogleConnected = useAppStore((state) => state.isGoogleConnected);
@@ -90,6 +92,16 @@ export default function DashboardScreen() {
       void runSync().then(loadDashboard).catch(() => undefined);
     }
   }, [isGoogleConnected, loadDashboard, runSync]);
+
+  useEffect(() => {
+    if (!dashboard) {
+      return;
+    }
+
+    setStats(dashboard);
+    setStatsAnimationVersion((current) => current + 1);
+    setLoading(false);
+  }, [dashboard]);
 
   useEffect(() => {
     if (hasLoadedDashboardRef.current || !loading) {
@@ -256,6 +268,8 @@ export default function DashboardScreen() {
                 loading={loading}
                 onClientPress={(id) => navigate(`/client/${id}`)}
                 onAddClient={() => setIsAddModalOpen(true)}
+                archivedClientCount={stats.archivedClientCount}
+                onArchivePress={() => navigate('/settings?section=archive')}
               />
             </div>
           </div>
