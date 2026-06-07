@@ -1,12 +1,26 @@
 import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Measurement, MeasurementConfig } from '../../types';
+import { Measurement, MeasurementConfig, ProgressPhoto } from '../../types';
 import ManageMetricsModal from '../modals/ManageMetricsModal';
 import AddMeasurementModal from '../modals/AddMeasurementModal';
+import DatePicker from '../ui/DatePicker';
+import LongPressCard from '../LongPressCard';
 import OdometerNumber from '../OdometerNumber';
 import SkeletonScheduleCard from '../skeletons/SkeletonScheduleCard';
 import SkeletonStatCard from '../skeletons/SkeletonStatCard';
 import { getClientProgress } from '../../services/analytics/analyticsService';
+import {
+  getProgressPhotos,
+  getProgressPhotoDriveKeys,
+  compressProgressPhotoFiles,
+  fetchProgressPhotoFromDrive,
+  removeProgressPhotoDriveKeys,
+  saveProgressPhotoDrafts,
+  uploadPendingProgressPhotos,
+  updateProgressPhotoGroup,
+  ProgressPhotoDraft,
+  ProgressPhotoDriveKey,
+} from '../../services/analytics/progressPhotoService';
 import { useModalVelocityDismiss } from '../../hooks/useSwipeGesture';
 import './AnalyticsSection.css';
 
@@ -21,6 +35,24 @@ type ChartRange = '1M' | '3M' | '6M' | '1Y' | 'ALL';
 const CHART_MODAL_OPENING_MS = 200;
 const CHART_MODAL_CLOSING_MS = 280;
 const CHART_RANGES: ChartRange[] = ['1M', '3M', '6M', '1Y', 'ALL'];
+const getTodayInputDate = () => new Date().toISOString().slice(0, 10);
+
+type ProgressImageGroup = {
+  date: string;
+  title: string;
+  note: string;
+  photos: ProgressPhoto[];
+  placeholders: ProgressPhotoDriveKey[];
+};
+
+type ProgressPhotoModalMode = 'create' | 'edit';
+
+type ProgressPhotoDraftItem = {
+  id: string;
+  uri: string;
+  file_size_bytes: number;
+  source: 'existing' | 'new';
+};
 
 export default function AnalyticsSection({
   clientId
@@ -69,10 +101,32 @@ export default function AnalyticsSection({
 
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [configs, setConfigs] = useState<MeasurementConfig[]>([]);
+  const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>([]);
+  const [remotePhotoKeys, setRemotePhotoKeys] = useState<ProgressPhotoDriveKey[]>([]);
+  const [isPhotoGalleryVisible, setIsPhotoGalleryVisible] = useState(false);
+  const [isPhotoGalleryLoaded, setIsPhotoGalleryLoaded] = useState(false);
+  const [isPhotoIndexLoading, setIsPhotoIndexLoading] = useState(false);
+  const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+  const [isPhotoUploadOpen, setIsPhotoUploadOpen] = useState(false);
+  const [photoModalMode, setPhotoModalMode] = useState<ProgressPhotoModalMode>('create');
+  const [editingPhotoGroupDate, setEditingPhotoGroupDate] = useState<string | null>(null);
+  const [selectedProgressPhoto, setSelectedProgressPhoto] = useState<ProgressPhoto | null>(null);
+  const [photoUploadDate, setPhotoUploadDate] = useState(getTodayInputDate);
+  const [photoUploadNote, setPhotoUploadNote] = useState('');
+  const [photoDrafts, setPhotoDrafts] = useState<ProgressPhotoDraftItem[]>([]);
+  const [photoErrorToast, setPhotoErrorToast] = useState('');
+  const [isPhotoErrorToastVisible, setIsPhotoErrorToastVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showLoadingSkeleton, setShowLoadingSkeleton] = useState(false);
   const canOpenChartModal = true;
   const hasLoadedAnalyticsRef = useRef(false);
+  const photoGalleryRef = useRef<HTMLElement | null>(null);
+  const photoUploadOverlayRef = useRef<HTMLDivElement>(null);
+  const photoUploadContainerRef = useRef<HTMLDivElement>(null);
+  const photoViewerOverlayRef = useRef<HTMLDivElement>(null);
+  const photoViewerContainerRef = useRef<HTMLDivElement>(null);
+  const photoGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const photoErrorToastTimeoutRef = useRef<number | null>(null);
 
   useModalVelocityDismiss({
     visible: isChartModalOpen,
@@ -82,6 +136,35 @@ export default function AnalyticsSection({
     enabled: false,
   });
 
+  useModalVelocityDismiss({
+    visible: isPhotoUploadOpen,
+    onClose: () => undefined,
+    overlayRef: photoUploadOverlayRef,
+    sheetRef: photoUploadContainerRef,
+    enabled: false,
+  });
+
+  useModalVelocityDismiss({
+    visible: Boolean(selectedProgressPhoto),
+    onClose: () => setSelectedProgressPhoto(null),
+    overlayRef: photoViewerOverlayRef,
+    sheetRef: photoViewerContainerRef,
+    enabled: false,
+  });
+
+  const showPhotoError = (message: string) => {
+    if (photoErrorToastTimeoutRef.current !== null) {
+      window.clearTimeout(photoErrorToastTimeoutRef.current);
+    }
+
+    setPhotoErrorToast(message);
+    setIsPhotoErrorToastVisible(true);
+    photoErrorToastTimeoutRef.current = window.setTimeout(() => {
+      setIsPhotoErrorToastVisible(false);
+      photoErrorToastTimeoutRef.current = null;
+    }, 3200);
+  };
+
   useEffect(() => {
     loadData();
   }, [clientId]);
@@ -89,7 +172,124 @@ export default function AnalyticsSection({
   useEffect(() => {
     hasLoadedAnalyticsRef.current = false;
     setShowLoadingSkeleton(false);
+    setProgressPhotos([]);
+    setRemotePhotoKeys([]);
+    setIsPhotoGalleryVisible(false);
+    setIsPhotoGalleryLoaded(false);
+    setIsPhotoIndexLoading(false);
+    setIsPhotoUploadOpen(false);
+    setEditingPhotoGroupDate(null);
+    setSelectedProgressPhoto(null);
+    setPhotoDrafts([]);
+    setIsPhotoErrorToastVisible(false);
+    setPhotoErrorToast('');
   }, [clientId]);
+
+  useEffect(() => {
+    return () => {
+      if (photoErrorToastTimeoutRef.current !== null) {
+        window.clearTimeout(photoErrorToastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsPhotoGalleryVisible(true);
+      return;
+    }
+
+    const element = photoGalleryRef.current;
+    if (!element) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) {
+        setIsPhotoGalleryVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '160px 0px' });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!isPhotoGalleryVisible || isPhotoGalleryLoaded) {
+      return;
+    }
+
+    let isMounted = true;
+
+    void getProgressPhotos(clientId)
+      .then((photos) => {
+        if (!isMounted) {
+          return;
+        }
+        setProgressPhotos(photos);
+        setIsPhotoGalleryLoaded(true);
+        setIsPhotoIndexLoading(true);
+        void uploadPendingProgressPhotos(clientId)
+          .catch((error) => {
+            console.warn('[AnalyticsSection] Progress photo Drive upload skipped:', error);
+            return getProgressPhotoDriveKeys(clientId);
+          })
+          .then((keys) => {
+            if (!isMounted) {
+              return;
+            }
+
+            setRemotePhotoKeys(keys);
+            const knownIds = new Set(photos.map((photo) => photo.id));
+
+            void (async () => {
+              for (const key of keys) {
+                if (!isMounted || knownIds.has(key.id)) {
+                  continue;
+                }
+
+                const photo = await fetchProgressPhotoFromDrive(key);
+                if (!photo || !isMounted) {
+                  continue;
+                }
+
+                knownIds.add(photo.id);
+                setProgressPhotos((current) => {
+                  if (current.some((currentPhoto) => currentPhoto.id === photo.id)) {
+                    return current;
+                  }
+
+                  return [...current, photo].sort((a, b) => {
+                    const dateCompare = b.date.localeCompare(a.date);
+                    return dateCompare !== 0 ? dateCompare : b.created_at.localeCompare(a.created_at);
+                  });
+                });
+              }
+            })().catch((error) => {
+              console.warn('[AnalyticsSection] Progress photo lazy fetch skipped:', error);
+            });
+          })
+          .catch((error) => {
+            console.warn('[AnalyticsSection] Progress photo Drive index skipped:', error);
+          })
+          .finally(() => {
+            if (isMounted) {
+              setIsPhotoIndexLoading(false);
+            }
+          });
+      })
+      .catch((error) => {
+        console.error('[AnalyticsSection] Progress photos load error:', error);
+        if (isMounted) {
+          showPhotoError(error instanceof Error ? error.message : 'Could not load progress images.');
+        }
+      })
+
+    return () => {
+      isMounted = false;
+    };
+  }, [clientId, isPhotoGalleryLoaded, isPhotoGalleryVisible]);
 
   useEffect(() => {
     if (hasLoadedAnalyticsRef.current || !loading) {
@@ -320,6 +520,209 @@ export default function AnalyticsSection({
       setLoading(false);
     }
   };
+
+  const openPhotoUploadModal = () => {
+    setPhotoModalMode('create');
+    setEditingPhotoGroupDate(null);
+    setPhotoUploadDate(getTodayInputDate());
+    setPhotoUploadNote('');
+    setPhotoDrafts([]);
+    setIsPhotoGalleryVisible(true);
+    setIsPhotoUploadOpen(true);
+  };
+
+  const openPhotoGroupEditor = (group: ProgressImageGroup) => {
+    setPhotoModalMode('edit');
+    setEditingPhotoGroupDate(group.date);
+    setPhotoUploadDate(group.date);
+    setPhotoUploadNote(group.note);
+    setPhotoDrafts(group.photos.map((photo) => ({
+      id: photo.id,
+      uri: photo.uri,
+      file_size_bytes: photo.file_size_bytes || 0,
+      source: 'existing',
+    })));
+    setIsPhotoUploadOpen(true);
+  };
+
+  const sortProgressPhotos = (photos: ProgressPhoto[]) => [...photos].sort((a, b) => {
+    const dateCompare = b.date.localeCompare(a.date);
+    return dateCompare !== 0 ? dateCompare : b.created_at.localeCompare(a.created_at);
+  });
+
+  const refreshPhotoDriveState = async (deletedPhotoIds: string[] = []) => {
+    let keys = deletedPhotoIds.length > 0
+      ? await removeProgressPhotoDriveKeys(clientId, deletedPhotoIds)
+      : await getProgressPhotoDriveKeys(clientId);
+    keys = await uploadPendingProgressPhotos(clientId).catch((error) => {
+      console.warn('[AnalyticsSection] Progress photo Drive upload skipped:', error);
+      return keys;
+    });
+    setRemotePhotoKeys(keys);
+    setProgressPhotos(sortProgressPhotos(await getProgressPhotos(clientId)));
+  };
+
+  const handleProgressPhotoSelection = async (files: FileList | null) => {
+    if (!files || isSavingPhotos) {
+      return;
+    }
+
+    const selectedFiles = Array.from(files);
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const imageFiles = selectedFiles.filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      showPhotoError('Choose an image file to add progress photos.');
+      return;
+    }
+
+    setIsSavingPhotos(true);
+
+    try {
+      const drafts = await compressProgressPhotoFiles(imageFiles);
+      setPhotoDrafts((current) => [
+        ...current,
+        ...drafts.map((draft): ProgressPhotoDraftItem => ({ ...draft, source: 'new' })),
+      ]);
+    } catch (error) {
+      showPhotoError(error instanceof Error ? error.message : 'Could not prepare progress images.');
+    } finally {
+      setIsSavingPhotos(false);
+      if (photoGalleryInputRef.current) {
+        photoGalleryInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removePhotoDraft = (draftId: string) => {
+    setPhotoDrafts((current) => current.filter((draft) => draft.id !== draftId));
+  };
+
+  const savePhotoModal = async () => {
+    if (isSavingPhotos) {
+      return;
+    }
+
+    if (photoModalMode === 'create' && photoDrafts.length === 0) {
+      showPhotoError('Add at least one image before saving.');
+      return;
+    }
+
+    setIsSavingPhotos(true);
+    const date = photoUploadDate || getTodayInputDate();
+    const note = photoUploadNote.trim();
+
+    try {
+      if (photoModalMode === 'edit' && editingPhotoGroupDate) {
+        const result = await updateProgressPhotoGroup(
+          clientId,
+          editingPhotoGroupDate,
+          date,
+          note,
+          photoDrafts.filter((draft) => draft.source === 'existing').map((draft) => draft.id),
+          photoDrafts
+            .filter((draft) => draft.source === 'new')
+            .map((draft): ProgressPhotoDraft => ({
+              id: draft.id,
+              uri: draft.uri,
+              file_size_bytes: draft.file_size_bytes,
+            })),
+        );
+        setProgressPhotos(sortProgressPhotos(result.photos));
+        void refreshPhotoDriveState(result.deletedPhotoIds).catch((error) => {
+          console.warn('[AnalyticsSection] Progress photo Drive refresh skipped:', error);
+        });
+      } else {
+        const savedPhotos = await saveProgressPhotoDrafts(
+          clientId,
+          photoDrafts.map((draft): ProgressPhotoDraft => ({
+            id: draft.id,
+            uri: draft.uri,
+            file_size_bytes: draft.file_size_bytes,
+          })),
+          note,
+          date,
+        );
+        setProgressPhotos((current) => sortProgressPhotos([...savedPhotos, ...current]));
+        void refreshPhotoDriveState().catch((error) => {
+          console.warn('[AnalyticsSection] Progress photo Drive refresh skipped:', error);
+        });
+      }
+
+      setIsPhotoGalleryLoaded(true);
+      setIsPhotoGalleryVisible(true);
+      setIsPhotoUploadOpen(false);
+      setEditingPhotoGroupDate(null);
+      setPhotoDrafts([]);
+    } catch (error) {
+      showPhotoError(error instanceof Error ? error.message : 'Could not save progress image entry.');
+    } finally {
+      setIsSavingPhotos(false);
+    }
+  };
+
+  const formatPhotoDate = (photo: ProgressPhoto) => new Date(photo.created_at || photo.date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  const progressPhotoGroups = useMemo<ProgressImageGroup[]>(() => {
+    const localIds = new Set(progressPhotos.map((photo) => photo.id));
+    const groups = new Map<string, ProgressImageGroup>();
+
+    remotePhotoKeys.forEach((key) => {
+      if (localIds.has(key.id)) {
+        return;
+      }
+
+      const group = groups.get(key.date) || {
+        date: key.date,
+        title: new Date(`${key.date}T00:00:00`).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        note: '',
+        photos: [],
+        placeholders: [],
+      };
+      if (!group.note && key.note) {
+        group.note = key.note;
+      }
+      group.placeholders.push(key);
+      groups.set(key.date, group);
+    });
+
+    progressPhotos.forEach((photo) => {
+      const group = groups.get(photo.date) || {
+        date: photo.date,
+        title: new Date(`${photo.date}T00:00:00`).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+        note: '',
+        photos: [],
+        placeholders: [],
+      };
+      if (!group.note && photo.note) {
+        group.note = photo.note;
+      }
+      group.photos.push(photo);
+      groups.set(photo.date, group);
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        photos: group.photos.sort((a, b) => b.created_at.localeCompare(a.created_at)),
+        placeholders: group.placeholders.sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [progressPhotos, remotePhotoKeys]);
 
   // ── Data Processing ─────────────────────────────────────────────────────────
 
@@ -825,6 +1228,67 @@ export default function AnalyticsSection({
           </svg>
           <span className="analytics-add-btn__text">Log Progress</span>
         </button>
+
+        <section className="progress-gallery" ref={photoGalleryRef}>
+          <div className="progress-gallery__header">
+            <h3 className="progress-gallery__title">Progress Images</h3>
+            <button
+              type="button"
+              className="progress-gallery__add-btn"
+              disabled={isSavingPhotos}
+              onClick={openPhotoUploadModal}
+            >
+              {isSavingPhotos ? 'Compressing...' : 'Add / Capture'}
+            </button>
+          </div>
+
+          {progressPhotoGroups.length === 0 ? (
+            <div className="progress-gallery__empty">
+              {isPhotoIndexLoading ? 'Checking progress images...' : 'No progress images yet.'}
+            </div>
+          ) : (
+            <div className="progress-gallery__groups">
+              {progressPhotoGroups.map((group) => (
+                <LongPressCard
+                  className="progress-photo-date-group"
+                  key={group.date}
+                  onLongPress={() => openPhotoGroupEditor(group)}
+                >
+                  <div className="progress-photo-date-group__header">
+                    <h4 className="progress-photo-date-group__title">{group.title}</h4>
+                    {group.note ? (
+                      <>
+                        <span className="progress-photo-date-group__separator">-</span>
+                        <p className="progress-photo-date-group__note">{group.note}</p>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="progress-gallery__grid">
+                    {group.photos.map((photo) => (
+                      <button
+                        type="button"
+                        className="progress-photo-card"
+                        key={photo.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedProgressPhoto(photo);
+                        }}
+                        aria-label={`Open progress image from ${formatPhotoDate(photo)}`}
+                      >
+                        <img className="progress-photo-card__image" src={photo.uri} alt={`Progress uploaded ${formatPhotoDate(photo)}`} loading="lazy" />
+                      </button>
+                    ))}
+                    {group.placeholders.map((key) => (
+                      <article className="progress-photo-card progress-photo-card--skeleton" key={key.id}>
+                        <span className="progress-photo-card__loading">Loading</span>
+                      </article>
+                    ))}
+                  </div>
+                </LongPressCard>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {showLoadingSkeleton ? (
@@ -867,6 +1331,150 @@ export default function AnalyticsSection({
         document.body
       )}
 
+      {isPhotoUploadOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={photoUploadOverlayRef}
+          className="progress-photo-upload-overlay"
+          data-state={isPhotoUploadOpen ? 'open' : 'closed'}
+        >
+          <div ref={photoUploadContainerRef} className="progress-photo-upload-modal" onClick={event => event.stopPropagation()}>
+            <div className="progress-photo-upload-body">
+              <div className="progress-photo-upload-meta-row">
+                <div className="progress-photo-upload-date">
+                  <DatePicker
+                    value={photoUploadDate}
+                    onChange={setPhotoUploadDate}
+                  />
+                </div>
+                <input
+                  id="progress-photo-note"
+                  className="progress-photo-upload-note-input"
+                  value={photoUploadNote}
+                  onChange={(event) => setPhotoUploadNote(event.currentTarget.value)}
+                  placeholder="note"
+                  disabled={isSavingPhotos}
+                />
+              </div>
+
+              <div className="progress-photo-upload-grid">
+                {photoDrafts.map((draft) => (
+                  <button
+                    type="button"
+                    className="progress-photo-upload-preview"
+                    key={draft.id}
+                    onClick={() => setSelectedProgressPhoto({
+                      id: draft.id,
+                      client_id: clientId,
+                      uri: draft.uri,
+                      date: photoUploadDate || getTodayInputDate(),
+                      note: photoUploadNote,
+                      file_size_bytes: draft.file_size_bytes,
+                      upload_status: 'local',
+                      created_at: new Date().toISOString(),
+                    })}
+                  >
+                    <img src={draft.uri} alt="Selected progress preview" />
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="progress-photo-upload-remove"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removePhotoDraft(draft.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removePhotoDraft(draft.id);
+                        }
+                      }}
+                      aria-label="Remove selected image"
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="progress-photo-upload-add-tile"
+                  disabled={isSavingPhotos}
+                  onClick={() => photoGalleryInputRef.current?.click()}
+                  aria-label="Add progress image"
+                >
+                  <span>+</span>
+                </button>
+              </div>
+
+              <input
+                ref={photoGalleryInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="progress-gallery__input"
+                onChange={(event) => void handleProgressPhotoSelection(event.currentTarget.files)}
+              />
+
+              {isSavingPhotos ? <p className="progress-photo-upload-status">Compressing images...</p> : null}
+            </div>
+
+            <div className="progress-photo-upload-footer">
+              <button
+                type="button"
+                className="progress-photo-upload-cancel"
+                disabled={isSavingPhotos}
+                onClick={() => setIsPhotoUploadOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="progress-photo-upload-save"
+                disabled={isSavingPhotos || (photoModalMode === 'create' && photoDrafts.length === 0)}
+                onClick={() => void savePhotoModal()}
+              >
+                {isSavingPhotos ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {selectedProgressPhoto && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={photoViewerOverlayRef}
+          className="progress-photo-viewer-overlay"
+          data-state={selectedProgressPhoto ? 'open' : 'closed'}
+          onClick={() => setSelectedProgressPhoto(null)}
+        >
+          <div
+            ref={photoViewerContainerRef}
+            className="progress-photo-viewer-modal"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="progress-photo-viewer-header">
+              <div>
+                <h3>{formatPhotoDate(selectedProgressPhoto)}</h3>
+                {selectedProgressPhoto.note ? <p>{selectedProgressPhoto.note}</p> : null}
+              </div>
+              <button
+                type="button"
+                className="progress-photo-viewer-close"
+                aria-label="Close progress image"
+                onClick={() => setSelectedProgressPhoto(null)}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="progress-photo-viewer-body">
+              <img src={selectedProgressPhoto.uri} alt={`Progress uploaded ${formatPhotoDate(selectedProgressPhoto)}`} />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <ManageMetricsModal 
         visible={isManageMetricsOpen}
         clientId={clientId}
@@ -881,6 +1489,14 @@ export default function AnalyticsSection({
         onClose={() => setIsLogProgressOpen(false)}
         onSuccess={() => { setIsLogProgressOpen(false); loadData(); }}
       />
+
+      <div
+        className={`progress-photo-error-toast ${isPhotoErrorToastVisible ? 'progress-photo-error-toast--visible' : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        {photoErrorToast}
+      </div>
     </div>
   );
 }

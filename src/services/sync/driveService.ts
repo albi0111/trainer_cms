@@ -160,6 +160,19 @@ export async function downloadFile<T>(fileId: string): Promise<T | null> {
   return response.json() as Promise<T>;
 }
 
+export async function downloadBlobFile(fileId: string): Promise<Blob | null> {
+  const response = await driveReadRequest(`${DRIVE_API}/${fileId}?alt=media`);
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`Drive download failed: ${response.status}`);
+  }
+
+  return response.blob();
+}
+
 export async function uploadFile<T>(
   name: string,
   parentId: string,
@@ -194,6 +207,55 @@ export async function uploadFile<T>(
   const form = new FormData();
   form.append('metadata', metadata);
   form.append('file', bodyBlob, name);
+
+  const response = await fetch(`${DRIVE_UPLOAD_API}?uploadType=multipart`, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Drive file upload failed: ${response.status}`);
+  }
+
+  const data = await response.json() as { id: string };
+  return data.id;
+}
+
+export async function uploadBlobFile(
+  name: string,
+  parentId: string,
+  content: Blob,
+  mimeType: string,
+  fileId?: string,
+): Promise<string> {
+  const headers = await getAuthHeaders();
+
+  if (fileId) {
+    const response = await fetch(`${DRIVE_UPLOAD_API}/${fileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: {
+        ...headers,
+        'Content-Type': mimeType,
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Drive file update failed: ${response.status}`);
+    }
+
+    return fileId;
+  }
+
+  const metadata = new Blob([JSON.stringify({
+    name,
+    parents: [parentId],
+    mimeType,
+  })], { type: 'application/json' });
+  const form = new FormData();
+  form.append('metadata', metadata);
+  form.append('file', content, name);
 
   const response = await fetch(`${DRIVE_UPLOAD_API}?uploadType=multipart`, {
     method: 'POST',
